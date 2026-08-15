@@ -25,7 +25,7 @@ FreshMate/
     └── src/
         ├── main/
         │   ├── AndroidManifest.xml         # Task 1（Task 9 补权限与接收器）
-        │   ├── java/com/freshmate/app/
+        │   ├── java/com/battor/freshmate/
         │   │   ├── FreshMateApp.kt         # Task 9（Application，通知渠道）
         │   │   ├── MainActivity.kt         # Task 1（空壳）/ Task 13（组装）
         │   │   ├── data/
@@ -59,7 +59,7 @@ FreshMate/
         │   │       ├── ReminderUtils.kt    # Task 4
         │   │       └── ExpiryStatus.kt     # Task 5
         │   └── res/drawable/ic_reminder.xml # Task 9（通知小图标）
-        └── test/java/com/freshmate/app/
+        └── test/java/com/battor/freshmate/
             ├── util/                        # Task 2-5 的单测
             ├── inputmethod/InputMethodsTest.kt # Task 8
             └── ui/main/MainViewModelTest.kt # Task 10
@@ -72,7 +72,7 @@ FreshMate/
 ### Task 1: 环境检查与项目脚手架
 
 **Files:**
-- Create: `settings.gradle.kts`、`build.gradle.kts`、`.gitignore`、`app/build.gradle.kts`、`app/src/main/AndroidManifest.xml`、`app/src/main/java/com/freshmate/app/MainActivity.kt`、`app/proguard-rules.pro`
+- Create: `settings.gradle.kts`、`build.gradle.kts`、`.gitignore`、`app/build.gradle.kts`、`app/src/main/AndroidManifest.xml`、`app/src/main/java/com/battor/freshmate/MainActivity.kt`、`app/proguard-rules.pro`
 
 - [ ] **Step 1: 环境检查（缺什么就停下来请用户安装，不要自动安装）**
 
@@ -137,11 +137,11 @@ plugins {
 }
 
 android {
-    namespace = "com.freshmate.app"
+    namespace = "com.battor.freshmate"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.freshmate.app"
+        applicationId = "com.battor.freshmate"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
@@ -212,10 +212,10 @@ dependencies {
 
 （`@mipmap/ic_launcher` 由 AGP 的默认资源提供不需要；若构建报缺图标，则改用 `android:icon="@android:drawable/sym_def_app_icon"`。）
 
-`app/src/main/java/com/freshmate/app/MainActivity.kt`：
+`app/src/main/java/com/battor/freshmate/MainActivity.kt`：
 
 ```kotlin
-package com.freshmate.app
+package com.battor.freshmate
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -251,13 +251,13 @@ git commit -m "chore: 项目脚手架（Gradle + Compose 空壳应用）"
 ### Task 2: 保质期单位与换算（util）
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/util/ShelfLifeUnit.kt`
-- Test: `app/src/test/java/com/freshmate/app/util/ShelfLifeUnitTest.kt`
+- Create: `app/src/main/java/com/battor/freshmate/util/ShelfLifeUnit.kt`
+- Test: `app/src/test/java/com/battor/freshmate/util/ShelfLifeUnitTest.kt`
 
 - [ ] **Step 1: 写失败测试**
 
 ```kotlin
-package com.freshmate.app.util
+package com.battor.freshmate.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -285,13 +285,13 @@ class ShelfLifeUnitTest {
 
 - [ ] **Step 2: 运行验证失败**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.util.ShelfLifeUnitTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.util.ShelfLifeUnitTest"`
 预期：编译失败，`unresolved reference: shelfLifeToDays`
 
 - [ ] **Step 3: 最小实现**
 
 ```kotlin
-package com.freshmate.app.util
+package com.battor.freshmate.util
 
 /** 保质期单位。设计文档约定：1 个月 = 30 天，1 年 = 365 天。 */
 enum class ShelfLifeUnit(val label: String, val days: Int) {
@@ -306,13 +306,13 @@ fun shelfLifeToDays(value: Int, unit: ShelfLifeUnit): Int = value * unit.days
 
 - [ ] **Step 4: 运行验证通过**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.util.ShelfLifeUnitTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.util.ShelfLifeUnitTest"`
 预期：5 个测试全部 PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/src/main/java/com/freshmate/app/util/ShelfLifeUnit.kt app/src/test/java/com/freshmate/app/util/ShelfLifeUnitTest.kt
+git add app/src/main/java/com/battor/freshmate/util/ShelfLifeUnit.kt app/src/test/java/com/battor/freshmate/util/ShelfLifeUnitTest.kt
 git commit -m "feat(util): 保质期单位与天数换算"
 ```
 
@@ -321,15 +321,15 @@ git commit -m "feat(util): 保质期单位与天数换算"
 ### Task 3: 到期时间计算（util）
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/util/ExpiryUtils.kt`
-- Test: `app/src/test/java/com/freshmate/app/util/ExpiryUtilsTest.kt`
+- Create: `app/src/main/java/com/battor/freshmate/util/ExpiryUtils.kt`
+- Test: `app/src/test/java/com/battor/freshmate/util/ExpiryUtilsTest.kt`
 
 约定（设计文档 §4）：起点 = `productionDate` 当天 00:00；未填生产日期时 = `createdAt` 的精确时刻。到期时间 = 起点 + `shelfLifeDays` 天。
 
 - [ ] **Step 1: 写失败测试**
 
 ```kotlin
-package com.freshmate.app.util
+package com.battor.freshmate.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -356,13 +356,13 @@ class ExpiryUtilsTest {
 
 - [ ] **Step 2: 运行验证失败**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.util.ExpiryUtilsTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.util.ExpiryUtilsTest"`
 预期：编译失败，`unresolved reference: expiryDateTime`
 
 - [ ] **Step 3: 最小实现**
 
 ```kotlin
-package com.freshmate.app.util
+package com.battor.freshmate.util
 
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -383,13 +383,13 @@ fun expiryDateTime(
 
 - [ ] **Step 4: 运行验证通过**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.util.ExpiryUtilsTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.util.ExpiryUtilsTest"`
 预期：2 个测试 PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/src/main/java/com/freshmate/app/util/ExpiryUtils.kt app/src/test/java/com/freshmate/app/util/ExpiryUtilsTest.kt
+git add app/src/main/java/com/battor/freshmate/util/ExpiryUtils.kt app/src/test/java/com/battor/freshmate/util/ExpiryUtilsTest.kt
 git commit -m "feat(util): 到期时间计算"
 ```
 
@@ -398,15 +398,15 @@ git commit -m "feat(util): 到期时间计算"
 ### Task 4: 提醒时点计算（util）
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/util/ReminderUtils.kt`
-- Test: `app/src/test/java/com/freshmate/app/util/ReminderUtilsTest.kt`
+- Create: `app/src/main/java/com/battor/freshmate/util/ReminderUtils.kt`
+- Test: `app/src/test/java/com/battor/freshmate/util/ReminderUtilsTest.kt`
 
 规则（设计文档 §6）：3 个时点 = 到期时刻往前倒 `总保质期 × 1/3、1/5、1/6`；每个时点向下取整到半小时；按时间升序去重；`futureReminderTimes` 过滤掉已过去的时点（`<= now` 算过去）。
 
 - [ ] **Step 1: 写失败测试**
 
 ```kotlin
-package com.freshmate.app.util
+package com.battor.freshmate.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -480,13 +480,13 @@ class ReminderUtilsTest {
 
 - [ ] **Step 2: 运行验证失败**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.util.ReminderUtilsTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.util.ReminderUtilsTest"`
 预期：编译失败，`unresolved reference: roundDownToHalfHour`
 
 - [ ] **Step 3: 最小实现**
 
 ```kotlin
-package com.freshmate.app.util
+package com.battor.freshmate.util
 
 import java.time.Duration
 import java.time.LocalDateTime
@@ -516,13 +516,13 @@ fun futureReminderTimes(
 
 - [ ] **Step 4: 运行验证通过**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.util.ReminderUtilsTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.util.ReminderUtilsTest"`
 预期：6 个测试 PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/src/main/java/com/freshmate/app/util/ReminderUtils.kt app/src/test/java/com/freshmate/app/util/ReminderUtilsTest.kt
+git add app/src/main/java/com/battor/freshmate/util/ReminderUtils.kt app/src/test/java/com/battor/freshmate/util/ReminderUtilsTest.kt
 git commit -m "feat(util): 剩余1/3、1/5、1/6提醒时点计算与半小时取整"
 ```
 
@@ -531,15 +531,15 @@ git commit -m "feat(util): 剩余1/3、1/5、1/6提醒时点计算与半小时�
 ### Task 5: 紧急度分档与文案（util）
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/util/ExpiryStatus.kt`
-- Test: `app/src/test/java/com/freshmate/app/util/ExpiryStatusTest.kt`
+- Create: `app/src/main/java/com/battor/freshmate/util/ExpiryStatus.kt`
+- Test: `app/src/test/java/com/battor/freshmate/util/ExpiryStatusTest.kt`
 
 分档规则（设计文档 §5.1，比值 = 剩余时长 / 总保质期）：`<= 0` EXPIRED；`<= 1/6` CRITICAL；`<= 1/5` WARNING；`<= 1/3` CAUTION；否则 SAFE。
 
 - [ ] **Step 1: 写失败测试**
 
 ```kotlin
-package com.freshmate.app.util
+package com.battor.freshmate.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -594,13 +594,13 @@ class ExpiryStatusTest {
 
 - [ ] **Step 2: 运行验证失败**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.util.ExpiryStatusTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.util.ExpiryStatusTest"`
 预期：编译失败，`unresolved reference: ExpiryStatus`
 
 - [ ] **Step 3: 最小实现**
 
 ```kotlin
-package com.freshmate.app.util
+package com.battor.freshmate.util
 
 import java.time.Duration
 import java.time.LocalDateTime
@@ -645,13 +645,13 @@ fun formatExpired(overdue: Duration): String {
 
 - [ ] **Step 4: 运行验证通过**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.util.ExpiryStatusTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.util.ExpiryStatusTest"`
 预期：11 个测试 PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/src/main/java/com/freshmate/app/util/ExpiryStatus.kt app/src/test/java/com/freshmate/app/util/ExpiryStatusTest.kt
+git add app/src/main/java/com/battor/freshmate/util/ExpiryStatus.kt app/src/test/java/com/battor/freshmate/util/ExpiryStatusTest.kt
 git commit -m "feat(util): 紧急度分档与剩余/过期时长文案"
 ```
 
@@ -660,8 +660,8 @@ git commit -m "feat(util): 紧急度分档与剩余/过期时长文案"
 ### Task 6: 数据层（Room）
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/data/Category.kt`、`FoodItem.kt`、`FoodItemDao.kt`、`FoodItemDatabase.kt`、`FoodItemRepository.kt`
-- Test: `app/src/androidTest/java/com/freshmate/app/data/FoodItemDaoTest.kt`（在 Task 15 执行，需设备）
+- Create: `app/src/main/java/com/battor/freshmate/data/Category.kt`、`FoodItem.kt`、`FoodItemDao.kt`、`FoodItemDatabase.kt`、`FoodItemRepository.kt`
+- Test: `app/src/androidTest/java/com/battor/freshmate/data/FoodItemDaoTest.kt`（在 Task 15 执行，需设备）
 
 注意：`data` 包不依赖 Compose（图标映射在 Task 11 的 UI 层）。DAO 行为测试需设备/模拟器，放到 Task 15（可选）；本任务以编译通过为验证。Room 自动把枚举存为 String。
 
@@ -670,7 +670,7 @@ git commit -m "feat(util): 紧急度分档与剩余/过期时长文案"
 `Category.kt`：
 
 ```kotlin
-package com.freshmate.app.data
+package com.battor.freshmate.data
 
 /** 商品分类（设计文档 §4，共 9 类）。 */
 enum class Category(val label: String) {
@@ -689,7 +689,7 @@ enum class Category(val label: String) {
 `FoodItem.kt`：
 
 ```kotlin
-package com.freshmate.app.data
+package com.battor.freshmate.data
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -714,7 +714,7 @@ data class FoodItem(
 `FoodItemDao.kt`：
 
 ```kotlin
-package com.freshmate.app.data
+package com.battor.freshmate.data
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -748,7 +748,7 @@ interface FoodItemDao {
 `FoodItemDatabase.kt`：
 
 ```kotlin
-package com.freshmate.app.data
+package com.battor.freshmate.data
 
 import android.content.Context
 import androidx.room.Database
@@ -792,7 +792,7 @@ abstract class FoodItemDatabase : RoomDatabase() {
 `FoodItemRepository.kt`：
 
 ```kotlin
-package com.freshmate.app.data
+package com.battor.freshmate.data
 
 import kotlinx.coroutines.flow.Flow
 
@@ -821,7 +821,7 @@ Run: `./gradlew assembleDebug`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/src/main/java/com/freshmate/app/data
+git add app/src/main/java/com/battor/freshmate/data
 git commit -m "feat(data): FoodItem 实体、DAO、Room 数据库与 Repository"
 ```
 
@@ -830,14 +830,14 @@ git commit -m "feat(data): FoodItem 实体、DAO、Room 数据库与 Repository"
 ### Task 7: Material 3 主题
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/ui/theme/Color.kt`、`Theme.kt`
+- Create: `app/src/main/java/com/battor/freshmate/ui/theme/Color.kt`、`Theme.kt`
 
 无逻辑，编译验证即可。Android 12+ 动态取色；Android 10–11 用明快（多巴胺）配色。
 
 - [ ] **Step 1: Color.kt**
 
 ```kotlin
-package com.freshmate.app.ui.theme
+package com.battor.freshmate.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
@@ -856,7 +856,7 @@ val DarkBackground = Color(0xFF1A1C18)
 - [ ] **Step 2: Theme.kt**
 
 ```kotlin
-package com.freshmate.app.ui.theme
+package com.battor.freshmate.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -906,7 +906,7 @@ fun FreshMateTheme(
 Run: `./gradlew assembleDebug` → 预期 `BUILD SUCCESSFUL`
 
 ```bash
-git add app/src/main/java/com/freshmate/app/ui/theme
+git add app/src/main/java/com/battor/freshmate/ui/theme
 git commit -m "feat(ui): Material 3 主题（动态取色 + 明快预设配色）"
 ```
 
@@ -915,15 +915,15 @@ git commit -m "feat(ui): Material 3 主题（动态取色 + 明快预设配色�
 ### Task 8: InputMethod 接口与实现
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/inputmethod/InputMethods.kt`
-- Test: `app/src/test/java/com/freshmate/app/inputmethod/InputMethodsTest.kt`
+- Create: `app/src/main/java/com/battor/freshmate/inputmethod/InputMethods.kt`
+- Test: `app/src/test/java/com/battor/freshmate/inputmethod/InputMethodsTest.kt`
 
 v1 语音/图片为占位：接口带 `extraAction`（图标+说明），实际占位行为由 UI 按 `InputMethodId` 分发（Task 12）。后续接入识别时只改这个包和 UI 的分发处。
 
 - [ ] **Step 1: 写失败测试**
 
 ```kotlin
-package com.freshmate.app.inputmethod
+package com.battor.freshmate.inputmethod
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -950,13 +950,13 @@ class InputMethodsTest {
 
 - [ ] **Step 2: 运行验证失败**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.inputmethod.InputMethodsTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.inputmethod.InputMethodsTest"`
 预期：编译失败，`unresolved reference: ManualInputMethod`
 
 - [ ] **Step 3: 实现**
 
 ```kotlin
-package com.freshmate.app.inputmethod
+package com.battor.freshmate.inputmethod
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -1006,13 +1006,13 @@ object InputMethods {
 
 - [ ] **Step 4: 运行验证通过**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.inputmethod.InputMethodsTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.inputmethod.InputMethodsTest"`
 预期：3 个测试 PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/src/main/java/com/freshmate/app/inputmethod app/src/test/java/com/freshmate/app/inputmethod
+git add app/src/main/java/com/battor/freshmate/inputmethod app/src/test/java/com/battor/freshmate/inputmethod
 git commit -m "feat(inputmethod): 输入方式策略接口与手动/语音/图片实现"
 ```
 
@@ -1021,17 +1021,17 @@ git commit -m "feat(inputmethod): 输入方式策略接口与手动/语音/图�
 ### Task 9: 提醒调度与通知
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/notification/ReminderIds.kt`、`ReminderScheduler.kt`、`ReminderBroadcastReceiver.kt`、`BootReceiver.kt`
-- Create: `app/src/main/java/com/freshmate/app/FreshMateApp.kt`、`app/src/main/res/drawable/ic_reminder.xml`
+- Create: `app/src/main/java/com/battor/freshmate/notification/ReminderIds.kt`、`ReminderScheduler.kt`、`ReminderBroadcastReceiver.kt`、`BootReceiver.kt`
+- Create: `app/src/main/java/com/battor/freshmate/FreshMateApp.kt`、`app/src/main/res/drawable/ic_reminder.xml`
 - Modify: `app/src/main/AndroidManifest.xml`
-- Test: `app/src/test/java/com/freshmate/app/notification/ReminderIdsTest.kt`
+- Test: `app/src/test/java/com/battor/freshmate/notification/ReminderIdsTest.kt`
 
 纯逻辑（requestCode 计算）走 TDD；闹钟/接收器/通知以编译 + 构建验证（运行时行为在 Task 16 手动清单里验证）。
 
 - [ ] **Step 1: 写 requestCode 失败测试**
 
 ```kotlin
-package com.freshmate.app.notification
+package com.battor.freshmate.notification
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -1053,7 +1053,7 @@ class ReminderIdsTest {
 
 - [ ] **Step 2: 运行验证失败**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.notification.ReminderIdsTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.notification.ReminderIdsTest"`
 预期：编译失败，`unresolved reference: ReminderIds`
 
 - [ ] **Step 3: ReminderIds 与 ReminderScheduler**
@@ -1061,7 +1061,7 @@ Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.notification.Remind
 `ReminderIds.kt`：
 
 ```kotlin
-package com.freshmate.app.notification
+package com.battor.freshmate.notification
 
 object ReminderIds {
     const val CHANNEL_ID = "expiry_reminders"
@@ -1074,17 +1074,17 @@ object ReminderIds {
 `ReminderScheduler.kt`：
 
 ```kotlin
-package com.freshmate.app.notification
+package com.battor.freshmate.notification
 
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.freshmate.app.data.FoodItem
-import com.freshmate.app.data.FoodItemDatabase
-import com.freshmate.app.util.expiryDateTime
-import com.freshmate.app.util.futureReminderTimes
+import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.data.FoodItemDatabase
+import com.battor.freshmate.util.expiryDateTime
+import com.battor.freshmate.util.futureReminderTimes
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
@@ -1146,17 +1146,17 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
 `ReminderBroadcastReceiver.kt`：
 
 ```kotlin
-package com.freshmate.app.notification
+package com.battor.freshmate.notification
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.freshmate.app.R
-import com.freshmate.app.data.FoodItemDatabase
-import com.freshmate.app.util.expiryDateTime
-import com.freshmate.app.util.formatRemaining
+import com.battor.freshmate.R
+import com.battor.freshmate.data.FoodItemDatabase
+import com.battor.freshmate.util.expiryDateTime
+import com.battor.freshmate.util.formatRemaining
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineScope
@@ -1203,7 +1203,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 `BootReceiver.kt`：
 
 ```kotlin
-package com.freshmate.app.notification
+package com.battor.freshmate.notification
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -1221,12 +1221,12 @@ class BootReceiver : BroadcastReceiver() {
 `FreshMateApp.kt`：
 
 ```kotlin
-package com.freshmate.app
+package com.battor.freshmate
 
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import com.freshmate.app.notification.ReminderIds
+import com.battor.freshmate.notification.ReminderIds
 
 class FreshMateApp : Application() {
     override fun onCreate() {
@@ -1275,7 +1275,7 @@ class FreshMateApp : Application() {
 
 - [ ] **Step 6: 运行测试与编译**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.notification.ReminderIdsTest" assembleDebug`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.notification.ReminderIdsTest" assembleDebug`
 预期：2 个测试 PASS，`BUILD SUCCESSFUL`
 
 - [ ] **Step 7: Commit**
@@ -1290,20 +1290,20 @@ git commit -m "feat(notification): AlarmManager 提醒调度、通知接收器�
 ### Task 10: MainViewModel（TDD）
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/ui/main/MainViewModel.kt`
-- Test: `app/src/test/java/com/freshmate/app/ui/main/MainViewModelTest.kt`
+- Create: `app/src/main/java/com/battor/freshmate/ui/main/MainViewModel.kt`
+- Test: `app/src/test/java/com/battor/freshmate/ui/main/MainViewModelTest.kt`
 
 - [ ] **Step 1: 写失败测试**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
-import com.freshmate.app.data.Category
-import com.freshmate.app.data.FoodItem
-import com.freshmate.app.data.FoodRepository
-import com.freshmate.app.inputmethod.InputMethodId
-import com.freshmate.app.notification.ReminderScheduling
-import com.freshmate.app.util.ShelfLifeUnit
+import com.battor.freshmate.data.Category
+import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.data.FoodRepository
+import com.battor.freshmate.inputmethod.InputMethodId
+import com.battor.freshmate.notification.ReminderScheduling
+import com.battor.freshmate.util.ShelfLifeUnit
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
@@ -1488,25 +1488,25 @@ class FakeScheduler : ReminderScheduling {
 
 - [ ] **Step 2: 运行验证失败**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.ui.main.MainViewModelTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.ui.main.MainViewModelTest"`
 预期：编译失败，`unresolved reference: MainViewModel`
 
 - [ ] **Step 3: 实现 MainViewModel.kt**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.freshmate.app.data.Category
-import com.freshmate.app.data.FoodItem
-import com.freshmate.app.data.FoodRepository
-import com.freshmate.app.inputmethod.InputMethodId
-import com.freshmate.app.notification.ReminderScheduling
-import com.freshmate.app.util.ShelfLifeUnit
-import com.freshmate.app.util.expiryDateTime
-import com.freshmate.app.util.reminderTimes
-import com.freshmate.app.util.shelfLifeToDays
+import com.battor.freshmate.data.Category
+import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.data.FoodRepository
+import com.battor.freshmate.inputmethod.InputMethodId
+import com.battor.freshmate.notification.ReminderScheduling
+import com.battor.freshmate.util.ShelfLifeUnit
+import com.battor.freshmate.util.expiryDateTime
+import com.battor.freshmate.util.reminderTimes
+import com.battor.freshmate.util.shelfLifeToDays
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -1691,13 +1691,13 @@ class MainViewModel(
 
 - [ ] **Step 4: 运行验证通过**
 
-Run: `./gradlew testDebugUnitTest --tests "com.freshmate.app.ui.main.MainViewModelTest"`
+Run: `./gradlew testDebugUnitTest --tests "com.battor.freshmate.ui.main.MainViewModelTest"`
 预期：12 个测试全部 PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/src/main/java/com/freshmate/app/ui/main/MainViewModel.kt app/src/test/java/com/freshmate/app/ui/main/MainViewModelTest.kt
+git add app/src/main/java/com/battor/freshmate/ui/main/MainViewModel.kt app/src/test/java/com/battor/freshmate/ui/main/MainViewModelTest.kt
 git commit -m "feat(ui): MainViewModel 状态流转（录入/编辑/校验/过期确认/删除撤销）"
 ```
 
@@ -1706,14 +1706,14 @@ git commit -m "feat(ui): MainViewModel 状态流转（录入/编辑/校验/过�
 ### Task 11: 列表 UI（分组、卡片、颜色、滑动删除）
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/ui/main/CategoryIcon.kt`、`StatusColor.kt`、`FoodItemCard.kt`、`MainScreen.kt`
+- Create: `app/src/main/java/com/battor/freshmate/ui/main/CategoryIcon.kt`、`StatusColor.kt`、`FoodItemCard.kt`、`MainScreen.kt`
 
 本任务先交付不带表单的列表版本（表单在 Task 12、FAB 菜单在 Task 13 接入）。UI 逻辑依赖 Task 2-5、6、10 已测试的纯函数，此处以编译 + 手动目检验证。
 
 - [ ] **Step 1: CategoryIcon.kt（分类图标映射）**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AcUnit
@@ -1726,7 +1726,7 @@ import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material.icons.filled.SoupKitchen
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.freshmate.app.data.Category
+import com.battor.freshmate.data.Category
 
 fun categoryIcon(category: Category): ImageVector = when (category) {
     Category.FRUITS_VEG -> Icons.Filled.Eco
@@ -1744,10 +1744,10 @@ fun categoryIcon(category: Category): ImageVector = when (category) {
 - [ ] **Step 2: StatusColor.kt（紧急度色带，设计文档 §5.1）**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import androidx.compose.ui.graphics.Color
-import com.freshmate.app.util.ExpiryStatus
+import com.battor.freshmate.util.ExpiryStatus
 
 /** 返回 (背景容器色, 前景色)。绿 → 黄 → 橙红 → 深红 → 已过期。 */
 fun statusColors(status: ExpiryStatus): Pair<Color, Color> = when (status) {
@@ -1762,7 +1762,7 @@ fun statusColors(status: ExpiryStatus): Pair<Color, Color> = when (status) {
 - [ ] **Step 3: FoodItemCard.kt（左滑删除 + 点击编辑）**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -1790,11 +1790,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.freshmate.app.data.FoodItem
-import com.freshmate.app.util.expiryDateTime
-import com.freshmate.app.util.expiryStatus
-import com.freshmate.app.util.formatExpired
-import com.freshmate.app.util.formatRemaining
+import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.util.expiryDateTime
+import com.battor.freshmate.util.expiryStatus
+import com.battor.freshmate.util.formatExpired
+import com.battor.freshmate.util.formatRemaining
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -1870,7 +1870,7 @@ fun FoodItemCard(
 - [ ] **Step 4: MainScreen.kt（列表 + 分组头 + 撤销 Snackbar）**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -1972,7 +1972,7 @@ private fun GroupHeader(createdAt: LocalDateTime) {
 Run: `./gradlew assembleDebug` → 预期 `BUILD SUCCESSFUL`
 
 ```bash
-git add app/src/main/java/com/freshmate/app/ui
+git add app/src/main/java/com/battor/freshmate/ui
 git commit -m "feat(ui): 分组列表、紧急度色带卡片与滑动删除"
 ```
 
@@ -1981,13 +1981,13 @@ git commit -m "feat(ui): 分组列表、紧急度色带卡片与滑动删除"
 ### Task 12: 输入表单 UI
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/ui/main/ItemForm.kt`
-- Modify: `app/src/main/java/com/freshmate/app/ui/main/MainScreen.kt`（把表单插入列表顶部）
+- Create: `app/src/main/java/com/battor/freshmate/ui/main/ItemForm.kt`
+- Modify: `app/src/main/java/com/battor/freshmate/ui/main/MainScreen.kt`（把表单插入列表顶部）
 
 - [ ] **Step 1: ItemForm.kt（完整表单 + 语音/图片占位附加操作）**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -2027,16 +2027,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.freshmate.app.data.Category
-import com.freshmate.app.inputmethod.InputMethodId
-import com.freshmate.app.inputmethod.InputMethods
-import com.freshmate.app.ui.main.MainViewModel.EditingState
-import com.freshmate.app.util.ExpiryStatus
-import com.freshmate.app.util.ShelfLifeUnit
-import com.freshmate.app.util.expiryDateTime
-import com.freshmate.app.util.expiryStatus
-import com.freshmate.app.util.formatExpired
-import com.freshmate.app.util.formatRemaining
+import com.battor.freshmate.data.Category
+import com.battor.freshmate.inputmethod.InputMethodId
+import com.battor.freshmate.inputmethod.InputMethods
+import com.battor.freshmate.ui.main.MainViewModel.EditingState
+import com.battor.freshmate.util.ExpiryStatus
+import com.battor.freshmate.util.ShelfLifeUnit
+import com.battor.freshmate.util.expiryDateTime
+import com.battor.freshmate.util.expiryStatus
+import com.battor.freshmate.util.formatExpired
+import com.battor.freshmate.util.formatRemaining
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -2295,7 +2295,7 @@ state.editing?.let { editing ->
 Run: `./gradlew assembleDebug` → 预期 `BUILD SUCCESSFUL`
 
 ```bash
-git add app/src/main/java/com/freshmate/app/ui
+git add app/src/main/java/com/battor/freshmate/ui
 git commit -m "feat(ui): 三种输入方式共用的录入表单（含语音/图片占位操作）"
 ```
 
@@ -2304,13 +2304,13 @@ git commit -m "feat(ui): 三种输入方式共用的录入表单（含语音/图
 ### Task 13: FAB 菜单与主页组装
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/ui/main/FabMenu.kt`
-- Modify: `app/src/main/java/com/freshmate/app/MainActivity.kt`（真实依赖）、`app/src/main/java/com/freshmate/app/ui/main/MainScreen.kt`（接入 FAB 与“已过时点”确认对话框）
+- Create: `app/src/main/java/com/battor/freshmate/ui/main/FabMenu.kt`
+- Modify: `app/src/main/java/com/battor/freshmate/MainActivity.kt`（真实依赖）、`app/src/main/java/com/battor/freshmate/ui/main/MainScreen.kt`（接入 FAB 与“已过时点”确认对话框）
 
 - [ ] **Step 1: FabMenu.kt**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -2336,7 +2336,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.freshmate.app.inputmethod.InputMethodId
+import com.battor.freshmate.inputmethod.InputMethodId
 
 /**
  * 未编辑：+ 号展开 4 项菜单（手动/语音/图片/完成，“完成”仅编辑中可用）。
@@ -2437,7 +2437,7 @@ state.pendingSave?.let { pending ->
 - [ ] **Step 3: MainActivity 真实组装**
 
 ```kotlin
-package com.freshmate.app
+package com.battor.freshmate
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -2445,12 +2445,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.freshmate.app.data.FoodItemDatabase
-import com.freshmate.app.data.FoodItemRepository
-import com.freshmate.app.notification.ReminderScheduler
-import com.freshmate.app.ui.main.MainScreen
-import com.freshmate.app.ui.main.MainViewModel
-import com.freshmate.app.ui.theme.FreshMateTheme
+import com.battor.freshmate.data.FoodItemDatabase
+import com.battor.freshmate.data.FoodItemRepository
+import com.battor.freshmate.notification.ReminderScheduler
+import com.battor.freshmate.ui.main.MainScreen
+import com.battor.freshmate.ui.main.MainViewModel
+import com.battor.freshmate.ui.theme.FreshMateTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels { MainViewModel.factory(applicationContext) }
@@ -2496,13 +2496,13 @@ git commit -m "feat(ui): FAB 菜单、过期确认对话框与主页组装"
 ### Task 14: 权限流程（通知权限 + 精确闹钟引导）
 
 **Files:**
-- Create: `app/src/main/java/com/freshmate/app/ui/main/PermissionEffects.kt`
-- Modify: `app/src/main/java/com/freshmate/app/ui/main/MainScreen.kt`（挂载权限副作用与横幅）
+- Create: `app/src/main/java/com/battor/freshmate/ui/main/PermissionEffects.kt`
+- Modify: `app/src/main/java/com/battor/freshmate/ui/main/MainScreen.kt`（挂载权限副作用与横幅）
 
 - [ ] **Step 1: PermissionEffects.kt**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import android.app.AlarmManager
 import android.content.Context
@@ -2617,15 +2617,15 @@ git commit -m "feat(ui): 通知权限请求与提醒设置横幅"
 ### Task 15:（可选，需设备/模拟器）DAO 与 Compose UI 自动化测试
 
 **Files:**
-- Create: `app/src/androidTest/java/com/freshmate/app/data/FoodItemDaoTest.kt`
-- Create: `app/src/androidTest/java/com/freshmate/app/ui/main/MainScreenTest.kt`
+- Create: `app/src/androidTest/java/com/battor/freshmate/data/FoodItemDaoTest.kt`
+- Create: `app/src/androidTest/java/com/battor/freshmate/ui/main/MainScreenTest.kt`
 
 **执行条件：** 需要连接设备或运行模拟器（`adb devices` 可见）。没有设备时跳过本任务，直接进 Task 16；后续有设备再补。
 
 - [ ] **Step 1: DAO 测试**
 
 ```kotlin
-package com.freshmate.app.data
+package com.battor.freshmate.data
 
 import android.content.Context
 import androidx.room.Room
@@ -2680,7 +2680,7 @@ class FoodItemDaoTest {
 - [ ] **Step 2: Compose UI 核心路径测试（录入 → 显示）**
 
 ```kotlin
-package com.freshmate.app.ui.main
+package com.battor.freshmate.ui.main
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -2688,7 +2688,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.freshmate.app.MainActivity
+import com.battor.freshmate.MainActivity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

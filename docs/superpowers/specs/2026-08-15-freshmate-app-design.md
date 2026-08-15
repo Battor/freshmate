@@ -28,7 +28,7 @@
 ## 3. 包结构
 
 ```
-com.freshmate.app
+com.battor.freshmate
 ├── data          # FoodItem 实体、DAO、RoomDatabase、Repository
 ├── ui
 │   ├── main      # 主列表页（列表 + FAB + 输入表单）
