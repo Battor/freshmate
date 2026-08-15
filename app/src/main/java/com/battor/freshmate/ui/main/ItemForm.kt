@@ -56,6 +56,7 @@ import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.formatExpired
 import com.battor.freshmate.util.formatRemaining
+import com.battor.freshmate.util.shelfLifeToDays
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -186,7 +187,11 @@ fun ItemForm(
 
 @Composable
 private fun ExpiryPreview(state: EditingState) {
-    val days = state.shelfLifeValue.toIntOrNull()?.takeIf { it > 0 } ?: return
+    // 数值必须乘上单位（1 + 年 = 365 天），与 save() 的换算保持一致
+    val days = state.shelfLifeValue.toIntOrNull()
+        ?.takeIf { it > 0 }
+        ?.let { shelfLifeToDays(it, state.shelfLifeUnit) }
+        ?: return
     val expiry = expiryDateTime(state.productionDate, state.createdAt, days)
     val now = remember { LocalDateTime.now() }
     val remaining = Duration.between(now, expiry)
