@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.battor.freshmate.data.Category
@@ -53,7 +55,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
+import java.time.ZoneOffset
 
 /** 快捷保质期：3天 / 7天 / 30天 / 3个月 / 6个月 / 1年（设计文档 §5.3） */
 private val QuickShelfLives = listOf(
@@ -122,7 +124,7 @@ fun ItemForm(
                 onValueChange = { text ->
                     onStateChange(
                         state.copy(
-                            shelfLifeValue = text.filter { it.isDigit() },
+                            shelfLifeValue = text.filter { it in '0'..'9' }.take(4),
                             shelfLifeError = false,
                         ),
                     )
@@ -135,6 +137,7 @@ fun ItemForm(
                     }
                 },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -210,7 +213,7 @@ private fun ProductionDateField(
     if (showPicker) {
         val pickerState = rememberDatePickerState(
             initialSelectedDateMillis = productionDate
-                ?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
+                ?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
         )
         DatePickerDialog(
             onDismissRequest = { showPicker = false },
@@ -219,7 +222,7 @@ private fun ProductionDateField(
                     onClick = {
                         pickerState.selectedDateMillis?.let { millis ->
                             val date = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneId.systemDefault()).toLocalDate()
+                                .atZone(ZoneOffset.UTC).toLocalDate()
                             onChange(date)
                         }
                         showPicker = false
@@ -242,15 +245,27 @@ private fun ExtraActionRow(
     onPlaceholderHint: (String) -> Unit,
 ) {
     var recording by remember { mutableStateOf(false) }
-    val pulse = rememberInfiniteTransition(label = "pulse")
-    val scale by pulse.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.35f,
-        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
-        label = "scale",
-    )
+    // 仅在录音时创建无限动画，避免非录音状态下持续产生动画帧
+    val scale = if (recording) {
+        val pulse = rememberInfiniteTransition(label = "pulse")
+        pulse.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.35f,
+            animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
+            label = "scale",
+        ).value
+    } else {
+        1f
+    }
     TextButton(
-        onClick = { if (id != InputMethodId.VOICE) onPlaceholderHint("图片识别即将上线") },
+        onClick = {
+            when {
+                id == InputMethodId.IMAGE -> onPlaceholderHint("图片识别即将上线")
+                // 录音中普通点击不打断录音（长按可结束）
+                recording -> Unit
+                else -> onPlaceholderHint("语音识别即将上线")
+            }
+        },
         modifier = if (id == InputMethodId.VOICE) {
             Modifier.pointerInput(Unit) {
                 detectTapGestures(onLongPress = { recording = !recording })
@@ -264,12 +279,12 @@ private fun ExtraActionRow(
             contentDescription = label,
             modifier = Modifier
                 .padding(end = 6.dp)
-                .scale(if (recording) scale else 1f),
+                .scale(scale),
         )
         Text(
             when {
                 id == InputMethodId.IMAGE -> label
-                recording -> "录音中…（占位，松手结束）"
+                recording -> "录音中…（占位，再按一次结束）"
                 else -> "$label（长按）"
             },
         )
