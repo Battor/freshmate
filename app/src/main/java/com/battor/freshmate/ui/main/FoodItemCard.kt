@@ -45,7 +45,6 @@ fun FoodItemCard(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     highlight: Boolean = false,
-    enabled: Boolean = true,
 ) {
     val now = remember { LocalDateTime.now() }
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
@@ -60,8 +59,7 @@ fun FoodItemCard(
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            // 编辑期间禁用滑动删除，避免与表单状态竞争
-            if (enabled && value == SwipeToDismissBoxValue.EndToStart) {
+            if (value == SwipeToDismissBoxValue.EndToStart) {
                 onDelete()
                 true
             } else {
@@ -94,7 +92,6 @@ fun FoodItemCard(
     ) {
         Card(
             onClick = onClick,
-            enabled = enabled,
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = container),
             // 「本次添加」批量条目用主色描边区分（状态色保留）

@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardVoice
@@ -28,29 +30,47 @@ import androidx.compose.ui.unit.dp
 import com.battor.freshmate.inputmethod.InputMethodId
 
 /**
- * 两态（2026-08-15 组容器模型）：
- * - 表单打开：←（放弃返回）/ ✓（新增表单 = 暂存并清空继续；编辑表单 = 保存退出）。
- * - 无表单：+ 号菜单（手动/语音/图片），新录入永远新开一组。
+ * 四种状态（2026-08-15 批量添加模式）：
+ * - 普通模式：+ 号菜单（手动/语音/图片/完成，“完成”禁用）。
+ * - 批量表单中（新条目）：←（返回输入方式选择）×（放弃并结束批量）✓（暂存并清空继续）。
+ * - 批量空闲（会话在、表单关）：+ 号菜单，“完成（已加 N 条）”启用。
+ * - 编辑已有条目：对勾（保存）/ 叉号（放弃），单条语义不变。
  */
 @Composable
 fun FabMenu(
     formOpen: Boolean,
-    isAddForm: Boolean,
+    isBatchForm: Boolean,
+    batchActive: Boolean,
+    stagedCount: Int,
     onStartInput: (InputMethodId) -> Unit,
     onSave: () -> Unit,
-    onBack: () -> Unit,
+    onDiscard: () -> Unit,
+    onBackToSelection: () -> Unit,
+    onFinishBatch: () -> Unit,
 ) {
     if (formOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isBatchForm) {
+                SmallFloatingActionButton(
+                    onClick = onBackToSelection,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.padding(end = 12.dp),
+                ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回输入方式选择") }
+            }
             SmallFloatingActionButton(
-                onClick = onBack,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                onClick = onDiscard,
+                containerColor = MaterialTheme.colorScheme.errorContainer,
                 modifier = Modifier.padding(end = 12.dp),
-            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "放弃返回") }
+            ) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = if (isBatchForm) "结束批量" else "放弃",
+                )
+            }
             SmallFloatingActionButton(onClick = onSave) {
                 Icon(
                     Icons.Filled.Check,
-                    contentDescription = if (isAddForm) "暂存并继续" else "保存",
+                    contentDescription = if (isBatchForm) "暂存并继续" else "保存",
                 )
             }
         }
@@ -75,6 +95,12 @@ fun FabMenu(
                     text = { Text("图片输入") },
                     leadingIcon = { Icon(Icons.Filled.Image, contentDescription = null) },
                     onClick = { expanded = false; onStartInput(InputMethodId.IMAGE) },
+                )
+                DropdownMenuItem(
+                    text = { Text(if (batchActive) "完成（已加 $stagedCount 条）" else "完成") },
+                    leadingIcon = { Icon(Icons.Filled.Done, contentDescription = null) },
+                    enabled = batchActive, // 批量会话进行中才可结束
+                    onClick = { expanded = false; onFinishBatch() },
                 )
             }
         }
