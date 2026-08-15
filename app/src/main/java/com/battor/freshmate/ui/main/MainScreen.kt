@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -42,6 +43,11 @@ fun MainScreen(viewModel: MainViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    NotificationPermissionEffect(
+        request = state.requestNotificationPermission,
+        onHandled = { viewModel.onPermissionRequested() },
+    )
+
     Scaffold(
         topBar = { CenterAlignedTopAppBar(title = { Text("食刻 FreshMate") }) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -55,47 +61,52 @@ fun MainScreen(viewModel: MainViewModel) {
         },
     ) { padding ->
         val editId = state.editing?.editingItemId
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            state.editing?.let { editing ->
-                item(key = "editing_form") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GroupHeader(editing.createdAt)
-                        ItemForm(
-                            state = editing,
-                            onStateChange = { newState -> viewModel.updateEditing { newState } },
-                            onPlaceholderHint = { hint ->
-                                scope.launch { snackbarHostState.showSnackbar(hint) }
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            PermissionBanners()
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                state.editing?.let { editing ->
+                    item(key = "editing_form") {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            GroupHeader(editing.createdAt)
+                            ItemForm(
+                                state = editing,
+                                onStateChange = { newState ->
+                                    viewModel.updateEditing { newState }
+                                },
+                                onPlaceholderHint = { hint ->
+                                    scope.launch { snackbarHostState.showSnackbar(hint) }
+                                },
+                            )
+                        }
+                    }
+                }
+                state.groups.forEach { group ->
+                    item(key = "header_${group.createdAt}") {
+                        GroupHeader(group.createdAt)
+                    }
+                    items(group.items.filter { it.id != editId }, key = { it.id }) { item ->
+                        FoodItemCard(
+                            item = item,
+                            onClick = { viewModel.startEdit(item) },
+                            onDelete = {
+                                viewModel.delete(item)
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        "已删除「${item.name}」",
+                                        actionLabel = "撤销",
+                                        duration = SnackbarDuration.Short,
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.undoDelete(item)
+                                    }
+                                }
                             },
                         )
                     }
-                }
-            }
-            state.groups.forEach { group ->
-                item(key = "header_${group.createdAt}") {
-                    GroupHeader(group.createdAt)
-                }
-                items(group.items.filter { it.id != editId }, key = { it.id }) { item ->
-                    FoodItemCard(
-                        item = item,
-                        onClick = { viewModel.startEdit(item) },
-                        onDelete = {
-                            viewModel.delete(item)
-                            scope.launch {
-                                val result = snackbarHostState.showSnackbar(
-                                    "已删除「${item.name}」",
-                                    actionLabel = "撤销",
-                                    duration = SnackbarDuration.Short,
-                                )
-                                if (result == SnackbarResult.ActionPerformed) {
-                                    viewModel.undoDelete(item)
-                                }
-                            }
-                        },
-                    )
                 }
             }
         }
