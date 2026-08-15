@@ -322,6 +322,27 @@ class MainViewModelTest {
         // 徽标随最近一次暂存转移到新组
         assertEquals(now, vm.uiState.value.activeGroup)
     }
+
+    @Test fun `录入时刻截断到分钟保证表单与分组键一致`() = runTest(dispatcher) {
+        now = LocalDateTime.of(2026, 8, 15, 10, 0, 30)
+        saveNew()
+        val key = LocalDateTime.of(2026, 8, 15, 10, 0)
+        assertEquals(key, repo.items.value[0].createdAt)
+        assertEquals(key, vm.uiState.value.activeGroup) // 徽标可与组键匹配
+        assertEquals(key, vm.uiState.value.editing?.createdAt) // 暂存后续录表单仍归属同组
+    }
+
+    @Test fun `编辑含秒的旧数据条目也对齐分组键`() = runTest(dispatcher) {
+        // 模拟修复前入库的历史数据（createdAt 含秒）
+        val legacy = FoodItem(
+            id = 1, name = "旧数据", category = Category.DAIRY, productionDate = null,
+            shelfLifeDays = 7, quantity = null,
+            createdAt = LocalDateTime.of(2026, 8, 14, 9, 0, 45),
+        )
+        repo.items.value = listOf(legacy)
+        vm.startEdit(legacy)
+        assertEquals(LocalDateTime.of(2026, 8, 14, 9, 0), vm.uiState.value.editing?.createdAt)
+    }
 }
 
 class FakeRepository : FoodRepository {

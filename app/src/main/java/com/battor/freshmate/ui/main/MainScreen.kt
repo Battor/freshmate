@@ -85,7 +85,7 @@ fun MainScreen(viewModel: MainViewModel) {
             ) {
                 val editing = state.editing
                 // 新组（表单目标组尚无条目）：顶部渲染仅含组头 + 表单的框，不重排现有组
-                if (editing != null && state.items.none { it.createdAt == editing.createdAt }) {
+                if (editing != null && state.items.none { groupKey(it.createdAt) == editing.createdAt }) {
                     item(key = "new_group_form") {
                         GroupBox(
                             createdAt = editing.createdAt,

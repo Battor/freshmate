@@ -24,11 +24,18 @@ import kotlinx.coroutines.launch
 data class FoodItemGroup(val createdAt: LocalDateTime, val items: List<FoodItem>)
 
 fun groupItems(items: List<FoodItem>): List<FoodItemGroup> =
-    items.groupBy { it.createdAt.truncatedTo(ChronoUnit.MINUTES) }
+    items.groupBy { groupKey(it.createdAt) }
         .map { (minute, list) ->
             FoodItemGroup(minute, list.sortedByDescending { it.createdAt })
         }
         .sortedByDescending { it.createdAt }
+
+/**
+ * 组键：录入时刻截断到分钟。分组、表单归属组、徽标比对共用同一把钥匙——
+ * 若表单/条目持有精确到秒的时刻，将无法与组键匹配，导致表单无处渲染
+ * （表现为点击卡片后卡片消失且看不到表单）。
+ */
+fun groupKey(time: LocalDateTime): LocalDateTime = time.truncatedTo(ChronoUnit.MINUTES)
 
 class MainViewModel(
     private val repository: FoodRepository,
@@ -67,7 +74,7 @@ class MainViewModel(
 
         /** 「本次添加」组内的条目。 */
         val activeGroupItems: List<FoodItem>
-            get() = activeGroup?.let { a -> items.filter { it.createdAt == a } } ?: emptyList()
+            get() = activeGroup?.let { a -> items.filter { groupKey(it.createdAt) == a } } ?: emptyList()
     }
 
     private val _uiState = MutableStateFlow(UiState())
@@ -96,7 +103,7 @@ class MainViewModel(
     fun startNew(method: InputMethodId) {
         if (saving) return
         _uiState.update {
-            it.copy(editing = EditingState(inputMethod = method, createdAt = nowProvider()))
+            it.copy(editing = EditingState(inputMethod = method, createdAt = groupKey(nowProvider())))
         }
     }
 
@@ -104,7 +111,7 @@ class MainViewModel(
     fun startAddTo(createdAt: LocalDateTime) {
         if (saving) return
         _uiState.update {
-            it.copy(editing = EditingState(inputMethod = InputMethodId.MANUAL, createdAt = createdAt))
+            it.copy(editing = EditingState(inputMethod = InputMethodId.MANUAL, createdAt = groupKey(createdAt)))
         }
     }
 
@@ -126,7 +133,7 @@ class MainViewModel(
                     shelfLifeValue = item.shelfLifeDays.toString(),
                     shelfLifeUnit = ShelfLifeUnit.DAY,
                     quantity = item.quantity ?: "",
-                    createdAt = item.createdAt,
+                    createdAt = groupKey(item.createdAt),
                 ),
             )
         }
@@ -214,7 +221,7 @@ class MainViewModel(
                 productionDate = editing.productionDate,
                 shelfLifeDays = days,
                 quantity = editing.quantity.trim().ifEmpty { null },
-                createdAt = editing.createdAt,
+                createdAt = groupKey(editing.createdAt),
             )
             val itemId = try {
                 if (editing.editingItemId == null) {
