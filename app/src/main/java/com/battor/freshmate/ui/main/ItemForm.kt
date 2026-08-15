@@ -6,6 +6,8 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -14,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -22,8 +26,8 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -32,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,10 +62,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-/** 快捷保质期：3天 / 7天 / 30天 / 3个月 / 6个月 / 1年（设计文档 §5.3） */
+/** 快捷保质期：30天 / 3个月 / 6个月 / 1年（2026-08-15 用户反馈去掉 3天/7天） */
 private val QuickShelfLives = listOf(
-    Triple("3天", 3, ShelfLifeUnit.DAY),
-    Triple("7天", 7, ShelfLifeUnit.DAY),
     Triple("30天", 30, ShelfLifeUnit.DAY),
     Triple("3个月", 3, ShelfLifeUnit.MONTH),
     Triple("6个月", 6, ShelfLifeUnit.MONTH),
@@ -202,14 +205,33 @@ private fun ProductionDateField(
     onChange: (LocalDate?) -> Unit,
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    Column {
-        OutlinedButton(onClick = { showPicker = true }) {
-            Text(productionDate?.let { "生产日期：$it（点击修改）" } ?: "生产日期：不填则按录入日起算")
-        }
-        if (productionDate != null) {
-            TextButton(onClick = { onChange(null) }) { Text("清除生产日期") }
+    // 只读输入框不响应 onValueChange，通过 interactionSource 捕获点击弹出日历
+    val interactionSource = remember { MutableInteractionSource() }
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) showPicker = true
         }
     }
+
+    OutlinedTextField(
+        value = productionDate?.toString() ?: "",
+        onValueChange = {},
+        readOnly = true,
+        interactionSource = interactionSource,
+        label = { Text("生产日期") },
+        placeholder = { Text("不填则按录入日起算") },
+        singleLine = true,
+        trailingIcon = if (productionDate != null) {
+            {
+                IconButton(onClick = { onChange(null) }) {
+                    Icon(Icons.Filled.Close, contentDescription = "清除生产日期")
+                }
+            }
+        } else {
+            null
+        },
+        modifier = Modifier.fillMaxWidth(),
+    )
     if (showPicker) {
         val pickerState = rememberDatePickerState(
             initialSelectedDateMillis = productionDate

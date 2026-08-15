@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.Cookie
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.SetMeal
-import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material.icons.filled.SoupKitchen
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,5 +21,4 @@ fun categoryIcon(category: Category): ImageVector = when (category) {
     Category.STAPLE -> Icons.Filled.BakeryDining
     Category.FROZEN -> Icons.Filled.AcUnit
     Category.CONDIMENT -> Icons.Filled.SoupKitchen
-    Category.OTHER -> Icons.Filled.ShoppingBasket
 }

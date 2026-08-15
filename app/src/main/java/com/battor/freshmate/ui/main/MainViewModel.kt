@@ -40,7 +40,7 @@ class MainViewModel(
         val inputMethod: InputMethodId = InputMethodId.MANUAL,
         val editingItemId: Long? = null, // null = 新建
         val name: String = "",
-        val category: Category = Category.OTHER,
+        val category: Category = Category.FRUITS_VEG,
         val productionDate: LocalDate? = null,
         val shelfLifeValue: String = "",
         val shelfLifeUnit: ShelfLifeUnit = ShelfLifeUnit.DAY,
