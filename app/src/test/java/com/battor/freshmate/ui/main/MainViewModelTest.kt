@@ -29,7 +29,7 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
-    private val now = LocalDateTime.of(2026, 8, 15, 10, 0)
+    private var now = LocalDateTime.of(2026, 8, 15, 10, 0)
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repo: FakeRepository
     private lateinit var scheduler: FakeScheduler
@@ -81,12 +81,12 @@ class MainViewModelTest {
         assertEquals(7, repo.items.value[0].shelfLifeDays)
         assertEquals(now, repo.items.value[0].createdAt)
         assertEquals(1, scheduler.scheduled.size)
-        // 暂存后表单清空但批量会话继续
+        // 暂存后表单清空继续，「本次添加」徽标指向该组
         val editing = vm.uiState.value.editing
         assertNotNull(editing)
         assertTrue(editing!!.name.isEmpty())
-        assertNotNull(vm.uiState.value.batch)
-        assertEquals(1, vm.uiState.value.batchItems.size)
+        assertEquals(now, vm.uiState.value.activeGroup)
+        assertEquals(1, vm.uiState.value.activeGroupItems.size)
     }
 
     @Test fun `填写单位换算成天数入库`() = runTest(dispatcher) {
@@ -114,11 +114,11 @@ class MainViewModelTest {
         assertNull(vm.uiState.value.pendingSave)
     }
 
-    @Test fun `放弃清空编辑状态并结束批量会话`() = runTest(dispatcher) {
+    @Test fun `放弃新表单返回时徽标不受影响`() = runTest(dispatcher) {
         vm.startNew(InputMethodId.MANUAL)
-        vm.discard()
+        vm.backToMethodSelection()
         assertNull(vm.uiState.value.editing)
-        assertNull(vm.uiState.value.batch)
+        assertNull(vm.uiState.value.activeGroup)
         assertTrue(repo.items.value.isEmpty())
     }
 
@@ -138,7 +138,6 @@ class MainViewModelTest {
 
     @Test fun `编辑已有条目保留录入时间`() = runTest(dispatcher) {
         saveNew()
-        vm.finishBatch()
         val item = repo.items.value[0]
         vm.startEdit(item)
         vm.updateEditing { it.copy(name = "鲜牛奶") }
@@ -244,7 +243,7 @@ class MainViewModelTest {
         saveNew(name = "面包")
         assertEquals(2, repo.items.value.size)
         assertEquals(repo.items.value[0].createdAt, repo.items.value[1].createdAt)
-        assertEquals(2, vm.uiState.value.batchItems.size)
+        assertEquals(2, vm.uiState.value.activeGroupItems.size)
     }
 
     @Test fun `暂存后表单清空但保留输入方式和分类`() = runTest(dispatcher) {
@@ -271,36 +270,57 @@ class MainViewModelTest {
         assertNull(editing.productionDate)
     }
 
-    @Test fun `返回输入方式选择关闭表单但保留会话`() = runTest(dispatcher) {
+    @Test fun `返回放弃表单时徽标不动`() = runTest(dispatcher) {
         saveNew()
         vm.startNew(InputMethodId.VOICE)
         vm.backToMethodSelection()
         assertNull(vm.uiState.value.editing)
-        assertNotNull(vm.uiState.value.batch)
-        assertEquals(1, vm.uiState.value.batchItems.size)
+        assertEquals(now, vm.uiState.value.activeGroup)
+        assertEquals(1, vm.uiState.value.activeGroupItems.size)
     }
 
-    @Test fun `完成后结束批量会话`() = runTest(dispatcher) {
+    @Test fun `点组续加复用该组的录入时间`() = runTest(dispatcher) {
         saveNew()
-        vm.finishBatch()
-        assertNull(vm.uiState.value.batch)
-        assertNull(vm.uiState.value.editing)
-        // 已入库条目保留为普通条目
-        assertEquals(1, repo.items.value.size)
-        assertEquals(0, vm.uiState.value.batchItems.size)
+        now = now.plusMinutes(5)
+        val oldGroup = repo.items.value[0].createdAt
+        vm.startAddTo(oldGroup)
+        vm.updateEditing { it.copy(name = "面包", shelfLifeValue = "3") }
+        vm.save()
+        advanceUntilIdle()
+        assertEquals(2, repo.items.value.size)
+        assertTrue(repo.items.value.all { it.createdAt == oldGroup })
     }
 
-    @Test fun `无会话时开始录入会创建会话`() = runTest(dispatcher) {
-        vm.startNew(InputMethodId.MANUAL)
-        assertNotNull(vm.uiState.value.batch)
-        assertEquals(now, vm.uiState.value.batch!!.createdAt)
+    @Test fun `暂存成功后徽标转移到目标组`() = runTest(dispatcher) {
+        saveNew()
+        now = now.plusMinutes(5)
+        val oldGroup = repo.items.value[0].createdAt
+        vm.startAddTo(oldGroup)
+        vm.updateEditing { it.copy(name = "面包", shelfLifeValue = "3") }
+        vm.save()
+        advanceUntilIdle()
+        assertEquals(oldGroup, vm.uiState.value.activeGroup)
+        assertEquals(2, vm.uiState.value.activeGroupItems.size)
     }
 
-    @Test fun `完成时表单若开着也一并关闭`() = runTest(dispatcher) {
-        vm.startNew(InputMethodId.MANUAL)
-        vm.finishBatch()
+    @Test fun `点组续加未暂存返回时徽标不动`() = runTest(dispatcher) {
+        saveNew()
+        now = now.plusMinutes(5)
+        val oldGroup = repo.items.value[0].createdAt
+        vm.startAddTo(oldGroup)
+        vm.backToMethodSelection()
+        assertEquals(oldGroup, vm.uiState.value.activeGroup)
         assertNull(vm.uiState.value.editing)
-        assertNull(vm.uiState.value.batch)
+    }
+
+    @Test fun `加菜单每次新开一组`() = runTest(dispatcher) {
+        saveNew()
+        now = now.plusMinutes(5)
+        saveNew(name = "面包")
+        assertEquals(2, repo.items.value.size)
+        assertEquals(2, repo.items.value.map { it.createdAt }.toSet().size)
+        // 徽标随最近一次暂存转移到新组
+        assertEquals(now, vm.uiState.value.activeGroup)
     }
 }
 
