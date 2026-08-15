@@ -1,6 +1,7 @@
 package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -48,7 +49,20 @@ fun MainScreen(viewModel: MainViewModel) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // 编辑中的表单卡片在 Task 12 插到这里
+            state.editing?.let { editing ->
+                item(key = "editing_form") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GroupHeader(editing.createdAt)
+                        ItemForm(
+                            state = editing,
+                            onStateChange = { newState -> viewModel.updateEditing { newState } },
+                            onPlaceholderHint = { hint ->
+                                scope.launch { snackbarHostState.showSnackbar(hint) }
+                            },
+                        )
+                    }
+                }
+            }
             state.groups.forEach { group ->
                 item(key = "header_${group.createdAt}") {
                     GroupHeader(group.createdAt)
