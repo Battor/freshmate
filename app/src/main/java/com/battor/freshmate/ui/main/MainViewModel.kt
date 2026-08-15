@@ -53,14 +53,23 @@ class MainViewModel(
     /** 有提醒时点已过、等待用户确认的保存（设计文档 §6）。 */
     data class PendingSave(val editing: EditingState, val days: Int, val skippedReminders: Int)
 
+    /** 批量添加会话：同会话内新增条目共享 createdAt，列表中以「本次添加」区块展示（2026-08-15 验收反馈）。 */
+    data class BatchState(val createdAt: LocalDateTime)
+
     data class UiState(
         val items: List<FoodItem> = emptyList(),
         val groups: List<FoodItemGroup> = emptyList(),
         val editing: EditingState? = null,
+        val batch: BatchState? = null,
         val pendingSave: PendingSave? = null,
         val requestNotificationPermission: Boolean = false,
     ) {
         val isEditing: Boolean get() = editing != null
+        val isBatchForm: Boolean get() = editing != null && editing.editingItemId == null
+
+        /** 本次批量会话已暂存（入库）的条目。 */
+        val batchItems: List<FoodItem>
+            get() = batch?.let { b -> items.filter { it.createdAt == b.createdAt } } ?: emptyList()
     }
 
     private val _uiState = MutableStateFlow(UiState())
@@ -87,8 +96,25 @@ class MainViewModel(
 
     fun startNew(method: InputMethodId) {
         _uiState.update {
-            it.copy(editing = EditingState(inputMethod = method, createdAt = nowProvider()))
+            // 无会话则开启新批量会话；表单 createdAt 用会话时刻，保证同批条目精确同组
+            val batch = it.batch ?: BatchState(nowProvider())
+            it.copy(
+                batch = batch,
+                editing = EditingState(inputMethod = method, createdAt = batch.createdAt),
+            )
         }
+    }
+
+    /** 批量模式中关闭表单、退回输入方式选择，会话继续（+ 菜单「完成」可用）。 */
+    fun backToMethodSelection() {
+        if (saving) return
+        _uiState.update { it.copy(editing = null) }
+    }
+
+    /** 结束批量会话（「完成」）；已入库条目保留为普通条目。 */
+    fun finishBatch() {
+        if (saving) return
+        _uiState.update { it.copy(editing = null, batch = null) }
     }
 
     fun startEdit(item: FoodItem) {
@@ -147,9 +173,10 @@ class MainViewModel(
         _uiState.update { it.copy(pendingSave = null) }
     }
 
+    /** 放弃：丢弃未提交的表单并结束批量会话（已入库条目保留为普通条目）。 */
     fun discard() {
         if (saving) return // 保存进行中不允许放弃，避免与落库竞争
-        _uiState.update { it.copy(editing = null, pendingSave = null) }
+        _uiState.update { it.copy(editing = null, batch = null, pendingSave = null) }
     }
 
     fun delete(item: FoodItem) {
@@ -213,11 +240,27 @@ class MainViewModel(
             }
             val saved = item.copy(id = itemId)
             scheduleOrCancel(saved)
-            _uiState.update { it.copy(editing = null) }
+            _uiState.update {
+                // 新条目暂存后表单清空继续（批量模式）；编辑已有条目仍是保存即退出
+                val editing = if (editing.editingItemId == null) clearedForm(editing) else null
+                it.copy(editing = editing)
+            }
             if (!permissionRequested) {
                 permissionRequested = true
                 _uiState.update { it.copy(requestNotificationPermission = true) }
             }
         }
     }
+
+    /**
+     * 暂存一条后返回的"下一张空白表单"（2026-08-15 用户选定策略：保留输入方式和分类）。
+     *
+     * 名称/日期/保质期/数量/错误标记必须清空（数据安全）；createdAt 必须沿用会话时刻
+     * （否则下一条会脱离「本次添加」分组）。
+     */
+    private fun clearedForm(current: EditingState): EditingState = EditingState(
+        inputMethod = current.inputMethod,
+        category = current.category,
+        createdAt = current.createdAt,
+    )
 }

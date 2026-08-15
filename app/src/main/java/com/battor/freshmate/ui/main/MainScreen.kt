@@ -18,6 +18,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -62,10 +63,15 @@ fun MainScreen(viewModel: MainViewModel) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FabMenu(
-                isEditing = state.isEditing,
+                formOpen = state.isEditing,
+                isBatchForm = state.isBatchForm,
+                batchActive = state.batch != null,
+                stagedCount = state.batchItems.size,
                 onStartInput = { viewModel.startNew(it) },
                 onSave = { viewModel.save() },
                 onDiscard = { viewModel.discard() },
+                onBackToSelection = { viewModel.backToMethodSelection() },
+                onFinishBatch = { viewModel.finishBatch() },
             )
         },
     ) { padding ->
@@ -93,9 +99,37 @@ fun MainScreen(viewModel: MainViewModel) {
                         }
                     }
                 }
-                // 先过滤被编辑条目再渲染，避免仅有单条目的组在编辑时残留空组头
+                val batchItemIds = state.batchItems.map { it.id }.toSet()
+                if (batchItemIds.isNotEmpty()) {
+                    item(key = "batch_section_header") { BatchHeader(state.batchItems.size) }
+                    items(state.batchItems, key = { it.id }) { item ->
+                        FoodItemCard(
+                            item = item,
+                            onClick = { viewModel.startEdit(item) },
+                            onDelete = {
+                                viewModel.delete(item)
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        "已删除「${item.name}」",
+                                        actionLabel = "撤销",
+                                        duration = SnackbarDuration.Short,
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.undoDelete(item)
+                                    }
+                                }
+                            },
+                            highlight = true,
+                        )
+                    }
+                }
+                // 先过滤被编辑条目和本次批量条目再渲染，避免编辑/批量时残留空组头
                 val visibleGroups = state.groups
-                    .map { it.copy(items = it.items.filterNot { item -> item.id == editId }) }
+                    .map {
+                        it.copy(
+                            items = it.items.filterNot { item -> item.id == editId || item.id in batchItemIds },
+                        )
+                    }
                     .filter { it.items.isNotEmpty() }
                 visibleGroups.forEach { group ->
                     item(key = "header_${group.createdAt}") {
@@ -151,6 +185,22 @@ private fun GroupHeader(createdAt: LocalDateTime) {
         Text(
             createdAt.format(GroupHeaderFormat),
             color = Color.White,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        )
+    }
+}
+
+/** 「本次添加」批量区块的标题，主色与灰色组头区分。 */
+@Composable
+private fun BatchHeader(count: Int) {
+    Surface(
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(10.dp),
+    ) {
+        Text(
+            "本次添加 · $count 条",
+            color = MaterialTheme.colorScheme.onPrimary,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )

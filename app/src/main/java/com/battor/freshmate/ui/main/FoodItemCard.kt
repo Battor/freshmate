@@ -1,6 +1,7 @@
 package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -42,6 +44,7 @@ fun FoodItemCard(
     item: FoodItem,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    highlight: Boolean = false,
 ) {
     val now = remember { LocalDateTime.now() }
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
@@ -91,6 +94,12 @@ fun FoodItemCard(
             onClick = onClick,
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = container),
+            // 「本次添加」批量条目用主色描边区分（状态色保留）
+            border = if (highlight) {
+                BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            } else {
+                null
+            },
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(

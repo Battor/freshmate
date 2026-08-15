@@ -81,7 +81,12 @@ class MainViewModelTest {
         assertEquals(7, repo.items.value[0].shelfLifeDays)
         assertEquals(now, repo.items.value[0].createdAt)
         assertEquals(1, scheduler.scheduled.size)
-        assertNull(vm.uiState.value.editing)
+        // 暂存后表单清空但批量会话继续
+        val editing = vm.uiState.value.editing
+        assertNotNull(editing)
+        assertTrue(editing!!.name.isEmpty())
+        assertNotNull(vm.uiState.value.batch)
+        assertEquals(1, vm.uiState.value.batchItems.size)
     }
 
     @Test fun `填写单位换算成天数入库`() = runTest(dispatcher) {
@@ -109,10 +114,11 @@ class MainViewModelTest {
         assertNull(vm.uiState.value.pendingSave)
     }
 
-    @Test fun `放弃清空编辑状态`() = runTest(dispatcher) {
+    @Test fun `放弃清空编辑状态并结束批量会话`() = runTest(dispatcher) {
         vm.startNew(InputMethodId.MANUAL)
         vm.discard()
         assertNull(vm.uiState.value.editing)
+        assertNull(vm.uiState.value.batch)
         assertTrue(repo.items.value.isEmpty())
     }
 
@@ -132,6 +138,7 @@ class MainViewModelTest {
 
     @Test fun `编辑已有条目保留录入时间`() = runTest(dispatcher) {
         saveNew()
+        vm.finishBatch()
         val item = repo.items.value[0]
         vm.startEdit(item)
         vm.updateEditing { it.copy(name = "鲜牛奶") }
@@ -140,6 +147,8 @@ class MainViewModelTest {
         assertEquals(1, repo.items.value.size)
         assertEquals("鲜牛奶", repo.items.value[0].name)
         assertEquals(now, repo.items.value[0].createdAt)
+        // 编辑已有条目是单条保存语义：保存即退出表单
+        assertNull(vm.uiState.value.editing)
     }
 
     @Test fun `首次保存后请求通知权限`() = runTest(dispatcher) {
@@ -228,6 +237,70 @@ class MainViewModelTest {
         vm.save()
         advanceUntilIdle()
         assertEquals(1, repo.items.value.size)
+    }
+
+    @Test fun `同批多次暂存共享录入时间`() = runTest(dispatcher) {
+        saveNew()
+        saveNew(name = "面包")
+        assertEquals(2, repo.items.value.size)
+        assertEquals(repo.items.value[0].createdAt, repo.items.value[1].createdAt)
+        assertEquals(2, vm.uiState.value.batchItems.size)
+    }
+
+    @Test fun `暂存后表单清空但保留输入方式和分类`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.VOICE)
+        vm.updateEditing {
+            it.copy(
+                name = "牛奶",
+                shelfLifeValue = "7",
+                category = Category.DAIRY,
+                quantity = "2",
+                productionDate = LocalDate.of(2026, 8, 14),
+            )
+        }
+        vm.save()
+        advanceUntilIdle()
+        val editing = vm.uiState.value.editing
+        assertNotNull(editing)
+        assertEquals(InputMethodId.VOICE, editing!!.inputMethod)
+        assertEquals(Category.DAIRY, editing.category)
+        assertEquals(now, editing.createdAt) // 会话时刻沿用，下一条仍归入同组
+        assertTrue(editing.name.isEmpty())
+        assertTrue(editing.shelfLifeValue.isEmpty())
+        assertTrue(editing.quantity.isEmpty())
+        assertNull(editing.productionDate)
+    }
+
+    @Test fun `返回输入方式选择关闭表单但保留会话`() = runTest(dispatcher) {
+        saveNew()
+        vm.startNew(InputMethodId.VOICE)
+        vm.backToMethodSelection()
+        assertNull(vm.uiState.value.editing)
+        assertNotNull(vm.uiState.value.batch)
+        assertEquals(1, vm.uiState.value.batchItems.size)
+    }
+
+    @Test fun `完成后结束批量会话`() = runTest(dispatcher) {
+        saveNew()
+        vm.finishBatch()
+        assertNull(vm.uiState.value.batch)
+        assertNull(vm.uiState.value.editing)
+        // 已入库条目保留为普通条目
+        assertEquals(1, repo.items.value.size)
+        assertEquals(0, vm.uiState.value.batchItems.size)
+    }
+
+    @Test fun `无会话时开始录入会创建会话`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        assertNotNull(vm.uiState.value.batch)
+        assertEquals(now, vm.uiState.value.batch!!.createdAt)
+    }
+
+    @Test fun `完成时表单若开着也一并关闭`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        vm.finishBatch()
+        assertNull(vm.uiState.value.editing)
+        assertNull(vm.uiState.value.batch)
     }
 }
 
