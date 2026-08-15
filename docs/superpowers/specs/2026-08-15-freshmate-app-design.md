@@ -1,0 +1,161 @@
+# 食刻 FreshMate — 设计文档
+
+日期：2026-08-15
+状态：已与需求方逐段确认
+
+## 1. 概述
+
+**食刻 FreshMate** 是一个 Android 单机应用，用于记录购买食品的保质期，在临近过期时发出通知提醒，避免遗忘导致的浪费。
+
+- 纯单机，无服务端，数据存本地（系统内置 SQLite，经 Room 访问）。
+- 仅 Android 手机端，UI 语言：中文。
+- 第一版（v1）范围：手动录入、列表展示、过期提醒；语音/图片输入仅做界面与接口占位，识别能力后续版本接入。
+
+## 2. 技术基线
+
+| 项 | 选择 |
+|---|---|
+| 语言 | Kotlin |
+| UI | Jetpack Compose + Material 3（系统组件，不自定义复杂控件） |
+| 最低版本 | Android 10（minSdk 29） |
+| 目标版本 | 当前最新稳定版 targetSdk |
+| 存储 | Room（SQLite） |
+| 提醒调度 | AlarmManager 精确闹钟 + BroadcastReceiver |
+| 架构 | 单 `app` 模块，MVVM，包内分层 |
+
+配色：扁平化、多圆角。Android 12+ 使用 Material 3 动态取色（Dynamic Color）；Android 10–11 使用预设的明快（多巴胺）配色主题。
+
+## 3. 包结构
+
+```
+com.freshmate.app
+├── data          # FoodItem 实体、DAO、RoomDatabase、Repository
+├── ui
+│   ├── main      # 主列表页（列表 + FAB + 输入表单）
+│   └── theme     # Material 3 主题与配色
+├── inputmethod   # InputMethod 接口 + Manual/Voice/Image 三个实现
+├── notification  # 提醒调度（AlarmManager）+ 通知构建 + 开机重排
+└── util          # 日期/保质期计算等纯函数
+```
+
+分层依赖方向：`ui` → `data`；`ui` → `notification`；`inputmethod` 只被 `ui.main` 引用；`util` 无依赖。
+
+## 4. 数据模型
+
+`FoodItem` 表（Room，一条记录 = 一个食品）：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `id` | Long，主键自增 | |
+| `name` | String | 食品名称，必填 |
+| `category` | Category 枚举 | 见下 |
+| `productionDate` | LocalDate? | 可选；为 null 时以录入当天起算 |
+| `shelfLifeDays` | Int | 保质期天数（录入时统一换算；1 个月=30 天，1 年=365 天） |
+| `quantity` | String | 数量，自由文本（如 "2"、"500g"），可选 |
+| `createdAt` | LocalDateTime | 录入时间，列表分组依据 |
+
+**Category 枚举（9 类，各配 Material 图标）**：果蔬、肉蛋、乳品、饮料、零食、主食、冷冻、调味、其他。
+
+**派生数据不落库**：
+- 到期时间 = `(productionDate ?? createdAt 的日期) + shelfLifeDays`，查询时计算。
+- 剩余时长 = 到期时间 − 当前时间。
+- 已过期即剩余 ≤ 0：条目保留在列表中，深红警示色标注"已过期 x 天"，由用户手动删除，不自动清理。
+
+## 5. 主界面设计
+
+### 5.1 主页面
+
+- 顶部：Material 3 `TopAppBar`，标题"食刻 FreshMate"，无其他动作。
+- 内容区：`LazyColumn`，按 `createdAt` **倒序分组**；每组头部为灰底白字圆角标签，显示该组录入的日期 + 时间。
+- 组内条目为圆角矩形卡片：**分类图标 + 食品名称 + 保质期/剩余时间文本**。
+- 背景色按紧急度分档（绿色 → 黄色 → 橙红 → 深红）：
+
+| 状态 | 条件（剩余占总保质期比例） |
+|---|---|
+| 安全（绿） | > 1/3 |
+| 注意（黄） | ≤ 1/3 |
+| 警告（橙红） | ≤ 1/5 |
+| 紧急（深红） | ≤ 1/6 |
+| 已过期（最深红，"已过期 x 天"） | ≤ 0 |
+
+颜色使用 Material 3 tonal palette 容器色，保证其上文字可读。
+
+### 5.2 悬浮按钮（FAB）与录入流程
+
+- 右下角 `+` FAB，点击展开悬浮菜单，自上而下 4 项（图标 + 文字）：**手动输入、语音输入、图片输入、完成**。
+- "完成"= 确认保存当前编辑中的表单（与表单内对勾等价）。
+- 选择任一输入方式后：
+  1. 内容区顶部插入一个编辑中条目：组头显示当前日期时间，下方为绿色背景表单卡片，原列表内容自动下移；
+  2. FAB 菜单切换为两项：**对勾（保存）/ 叉号（放弃）**；
+  3. 保存成功或放弃后，FAB 菜单还原为 4 项，表单收起。
+
+### 5.3 输入表单（三种方式共用）
+
+通过 `InputMethod` 接口抽象输入方式：
+
+```kotlin
+interface InputMethod {
+    val menuIcon: ImageVector       // 悬浮菜单图标
+    val menuLabel: String           // 悬浮菜单文字
+    val extraAction: InputExtraAction?  // 附加操作（语音/图片各多一个图标），手动输入为 null
+    fun onExtraAction(state: FormState) // 附加操作行为
+}
+```
+
+- 实现：`ManualInputMethod`（extraAction 为 null）、`VoiceInputMethod`（长按录音，v1 占位）、`ImageInputMethod`（选择图片，v1 占位）。后续接入识别能力时只替换 `inputmethod` 包内实现，UI 不动。
+- v1 占位行为：语音图标长按播放音频跳动动画占位，图片图标弹出"即将上线"提示。
+- 表单字段（三种模式下均可手动编辑，保留手动输入能力）：
+  - **食品名称**：必填；
+  - **分类**：9 类图标单选；
+  - **生产日期**：可选，默认空 = 按录入日起算；
+  - **保质期**：数字输入 + 单位选择器（天/周/月/年），旁设快捷按钮：3 天、7 天、30 天、3 个月、6 个月、1 年；
+  - **数量**：可选自由文本；
+  - 表单实时显示计算出的到期时间与剩余时长。
+- 校验：名称非空、保质期数字 > 0；不合法时对勾无效，字段下方红字提示，表单不收起。
+
+### 5.4 编辑与删除
+
+- **点击条目** → 在条目原位展开编辑（复用同一表单），FAB 切换为对勾/叉号。
+- **左滑条目** → Material 3 `SwipeToDismissBox` 露出红色删除背景；滑出后删除并弹 Snackbar"撤销"（5 秒内可恢复）。
+- 新增/编辑/删除/撤销均同步重排该条目的提醒闹钟。
+
+## 6. 提醒设计
+
+- 每条食品计算 3 个提醒时点：到期时刻往前倒 `总保质期 × 1/3`、`× 1/5`、`× 1/6`（即剩余 1/3、1/5、1/6 时各提醒一次）。
+- 时点取整到**半小时**（14:47 → 14:30）。
+- 通知内容：分类图标 + "「牛奶」还有 3 天 12 小时到期"。
+- **过期时点已过的处理（不静默跳过）**：
+  - 保存时若 1/3、1/5 时点已过，弹出 Material 3 对话框告知"该食品保质期已过去超过 2/3（或已过期），剩余提醒时点只有 N 个"，用户确认后才保存；
+  - 已过期食品保存后不排任何闹钟。
+- 调度：`AlarmManager.setExactAndAllowWhileIdle()` + `BroadcastReceiver` 发通知；`BOOT_COMPLETED` 接收器在设备重启后重排全部闹钟。
+- 同一时点通知使用唯一 notificationId，不叠加。
+
+## 7. 权限处理
+
+| 权限 | 场景 | 处理 |
+|---|---|---|
+| 通知（POST_NOTIFICATIONS，Android 13+） | 发提醒 | 首次保存食品时运行时申请；拒绝时 App 内顶部横幅提示，不崩溃 |
+| 精确闹钟（SCHEDULE_EXACT_ALARM，Android 12+） | 精确提醒 | 检测 `canScheduleExactAlarms()`；未授予时引导跳系统设置；退化为 `setAndAllowWhileIdle`（非精确但仍可用） |
+| RECEIVE_BOOT_COMPLETED | 重启后重排闹钟 | 清单声明即可 |
+
+v1 不需要网络、存储、麦克风、相机权限。
+
+## 8. 错误处理
+
+- 表单校验失败：见 5.3。
+- 数据库操作经 Repository 统一捕获，失败以 Snackbar 提示"保存失败，请重试"，不崩溃。
+
+## 9. 测试策略
+
+- `util`（到期计算、比例时点、半小时取整）：JUnit 纯函数单测全覆盖——最易错处（如 7 天的 1/5 = 33.6 小时的取整）。
+- DAO：Room in-memory 插查测试。
+- ViewModel：fake Repository 测状态流转（编辑中/保存/放弃/撤销）。
+- UI：Compose UI 测试覆盖核心路径（录入→显示、滑动删除→撤销）。不做截图测试。
+
+## 10. 明确不做（v1）
+
+- 服务端/云同步、多设备
+- 语音识别、图片 OCR（仅占位接口）
+- 用户自定义分类
+- 过期条目自动清理
+- 平板专项适配、桌面端
