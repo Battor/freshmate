@@ -21,6 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,8 +41,16 @@ private val GroupHeaderFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val errorEvent by viewModel.errorEvent.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(errorEvent) {
+        errorEvent?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onErrorShown()
+        }
+    }
 
     NotificationPermissionEffect(
         request = state.requestNotificationPermission,
@@ -84,11 +93,15 @@ fun MainScreen(viewModel: MainViewModel) {
                         }
                     }
                 }
-                state.groups.forEach { group ->
+                // 先过滤被编辑条目再渲染，避免仅有单条目的组在编辑时残留空组头
+                val visibleGroups = state.groups
+                    .map { it.copy(items = it.items.filterNot { item -> item.id == editId }) }
+                    .filter { it.items.isNotEmpty() }
+                visibleGroups.forEach { group ->
                     item(key = "header_${group.createdAt}") {
                         GroupHeader(group.createdAt)
                     }
-                    items(group.items.filter { it.id != editId }, key = { it.id }) { item ->
+                    items(group.items, key = { it.id }) { item ->
                         FoodItemCard(
                             item = item,
                             onClick = { viewModel.startEdit(item) },

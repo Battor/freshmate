@@ -66,6 +66,14 @@ class MainViewModel(
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    /** 一次性错误提示（Snackbar），展示后由 UI 调用 onErrorShown() 清空。 */
+    private val _errorEvent = MutableStateFlow<String?>(null)
+    val errorEvent: StateFlow<String?> = _errorEvent.asStateFlow()
+
+    fun onErrorShown() {
+        _errorEvent.value = null
+    }
+
     private var permissionRequested = false
     private var saving = false
 
@@ -146,16 +154,24 @@ class MainViewModel(
 
     fun delete(item: FoodItem) {
         viewModelScope.launch {
-            repository.delete(item)
-            scheduler.cancel(item.id)
+            try {
+                repository.delete(item)
+                scheduler.cancel(item.id)
+            } catch (e: Exception) {
+                _errorEvent.value = "删除失败，请重试"
+            }
         }
     }
 
     /** 恢复指定的被删条目（避免多条删除排队时撤销错对象）。 */
     fun undoDelete(item: FoodItem) {
         viewModelScope.launch {
-            val id = repository.insert(item.copy(id = 0))
-            scheduleOrCancel(item.copy(id = id))
+            try {
+                val id = repository.insert(item.copy(id = 0))
+                scheduleOrCancel(item.copy(id = id))
+            } catch (e: Exception) {
+                _errorEvent.value = "恢复失败，请重试"
+            }
         }
     }
 
@@ -173,30 +189,34 @@ class MainViewModel(
         if (saving) return // 防重复保存（save()/confirmPendingSave() 均经由本方法落库）
         saving = true
         viewModelScope.launch {
-            try {
-                val item = FoodItem(
-                    id = editing.editingItemId ?: 0,
-                    name = editing.name.trim(),
-                    category = editing.category,
-                    productionDate = editing.productionDate,
-                    shelfLifeDays = days,
-                    quantity = editing.quantity.trim().ifEmpty { null },
-                    createdAt = editing.createdAt,
-                )
-                val saved = if (editing.editingItemId == null) {
-                    item.copy(id = repository.insert(item))
+            val item = FoodItem(
+                id = editing.editingItemId ?: 0,
+                name = editing.name.trim(),
+                category = editing.category,
+                productionDate = editing.productionDate,
+                shelfLifeDays = days,
+                quantity = editing.quantity.trim().ifEmpty { null },
+                createdAt = editing.createdAt,
+            )
+            val itemId = try {
+                if (editing.editingItemId == null) {
+                    repository.insert(item)
                 } else {
                     repository.update(item)
-                    item
+                    item.id
                 }
-                scheduleOrCancel(saved)
-                _uiState.update { it.copy(editing = null) }
-                if (!permissionRequested) {
-                    permissionRequested = true
-                    _uiState.update { it.copy(requestNotificationPermission = true) }
-                }
+            } catch (e: Exception) {
+                _errorEvent.value = "保存失败，请重试"
+                return@launch // 编辑表单保留，等待用户重试
             } finally {
                 saving = false
+            }
+            val saved = item.copy(id = itemId)
+            scheduleOrCancel(saved)
+            _uiState.update { it.copy(editing = null) }
+            if (!permissionRequested) {
+                permissionRequested = true
+                _uiState.update { it.copy(requestNotificationPermission = true) }
             }
         }
     }

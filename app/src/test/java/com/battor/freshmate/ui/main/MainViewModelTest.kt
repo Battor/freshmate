@@ -212,13 +212,35 @@ class MainViewModelTest {
         advanceUntilIdle()
         assertNull(repo.items.value[0].quantity)
     }
+
+    @Test fun `保存失败时提示错误且保留表单`() = runTest(dispatcher) {
+        repo.failNextInsert = true
+        vm.startNew(InputMethodId.MANUAL)
+        vm.updateEditing { it.copy(name = "牛奶", shelfLifeValue = "7") }
+        vm.save()
+        advanceUntilIdle()
+        assertEquals("保存失败，请重试", vm.errorEvent.value)
+        assertNotNull(vm.uiState.value.editing) // 表单保留
+        assertTrue(repo.items.value.isEmpty())
+        vm.onErrorShown()
+        assertNull(vm.errorEvent.value)
+        // 再次保存成功（saving 标志已在失败路径复位）
+        vm.save()
+        advanceUntilIdle()
+        assertEquals(1, repo.items.value.size)
+    }
 }
 
 class FakeRepository : FoodRepository {
     val items = MutableStateFlow<List<FoodItem>>(emptyList())
+    var failNextInsert = false
     private var nextId = 1L
     override fun observeAll(): Flow<List<FoodItem>> = items
     override suspend fun insert(item: FoodItem): Long {
+        if (failNextInsert) {
+            failNextInsert = false
+            throw RuntimeException("db error")
+        }
         val id = nextId++
         items.value = items.value + item.copy(id = id)
         return id
