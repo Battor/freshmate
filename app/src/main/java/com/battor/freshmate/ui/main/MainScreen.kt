@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -17,6 +18,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -26,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.battor.freshmate.notification.ReminderIds
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
@@ -42,6 +45,14 @@ fun MainScreen(viewModel: MainViewModel) {
     Scaffold(
         topBar = { CenterAlignedTopAppBar(title = { Text("食刻 FreshMate") }) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FabMenu(
+                isEditing = state.isEditing,
+                onStartInput = { viewModel.startNew(it) },
+                onSave = { viewModel.save() },
+                onDiscard = { viewModel.discard() },
+            )
+        },
     ) { padding ->
         val editId = state.editing?.editingItemId
         LazyColumn(
@@ -88,6 +99,25 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
             }
         }
+    }
+
+    state.pendingSave?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelPendingSave() },
+            title = { Text("该食品临近过期") },
+            text = {
+                Text(
+                    "「${pending.editing.name}」已有 ${pending.skippedReminders} 个提醒时点过去，" +
+                        "剩余提醒时点 ${ReminderIds.REMINDER_COUNT - pending.skippedReminders} 个。确认保存吗？",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmPendingSave() }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelPendingSave() }) { Text("取消") }
+            },
+        )
     }
 }
 
