@@ -11,14 +11,13 @@ import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.futureReminderTimes
 import java.time.LocalDateTime
 import java.time.ZoneId
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 interface ReminderScheduling {
     fun schedule(item: FoodItem)
     fun cancel(itemId: Long)
-    fun rescheduleAll()
+    suspend fun rescheduleAll()
 }
 
 class ReminderScheduler(private val context: Context) : ReminderScheduling {
@@ -47,13 +46,11 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
         }
     }
 
-    override fun rescheduleAll() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val dao = FoodItemDatabase.get(context).foodItemDao()
-            dao.getAllOnce().forEach { item ->
-                val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
-                if (expiry > LocalDateTime.now()) schedule(item) else cancel(item.id)
-            }
+    override suspend fun rescheduleAll() = withContext(Dispatchers.IO) {
+        val dao = FoodItemDatabase.get(context).foodItemDao()
+        dao.getAllOnce().forEach { item ->
+            val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
+            if (expiry > LocalDateTime.now()) schedule(item) else cancel(item.id)
         }
     }
 
