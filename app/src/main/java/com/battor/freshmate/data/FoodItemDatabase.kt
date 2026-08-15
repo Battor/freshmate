@@ -17,7 +17,7 @@ class Converters {
         v?.let(LocalDateTime::parse)
 }
 
-@Database(entities = [FoodItem::class], version = 1, exportSchema = false)
+@Database(entities = [FoodItem::class], version = 1, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class FoodItemDatabase : RoomDatabase() {
     abstract fun foodItemDao(): FoodItemDao
