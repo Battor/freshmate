@@ -68,6 +68,7 @@ class MainViewModel(
 
     private var permissionRequested = false
     private var lastDeleted: FoodItem? = null
+    private var saving = false
 
     init {
         viewModelScope.launch {
@@ -140,6 +141,7 @@ class MainViewModel(
     }
 
     fun discard() {
+        if (saving) return // 保存进行中不允许放弃，避免与落库竞争
         _uiState.update { it.copy(editing = null, pendingSave = null) }
     }
 
@@ -156,7 +158,7 @@ class MainViewModel(
         lastDeleted = null
         viewModelScope.launch {
             val id = repository.insert(item.copy(id = 0))
-            scheduler.schedule(item.copy(id = id))
+            scheduleOrCancel(item.copy(id = id))
         }
     }
 
@@ -164,29 +166,40 @@ class MainViewModel(
         _uiState.update { it.copy(requestNotificationPermission = false) }
     }
 
+    /** 未过期则排提醒，已过期则取消（保持调度与数据状态对称）。 */
+    private fun scheduleOrCancel(item: FoodItem) {
+        val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
+        if (expiry > nowProvider()) scheduler.schedule(item) else scheduler.cancel(item.id)
+    }
+
     private fun persist(editing: EditingState, days: Int) {
+        if (saving) return // 防重复保存（save()/confirmPendingSave() 均经由本方法落库）
+        saving = true
         viewModelScope.launch {
-            val item = FoodItem(
-                id = editing.editingItemId ?: 0,
-                name = editing.name.trim(),
-                category = editing.category,
-                productionDate = editing.productionDate,
-                shelfLifeDays = days,
-                quantity = editing.quantity.trim().ifEmpty { null },
-                createdAt = editing.createdAt,
-            )
-            val saved = if (editing.editingItemId == null) {
-                item.copy(id = repository.insert(item))
-            } else {
-                repository.update(item)
-                item
-            }
-            val expiry = expiryDateTime(saved.productionDate, saved.createdAt, saved.shelfLifeDays)
-            if (expiry > nowProvider()) scheduler.schedule(saved) else scheduler.cancel(saved.id)
-            _uiState.update { it.copy(editing = null) }
-            if (!permissionRequested) {
-                permissionRequested = true
-                _uiState.update { it.copy(requestNotificationPermission = true) }
+            try {
+                val item = FoodItem(
+                    id = editing.editingItemId ?: 0,
+                    name = editing.name.trim(),
+                    category = editing.category,
+                    productionDate = editing.productionDate,
+                    shelfLifeDays = days,
+                    quantity = editing.quantity.trim().ifEmpty { null },
+                    createdAt = editing.createdAt,
+                )
+                val saved = if (editing.editingItemId == null) {
+                    item.copy(id = repository.insert(item))
+                } else {
+                    repository.update(item)
+                    item
+                }
+                scheduleOrCancel(saved)
+                _uiState.update { it.copy(editing = null) }
+                if (!permissionRequested) {
+                    permissionRequested = true
+                    _uiState.update { it.copy(requestNotificationPermission = true) }
+                }
+            } finally {
+                saving = false
             }
         }
     }

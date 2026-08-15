@@ -160,6 +160,58 @@ class MainViewModelTest {
         assertEquals(listOf("b", "a"), groups[0].items.map { it.name }) // 同分钟同组，组内倒序
         assertEquals(listOf("c"), groups[1].items.map { it.name })
     }
+
+    @Test fun `取消过期确认不保存`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        vm.updateEditing {
+            it.copy(name = "酸奶", shelfLifeValue = "7", productionDate = LocalDate.of(2026, 8, 1))
+        }
+        vm.save()
+        advanceUntilIdle()
+        vm.cancelPendingSave()
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.pendingSave)
+        assertTrue(repo.items.value.isEmpty())
+    }
+
+    @Test fun `保存已过期食品不排提醒并取消闹钟`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        vm.updateEditing {
+            it.copy(name = "酸奶", shelfLifeValue = "7", productionDate = LocalDate.of(2026, 8, 1))
+        }
+        vm.save()
+        advanceUntilIdle()
+        vm.confirmPendingSave()
+        advanceUntilIdle()
+        val saved = repo.items.value.single()
+        assertTrue(scheduler.scheduled.isEmpty())
+        assertEquals(listOf(saved.id), scheduler.cancelled)
+    }
+
+    @Test fun `撤销恢复保留录入时间`() = runTest(dispatcher) {
+        saveNew()
+        val item = repo.items.value[0]
+        vm.delete(item)
+        advanceUntilIdle()
+        vm.undoDelete()
+        advanceUntilIdle()
+        assertEquals(now, repo.items.value[0].createdAt)
+    }
+
+    @Test fun `第二次保存不再请求通知权限`() = runTest(dispatcher) {
+        saveNew()
+        vm.onPermissionRequested()
+        saveNew(name = "面包")
+        assertFalse(vm.uiState.value.requestNotificationPermission)
+    }
+
+    @Test fun `空白数量保存为null`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        vm.updateEditing { it.copy(name = "牛奶", shelfLifeValue = "7", quantity = "   ") }
+        vm.save()
+        advanceUntilIdle()
+        assertNull(repo.items.value[0].quantity)
+    }
 }
 
 class FakeRepository : FoodRepository {
