@@ -44,12 +44,12 @@ class ReminderUtilsTest {
     @Test
     fun `时点取整到半小时`() {
         // 到期 01-04 18:47，总 72h：1/3=24h → 01-03 18:47 → 18:30；
-        // 1/5=33h → 01-04 04:47 → 04:30；1/6=12h → 01-04 06:47 → 06:30
+        // 1/5=14h24m → 01-04 04:23 → 04:00；1/6=12h → 01-04 06:47 → 06:30
         val e = LocalDateTime.of(2026, 1, 4, 18, 47)
         assertEquals(
             listOf(
                 LocalDateTime.of(2026, 1, 3, 18, 30),
-                LocalDateTime.of(2026, 1, 4, 4, 30),
+                LocalDateTime.of(2026, 1, 4, 4, 0),
                 LocalDateTime.of(2026, 1, 4, 6, 30),
             ),
             reminderTimes(e, 3),
