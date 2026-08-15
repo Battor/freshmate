@@ -28,11 +28,11 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
         cancel(item.id)
         val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
         val times = futureReminderTimes(expiry, item.shelfLifeDays, LocalDateTime.now())
+        val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            alarmManager.canScheduleExactAlarms()
         times.forEachIndexed { index, time ->
             val pi = broadcast(item.id, index)
             val atMillis = time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                alarmManager.canScheduleExactAlarms()
             if (canExact) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pi)
             } else {
@@ -42,7 +42,9 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
     }
 
     override fun cancel(itemId: Long) {
-        (0..2).forEach { index -> alarmManager.cancel(broadcast(itemId, index)) }
+        (0 until ReminderIds.REMINDER_COUNT).forEach { index ->
+            alarmManager.cancel(broadcast(itemId, index))
+        }
     }
 
     override fun rescheduleAll() {

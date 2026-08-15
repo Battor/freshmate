@@ -22,20 +22,35 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val item = FoodItemDatabase.get(context).foodItemDao().getById(itemId)
-                    ?: return@launch
-                val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
-                val remaining = Duration.between(LocalDateTime.now(), expiry)
-                if (remaining.isNegative || remaining.isZero) return@launch
-                val notification = NotificationCompat.Builder(context, ReminderIds.CHANNEL_ID)
-                    .setSmallIcon(R.drawable.ic_reminder)
-                    .setContentTitle("食刻 FreshMate")
-                    .setContentText("「${item.name}」还有 ${formatRemaining(remaining)} 到期")
-                    .setAutoCancel(true)
-                    .build()
-                if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
-                    NotificationManagerCompat.from(context)
-                        .notify(ReminderIds.requestCode(itemId, 0), notification)
+                runCatching {
+                    val item = FoodItemDatabase.get(context).foodItemDao().getById(itemId)
+                        ?: return@runCatching
+                    val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
+                    val remaining = Duration.between(LocalDateTime.now(), expiry)
+                    if (remaining.isNegative || remaining.isZero) return@runCatching
+                    val builder = NotificationCompat.Builder(context, ReminderIds.CHANNEL_ID)
+                        .setSmallIcon(R.drawable.ic_reminder)
+                        .setContentTitle("食刻 FreshMate")
+                        .setContentText("「${item.name}」还有 ${formatRemaining(remaining)} 到期")
+                        .setAutoCancel(true)
+                    val launchIntent =
+                        context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    if (launchIntent != null) {
+                        val contentPi = android.app.PendingIntent.getActivity(
+                            context,
+                            itemId.toInt(),
+                            launchIntent,
+                            android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                                android.app.PendingIntent.FLAG_IMMUTABLE,
+                        )
+                        builder.setContentIntent(contentPi)
+                    }
+                    if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                        NotificationManagerCompat.from(context)
+                            .notify(ReminderIds.requestCode(itemId, 0), builder.build())
+                    }
+                }.onFailure {
+                    android.util.Log.w("ReminderReceiver", "处理提醒失败", it)
                 }
             } finally {
                 pendingResult.finish()
