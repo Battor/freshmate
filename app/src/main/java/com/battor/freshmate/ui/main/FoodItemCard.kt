@@ -24,6 +24,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.battor.freshmate.data.FoodItem
@@ -65,11 +68,20 @@ fun FoodItemCard(
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
+        // TalkBack 用户无法滑动删除，提供自定义无障碍删除动作
+        modifier = Modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction("删除") {
+                    onDelete()
+                    true
+                },
+            )
+        },
         backgroundContent = {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFC62828), RoundedCornerShape(16.dp))
+                    .background(ExpiredRed, RoundedCornerShape(16.dp))
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterEnd,
             ) { Icon(Icons.Filled.Delete, contentDescription = "删除", tint = Color.White) }

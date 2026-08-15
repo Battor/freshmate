@@ -67,7 +67,6 @@ class MainViewModel(
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private var permissionRequested = false
-    private var lastDeleted: FoodItem? = null
     private var saving = false
 
     init {
@@ -146,16 +145,14 @@ class MainViewModel(
     }
 
     fun delete(item: FoodItem) {
-        lastDeleted = item
         viewModelScope.launch {
             repository.delete(item)
             scheduler.cancel(item.id)
         }
     }
 
-    fun undoDelete() {
-        val item = lastDeleted ?: return
-        lastDeleted = null
+    /** 恢复指定的被删条目（避免多条删除排队时撤销错对象）。 */
+    fun undoDelete(item: FoodItem) {
         viewModelScope.launch {
             val id = repository.insert(item.copy(id = 0))
             scheduleOrCancel(item.copy(id = id))

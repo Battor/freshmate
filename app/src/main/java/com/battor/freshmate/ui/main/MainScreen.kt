@@ -66,7 +66,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                     duration = SnackbarDuration.Short,
                                 )
                                 if (result == SnackbarResult.ActionPerformed) {
-                                    viewModel.undoDelete()
+                                    viewModel.undoDelete(item)
                                 }
                             }
                         },

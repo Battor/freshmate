@@ -124,7 +124,7 @@ class MainViewModelTest {
         assertTrue(repo.items.value.isEmpty())
         assertEquals(item.id, scheduler.cancelled.singleOrNull())
 
-        vm.undoDelete()
+        vm.undoDelete(item)
         advanceUntilIdle()
         assertEquals(1, repo.items.value.size)
         assertEquals("牛奶", repo.items.value[0].name)
@@ -193,7 +193,7 @@ class MainViewModelTest {
         val item = repo.items.value[0]
         vm.delete(item)
         advanceUntilIdle()
-        vm.undoDelete()
+        vm.undoDelete(item)
         advanceUntilIdle()
         assertEquals(now, repo.items.value[0].createdAt)
     }
