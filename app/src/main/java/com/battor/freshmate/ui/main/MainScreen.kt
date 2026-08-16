@@ -167,8 +167,9 @@ fun MainScreen(viewModel: MainViewModel) {
 
 /**
  * 组容器（2026-08-16 组容器模型）：边框把组头与子条目框成一组。
- * - 普通：1dp 极浅描边；「本次添加」：2dp 主色描边（仅外框，卡片不加描边）；
- *   正在编辑（表单挂本组）：2dp 主色描边 + 浅主色底，与普通组明显区分。
+ * - 普通：1dp 极浅描边；「本次添加」与正在编辑（表单挂本组）：2dp 主色描边。
+ *   不加背景晕染——组内子项的状态色（绿/黄/橙/红）原样保留，编辑态的醒目
+ *   由主色边框 + 框内 primaryContainer 表单卡片承担。
  * - 点击组头或框内空白区域（boxClick 非 null 时）：无表单 = 续加；本组空表单 = 放弃返回。
  * - 表单挂到本组时在框内原位渲染（新增/编辑统一，列表次序不变），被编辑条目隐藏卡片。
  */
@@ -186,8 +187,7 @@ private fun GroupBox(
     onStateChange: (EditingState) -> Unit,
     onPlaceholderHint: (String) -> Unit,
 ) {
-    val editingHost = form != null
-    val border = if (active || editingHost) {
+    val border = if (active || form != null) {
         BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
     } else {
         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -196,11 +196,7 @@ private fun GroupBox(
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = if (editingHost) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
+        color = MaterialTheme.colorScheme.surface,
         border = border,
         modifier = Modifier
             .fillMaxWidth()
