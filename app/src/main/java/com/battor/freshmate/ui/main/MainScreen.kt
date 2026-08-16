@@ -14,7 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -31,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.Icons
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,7 +49,7 @@ private val GroupHeaderFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(viewModel: MainViewModel, onOpenHistory: () -> Unit, onOpenSettings: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val errorEvent by viewModel.errorEvent.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -64,7 +68,17 @@ fun MainScreen(viewModel: MainViewModel) {
     )
 
     Scaffold(
-        topBar = { CenterAlignedTopAppBar(title = { Text("食刻 FreshMate") }) },
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("食刻 FreshMate") },
+                actions = {
+                    // 设置按钮 Task 11 加入；本任务只放历史入口，避免死按钮
+                    IconButton(onClick = onOpenHistory) {
+                        Icon(Icons.Filled.History, contentDescription = "历史")
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FabMenu(
