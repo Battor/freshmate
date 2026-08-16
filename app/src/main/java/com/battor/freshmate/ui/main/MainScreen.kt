@@ -70,6 +70,7 @@ fun MainScreen(viewModel: MainViewModel) {
             FabMenu(
                 formOpen = state.isEditing,
                 isAddForm = state.isAddForm,
+                showSave = state.hasFormContent,
                 onStartInput = { viewModel.startNew(it) },
                 onSave = { viewModel.save() },
                 onBack = { viewModel.backToMethodSelection() },
@@ -93,10 +94,11 @@ fun MainScreen(viewModel: MainViewModel) {
                             active = false,
                             form = editing,
                             editingItemId = null,
-                            interactionsEnabled = false,
+                            cardsEnabled = false,
+                            // 空表单点框内空白 = 放弃返回；有内容时不响应，防误触丢失
+                            boxClick = if (state.hasFormContent) null else { { viewModel.backToMethodSelection() } },
                             onStartEdit = {},
                             onDeleteItem = {},
-                            onAddTo = {},
                             onStateChange = { newState -> viewModel.updateEditing { newState } },
                             onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
                         )
@@ -105,13 +107,21 @@ fun MainScreen(viewModel: MainViewModel) {
                 // 每组一个组容器；表单目标组在框内原位渲染表单
                 state.groups.forEach { group ->
                     item(key = "group_${group.createdAt}") {
+                        val formHost = editing != null && editing.createdAt == group.createdAt
                         GroupBox(
                             createdAt = group.createdAt,
                             items = group.items,
                             active = group.createdAt == state.activeGroup,
                             form = editing?.takeIf { it.createdAt == group.createdAt },
                             editingItemId = editing?.editingItemId,
-                            interactionsEnabled = editing == null,
+                            cardsEnabled = editing == null,
+                            boxClick = when {
+                                editing == null -> { { viewModel.startAddTo(group.createdAt) } }
+                                formHost && !state.hasFormContent -> {
+                                    { viewModel.backToMethodSelection() }
+                                }
+                                else -> null
+                            },
                             onStartEdit = { viewModel.startEdit(it) },
                             onDeleteItem = { item ->
                                 viewModel.delete(item)
@@ -126,7 +136,6 @@ fun MainScreen(viewModel: MainViewModel) {
                                     }
                                 }
                             },
-                            onAddTo = { viewModel.startAddTo(group.createdAt) },
                             onStateChange = { newState -> viewModel.updateEditing { newState } },
                             onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
                         )
@@ -157,9 +166,10 @@ fun MainScreen(viewModel: MainViewModel) {
 }
 
 /**
- * 组容器（2026-08-16 组容器模型）：非常浅色的边框把组头与子条目框成一组。
- * - 活跃组（「本次添加」）主色描边，组头追加小字提示，卡片主色描边；
- * - 点击组头或框内空白区域可继续往该组添加（表单打开期间禁用）；
+ * 组容器（2026-08-16 组容器模型）：边框把组头与子条目框成一组。
+ * - 普通：1dp 极浅描边；「本次添加」：2dp 主色描边（仅外框，卡片不加描边）；
+ *   正在编辑（表单挂本组）：2dp 主色描边 + 浅主色底，与普通组明显区分。
+ * - 点击组头或框内空白区域（boxClick 非 null 时）：无表单 = 续加；本组空表单 = 放弃返回。
  * - 表单挂到本组时在框内原位渲染（新增/编辑统一，列表次序不变），被编辑条目隐藏卡片。
  */
 @Composable
@@ -169,31 +179,36 @@ private fun GroupBox(
     active: Boolean,
     form: EditingState?,
     editingItemId: Long?,
-    interactionsEnabled: Boolean,
+    cardsEnabled: Boolean,
+    boxClick: (() -> Unit)?,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
-    onAddTo: () -> Unit,
     onStateChange: (EditingState) -> Unit,
     onPlaceholderHint: (String) -> Unit,
 ) {
-    val borderColor = if (active) {
-        MaterialTheme.colorScheme.primary
+    val editingHost = form != null
+    val border = if (active || editingHost) {
+        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
     } else {
-        MaterialTheme.colorScheme.outlineVariant
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     }
-    // 整框可点（组头 + 空白区域续加）；去掉波纹避免干扰框内卡片与表单
+    // 整框可点（组头 + 空白区域）；去掉波纹避免干扰框内卡片与表单
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, borderColor),
+        color = if (editingHost) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = border,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                enabled = interactionsEnabled,
-            ) { onAddTo() },
+                enabled = boxClick != null,
+            ) { boxClick?.invoke() },
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -219,8 +234,7 @@ private fun GroupBox(
                         item = item,
                         onClick = { onStartEdit(item) },
                         onDelete = { onDeleteItem(item) },
-                        highlight = active,
-                        enabled = interactionsEnabled,
+                        enabled = cardsEnabled,
                     )
                 }
             }

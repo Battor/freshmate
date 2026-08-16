@@ -29,13 +29,14 @@ import com.battor.freshmate.inputmethod.InputMethodId
 
 /**
  * 两态（2026-08-16 组容器模型）：
- * - 表单打开：←（放弃返回）/ ✓（新增表单 = 暂存并清空继续；编辑表单 = 保存退出）。
+ * - 表单打开：←（放弃返回）；表单有内容时追加 ✓（新增 = 暂存并继续；编辑 = 保存）。
  * - 无表单：+ 号菜单（手动/语音/图片），新录入永远新开一组。
  */
 @Composable
 fun FabMenu(
     formOpen: Boolean,
     isAddForm: Boolean,
+    showSave: Boolean,
     onStartInput: (InputMethodId) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
@@ -47,11 +48,13 @@ fun FabMenu(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 modifier = Modifier.padding(end = 12.dp),
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "放弃返回") }
-            SmallFloatingActionButton(onClick = onSave) {
-                Icon(
-                    Icons.Filled.Check,
-                    contentDescription = if (isAddForm) "暂存并继续" else "保存",
-                )
+            if (showSave) {
+                SmallFloatingActionButton(onClick = onSave) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = if (isAddForm) "暂存并继续" else "保存",
+                    )
+                }
             }
         }
     } else {

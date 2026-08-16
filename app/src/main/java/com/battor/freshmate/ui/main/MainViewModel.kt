@@ -75,6 +75,26 @@ class MainViewModel(
         /** 「本次添加」组内的条目。 */
         val activeGroupItems: List<FoodItem>
             get() = activeGroup?.let { a -> items.filter { groupKey(it.createdAt) == a } } ?: emptyList()
+
+        /**
+         * 表单是否已有内容：新增表单 = 任一字段非空；编辑表单 = 与原条目有差异。
+         * 驱动 ✓ 按钮显隐与"空表单点组内空白退出"（有内容时不退出，防误触丢失）。
+         */
+        val hasFormContent: Boolean
+            get() = editing?.let { e ->
+                if (e.editingItemId == null) {
+                    e.name.isNotBlank() || e.shelfLifeValue.isNotBlank() ||
+                        e.quantity.isNotBlank() || e.productionDate != null
+                } else {
+                    val item = items.firstOrNull { it.id == e.editingItemId } ?: return@let true
+                    e.name != item.name ||
+                        e.category != item.category ||
+                        e.productionDate != item.productionDate ||
+                        e.quantity.trim().ifEmpty { null } != item.quantity ||
+                        e.shelfLifeValue.toIntOrNull()
+                            ?.let { shelfLifeToDays(it, e.shelfLifeUnit) } != item.shelfLifeDays
+                }
+            } ?: false
     }
 
     private val _uiState = MutableStateFlow(UiState())

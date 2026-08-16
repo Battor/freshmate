@@ -343,6 +343,28 @@ class MainViewModelTest {
         vm.startEdit(legacy)
         assertEquals(LocalDateTime.of(2026, 8, 14, 9, 0), vm.uiState.value.editing?.createdAt)
     }
+
+    @Test fun `空新增表单无内容填任一字段后才有`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        assertFalse(vm.uiState.value.hasFormContent)
+        vm.updateEditing { it.copy(productionDate = LocalDate.of(2026, 8, 14)) }
+        assertTrue(vm.uiState.value.hasFormContent)
+    }
+
+    @Test fun `编辑表单未改动无内容改动后才有`() = runTest(dispatcher) {
+        saveNew()
+        vm.startEdit(repo.items.value[0])
+        assertFalse(vm.uiState.value.hasFormContent)
+        vm.updateEditing { it.copy(name = "鲜牛奶") }
+        assertTrue(vm.uiState.value.hasFormContent)
+    }
+
+    @Test fun `编辑表单改数量也算有内容`() = runTest(dispatcher) {
+        saveNew()
+        vm.startEdit(repo.items.value[0])
+        vm.updateEditing { it.copy(quantity = "2") }
+        assertTrue(vm.uiState.value.hasFormContent)
+    }
 }
 
 class FakeRepository : FoodRepository {
