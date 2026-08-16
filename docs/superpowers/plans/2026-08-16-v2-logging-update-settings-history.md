@@ -273,6 +273,10 @@ git commit -m "feat(logging): DailyFileWriter 按天日志文件与轮转清理"
 
 - [ ] **Step 2: 实现 FileTree**
 
+> ⚠️ 2026-08-16 修订（审查发现原代码两缺陷）：必须继承 `Timber.DebugTree` 而非 `Timber.Tree`
+> （基类不推断 tag，所有行会打成 `[null]`）；且不可手动追加堆栈
+> （Timber 的 prepareLog 已把堆栈拼进 message，重复会写两遍）。override log 不调 super，不写 logcat。
+
 ```kotlin
 package com.battor.freshmate.logging
 
@@ -282,15 +286,18 @@ import timber.log.Timber
 
 /**
  * 写文件的 Timber 树（设计文档 §4.2）：`MM-dd HH:mm:ss.SSS [tag] message`。
- * IO 失败静默——日志绝不能把 App 搞崩（logcat 由 DebugTree 承担可见性）。
+ * 继承 DebugTree 以获得调用类名的 tag 推断（基类 Tree 只认显式 Timber.tag()，否则为 null）；
+ * 堆栈已由 Timber prepareLog 拼进 message，这里不再重复追加。
+ * 一切失败静默——日志绝不能把 App 搞崩（logcat 由 FreshMateApp 另种的 DebugTree 承担）。
  */
-class FileTree(private val writer: DailyFileWriter) : Timber.Tree() {
+class FileTree(private val writer: DailyFileWriter) : Timber.DebugTree() {
     private val timeFormat = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss.SSS")
 
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-        val time = LocalDateTime.now().format(timeFormat)
-        val stack = t?.let { "\n" + it.stackTraceToString() } ?: ""
-        runCatching { writer.append("$time [$tag] $message$stack") }
+        runCatching {
+            val time = LocalDateTime.now().format(timeFormat)
+            writer.append("$time [$tag] $message")
+        }
     }
 }
 ```
