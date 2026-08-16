@@ -33,9 +33,6 @@ import androidx.compose.ui.unit.sp
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
-import com.battor.freshmate.util.formatExpired
-import com.battor.freshmate.util.formatRemaining
-import java.time.Duration
 import java.time.LocalDateTime
 
 @Composable
@@ -51,12 +48,6 @@ fun FoodItemCard(
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
     val status = expiryStatus(expiry, item.shelfLifeDays, now)
     val (container, onColor) = statusColors(status)
-    val remaining = Duration.between(now, expiry)
-    val statusText = if (remaining.isNegative || remaining.isZero) {
-        "已过期 ${formatExpired(remaining.negated())}"
-    } else {
-        "还有 ${formatRemaining(remaining)} 到期"
-    }
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
@@ -122,7 +113,7 @@ fun FoodItemCard(
                     Text(item.name, color = onColor, fontSize = 16.sp)
                     item.quantity?.let { Text("数量：$it", color = onColor, fontSize = 12.sp) }
                 }
-                Text(statusText, color = onColor, fontSize = 13.sp)
+                Text(expiryText(item, now), color = onColor, fontSize = 13.sp)
             }
         }
     }
