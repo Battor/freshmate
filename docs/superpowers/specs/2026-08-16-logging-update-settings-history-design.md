@@ -50,7 +50,7 @@ com.battor.freshmate
 | 系统操作 | ReminderScheduler.schedule/cancel、通知发送、权限申请结果 | `ALARM schedule itemId=3 at 2026-08-20T14:30` |
 | 系统广播 | BootReceiver、ReminderBroadcastReceiver、MY_PACKAGE_REPLACED | `BCAST BOOT_COMPLETED → reschedule 12 items` |
 
-三类日志始终写文件；logcat 仅 Debug 构建额外输出（Timber DebugTree）。
+三类日志双写：始终写文件，同时也输出到系统 logcat（Debug/Release 均种 DebugTree，便于日后 `adb logcat` 排查）。
 
 DAO 层（Room 生成代码）不打日志；Repository 是全部 DAO 调用的必经之路。
 
