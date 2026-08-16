@@ -107,7 +107,7 @@ DAO 层（Room 生成代码）不打日志；Repository 是全部 DAO 调用的�
 
 ### 7.1 数据模型
 
-`FoodItem` 新增 `@ColumnInfo(name = "deleted_at") val deletedAt: LocalDateTime? = null`；Room 版本 1→2，`Migration(1,2)` = `ALTER TABLE food_items ADD COLUMN deleted_at INTEGER`；现存数据全 null。
+`FoodItem` 新增 `@ColumnInfo(name = "deleted_at") val deletedAt: LocalDateTime? = null`；Room 版本 1→2，`Migration(1,2)` = `ALTER TABLE food_items ADD COLUMN deleted_at TEXT`（TypeConverter 将 LocalDateTime 存为字符串，列类型须与其一致）；现存数据全 null。
 
 查询拆分：
 
