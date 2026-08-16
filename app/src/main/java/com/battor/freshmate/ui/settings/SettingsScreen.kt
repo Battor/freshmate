@@ -113,23 +113,31 @@ fun SettingsScreen(
 
     updateState.manifest?.let { m ->
         AlertDialog(
-            onDismissRequest = onDismissUpdate,
+            // 下载中禁止点外部/返回关闭：对话框是下载进度与安装入口的唯一载体
+            onDismissRequest = { if (!updateState.downloading) onDismissUpdate() },
             title = { Text("发现新版本 ${m.versionName}") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     m.notes?.let { Text(it) }
                     if (updateState.downloading) {
-                        LinearProgressIndicator(
-                            progress = { updateState.progress },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        val p = updateState.progress
+                        if (p != null) {
+                            LinearProgressIndicator(
+                                progress = { p },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        } else {
+                            // 服务器未给总长度：不定进度条
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             },
             confirmButton = {
                 when {
                     updateState.downloading -> TextButton(onClick = {}) {
-                        Text("下载中 ${(updateState.progress * 100).toInt()}%")
+                        val p = updateState.progress
+                        Text(if (p != null) "下载中 ${(p * 100).toInt()}%" else "下载中…")
                     }
                     updateState.apkReady -> TextButton(onClick = onInstall) { Text("安装") }
                     else -> TextButton(onClick = onDownload) { Text("下载更新") }

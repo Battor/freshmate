@@ -73,9 +73,15 @@ fun MainScreen(
     // 启动静默检查发现新版：Snackbar 一条 + 「查看」跳设置页（一次性，展示即清）
     LaunchedEffect(updateHint) {
         if (updateHint == null) return@LaunchedEffect
-        val result = snackbarHostState.showSnackbar(updateHint, actionLabel = "查看")
-        onUpdateHintShown()
-        if (result == SnackbarResult.ActionPerformed) onOpenUpdate()
+        try {
+            val result = snackbarHostState.showSnackbar(updateHint, actionLabel = "查看")
+            onUpdateHintShown()
+            if (result == SnackbarResult.ActionPerformed) onOpenUpdate()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // 展示中途离开本页（Snackbar 协程被取消）：也清掉一次性提示，防回来重复弹
+            onUpdateHintShown()
+            throw e
+        }
     }
 
     NotificationPermissionEffect(

@@ -24,7 +24,8 @@ class UpdateViewModel(
         /** 启动静默检查发现的新版本（主页 Snackbar 用，一次性）。 */
         val silentFound: UpdateManifest? = null,
         val downloading: Boolean = false,
-        val progress: Float = 0f,
+        /** 下载进度 0..1；null = 服务器未给总长度，展示不定进度条。 */
+        val progress: Float? = null,
         val apkReady: Boolean = false,
         /** 一次性结果提示（null = 不展示）。 */
         val notice: String? = null,
@@ -40,6 +41,9 @@ class UpdateViewModel(
     private val installer = ApkInstaller(appContext)
     private val apkFile: File = ApkDownloader.apkFile(appContext)
 
+    /** 启动静默检查只做一次：返回主页/重组不应重复拉取与重复弹提示。 */
+    private var silentChecked = false
+
     fun clearNotice() = _uiState.update { it.copy(notice = null) }
     fun clearSilentFound() = _uiState.update { it.copy(silentFound = null) }
     fun dismissManifest() = _uiState.update { it.copy(manifest = null, apkReady = false) }
@@ -47,6 +51,10 @@ class UpdateViewModel(
     /** manual=true：结果都提示用户；false：仅发现新版时提示（设计文档 §5.2）。 */
     fun check(manual: Boolean) {
         if (_uiState.value.busy) return
+        if (!manual) {
+            if (silentChecked) return
+            silentChecked = true
+        }
         _uiState.update { it.copy(checking = true) }
         viewModelScope.launch {
             checker.fetch().fold(
@@ -55,6 +63,9 @@ class UpdateViewModel(
                         _uiState.update {
                             it.copy(
                                 checking = false,
+                                // 重查发现新版时清掉旧 apkReady：防止把上一版已下载的
+                                // 安装包当成新版本装出去
+                                apkReady = false,
                                 manifest = if (manual) m else it.manifest,
                                 silentFound = if (manual) null else m,
                             )
@@ -77,12 +88,12 @@ class UpdateViewModel(
     fun download() {
         val m = _uiState.value.manifest ?: return
         if (_uiState.value.busy) return
-        _uiState.update { it.copy(downloading = true, progress = 0f) }
+        _uiState.update { it.copy(downloading = true, progress = null) }
         viewModelScope.launch {
             try {
                 downloader.download(m.apkUrl, apkFile) { copied, total ->
                     _uiState.update { s ->
-                        s.copy(progress = if (total > 0) copied.toFloat() / total else 0f)
+                        s.copy(progress = if (total > 0) copied.toFloat() / total else null)
                     }
                 }
                 // 校验策略（设计文档 §5.3）：清单提供 sha256 则必须匹配；未提供则放行并记日志
