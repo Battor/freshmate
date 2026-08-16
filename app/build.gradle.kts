@@ -39,6 +39,10 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    sourceSets {
+        getByName("androidTest").assets.srcDirs(files("$projectDir/schemas"))
+    }
 }
 
 ksp {
@@ -80,7 +84,7 @@ dependencies {
     // v2：日志 / 更新 / 导航
     implementation("com.jakewharton.timber:timber:5.0.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     implementation("androidx.navigation:navigation-compose:2.8.1")
     implementation("androidx.core:core:1.13.1")
 
