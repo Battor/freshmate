@@ -3,6 +3,7 @@ package com.battor.freshmate.update
 import kotlinx.serialization.SerializationException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,6 +21,13 @@ class UpdateManifestTest {
         assertEquals("https://host/apk-1.1.0.apk", m.apkUrl)
         assertEquals("AbCd12", m.sha256)
         assertEquals("修复与历史页", m.notes)
+    }
+
+    @Test fun `缺少必要字段抛异常`() {
+        val e = kotlin.runCatching {
+            ManifestParser.parse("""{"versionName":"1.0","apkUrl":"u"}""")
+        }.exceptionOrNull()
+        assertNotNull(e) // versionCode 缺失必须失败，不能默认 0 静默当最新
     }
 
     @Test fun `sha256与notes可省略`() {
