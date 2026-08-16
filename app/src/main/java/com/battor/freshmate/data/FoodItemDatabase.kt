@@ -40,7 +40,10 @@ abstract class FoodItemDatabase : RoomDatabase() {
                     context.applicationContext,
                     FoodItemDatabase::class.java,
                     "freshmate.db",
-                ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2)
+                    // 迁移失败的最后兜底（设计文档 §8）：清库重建优于每次启动崩溃循环
+                    .fallbackToDestructiveMigration()
+                    .build().also { instance = it }
             }
     }
 }

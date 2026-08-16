@@ -13,7 +13,8 @@ interface FoodItemDao {
     @Query("SELECT * FROM food_items WHERE deleted_at IS NULL ORDER BY created_at DESC")
     fun observeAll(): Flow<List<FoodItem>>
 
-    @Query("SELECT * FROM food_items WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")
+    // id 作次序键：同分钟删除的条目顺序稳定，避免列表重查时跳动
+    @Query("SELECT * FROM food_items WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC")
     fun observeDeleted(): Flow<List<FoodItem>>
 
     @Query("SELECT * FROM food_items WHERE deleted_at IS NULL")
