@@ -57,4 +57,19 @@ class DailyFileWriterTest {
         assertTrue(lines.size in 1..5)
         assertEquals("line-9-0123456789", lines.last())
     }
+
+    @Test fun `打开新文件失败后下一次append重试`() {
+        val dir = tmp.newFolder()
+        val w = DailyFileWriter(dir, nowProvider = { now })
+        w.append("ok")
+        now = now.plusDays(1)
+        // 制造失败：把跨天目标文件路径做成目录，newWriter 必然抛 FileNotFoundException
+        File(dir, "2026-08-17.txt").mkdirs()
+        val boom = runCatching { w.append("boom") }
+        assertTrue(boom.isFailure)
+        // 恢复后，同一天内再次 append 也应自愈重试成功（而非永远失败在已关闭的旧 writer 上）
+        File(dir, "2026-08-17.txt").delete()
+        w.append("recovered")
+        assertEquals(listOf("recovered"), w.read(LocalDate.of(2026, 8, 17)))
+    }
 }

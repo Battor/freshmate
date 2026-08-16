@@ -3,6 +3,7 @@ package com.battor.freshmate.logging
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.io.OutputStreamWriter
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -30,31 +31,46 @@ class DailyFileWriter(
     fun append(line: String) = synchronized(lock) {
         val today = nowProvider().toLocalDate()
         if (currentDate != today) {
+            // 先开新文件成功后再切换状态，失败则复位以便下次 append 重试自愈
+            val fresh = try {
+                newWriter(today)
+            } catch (e: IOException) {
+                writer = null
+                currentDate = null
+                throw e
+            }
             writer?.close()
+            writer = fresh
             currentDate = today
             cleanup(today)
-            writer = newWriter(today)
         }
         val file = fileFor(today)
         if (file.length() >= maxFileBytes) {
-            // 先关句柄再截断（append 模式的偏移量在外部重写后不可信）
-            writer!!.close()
-            truncate(file)
-            writer = newWriter(today)
+            // 先关句柄再截断（append 模式的偏移量在外部重写后不可信）；任一步失败则复位以便重试
+            try {
+                writer!!.close()
+                truncate(file)
+                writer = newWriter(today)
+            } catch (e: IOException) {
+                writer = null
+                currentDate = null
+                throw e
+            }
         }
         writer!!.write(line)
         writer!!.newLine()
         writer!!.flush()
     }
 
-    /** 可查看的日志日期，新→旧。 */
+    /** 可查看的日志日期，新→旧。可能与清理/截断有短暂不一致（未与 append 共用锁），读取方需容忍少量过期。 */
     fun availableDates(): List<LocalDate> =
         dir.listFiles().orEmpty()
             .mapNotNull { runCatching { LocalDate.parse(it.name.removeSuffix(".txt")) }.getOrNull() }
             .sortedDescending()
 
+    /** 读取指定日期的日志行。可能与清理/截断有短暂不一致（未与 append 共用锁），读取方需容忍少量过期。 */
     fun read(date: LocalDate): List<String> =
-        fileFor(date).takeIf { it.exists() }?.readLines() ?: emptyList()
+        fileFor(date).takeIf { it.exists() }?.readLines(Charsets.UTF_8) ?: emptyList()
 
     private fun fileFor(date: LocalDate) = File(dir, "$date.txt")
 
@@ -71,7 +87,7 @@ class DailyFileWriter(
     }
 
     private fun truncate(file: File) {
-        val lines = file.readLines()
+        val lines = file.readLines(Charsets.UTF_8)
         val kept = ArrayList<String>()
         var size = 0L
         for (i in lines.indices.reversed()) {
@@ -81,6 +97,6 @@ class DailyFileWriter(
             size += lineBytes
         }
         kept.reverse()
-        file.writeText(kept.joinToString(separator = "\n", postfix = "\n"))
+        file.writeText(kept.joinToString(separator = "\n", postfix = "\n"), Charsets.UTF_8)
     }
 }
