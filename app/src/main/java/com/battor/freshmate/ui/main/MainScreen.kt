@@ -174,7 +174,8 @@ fun MainScreen(viewModel: MainViewModel) {
  *   不加背景晕染——组内子项的状态色（绿/黄/橙/红）原样保留，编辑态的醒目
  *   由主色边框 + 框内 primaryContainer 表单卡片承担。
  * - 点击组头或框内空白区域（boxClick 非 null 时）：无表单 = 续加；本组空表单 = 放弃返回。
- * - 表单挂到本组时在框内原位渲染（新增/编辑统一，列表次序不变），被编辑条目隐藏卡片。
+ * - 表单挂到本组时在框内渲染：编辑 = 被编辑条目原位置替换为表单（其余子项不动）；
+ *   新增 = 渲染在组尾。列表次序始终不变。
  */
 @Composable
 private fun GroupBox(
@@ -229,7 +230,10 @@ private fun GroupBox(
                 }
             }
             items.forEach { item ->
-                if (item.id != editingItemId) {
+                if (item.id == editingItemId) {
+                    // 编辑：表单渲染在被编辑条目的原位置，其余子项不动
+                    form?.let { GroupForm(it, onStateChange, onPlaceholderHint) }
+                } else {
                     FoodItemCard(
                         item = item,
                         onClick = { onStartEdit(item) },
@@ -239,13 +243,23 @@ private fun GroupBox(
                     )
                 }
             }
-            form?.let {
-                ItemForm(
-                    state = it,
-                    onStateChange = onStateChange,
-                    onPlaceholderHint = onPlaceholderHint,
-                )
+            // 新增（点组续加 / + 菜单）：表单渲染在组尾
+            if (form != null && editingItemId == null) {
+                GroupForm(form, onStateChange, onPlaceholderHint)
             }
         }
     }
+}
+
+@Composable
+private fun GroupForm(
+    form: EditingState,
+    onStateChange: (EditingState) -> Unit,
+    onPlaceholderHint: (String) -> Unit,
+) {
+    ItemForm(
+        state = form,
+        onStateChange = onStateChange,
+        onPlaceholderHint = onPlaceholderHint,
+    )
 }
