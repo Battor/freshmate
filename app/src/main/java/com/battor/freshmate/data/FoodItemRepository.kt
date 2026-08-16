@@ -1,5 +1,6 @@
 package com.battor.freshmate.data
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
@@ -26,20 +27,22 @@ class FoodItemRepository(private val dao: FoodItemDao) : FoodRepository {
         timed("delete(id=${item.id} ${item.name})") { dao.delete(item) }
 
     override suspend fun getAll(): List<FoodItem> =
-        timed("getAll") { dao.getAllOnce() }
+        timed("getAll", resultFormat = { "${it.size} items" }) { dao.getAllOnce() }
 
-    /** 设计文档 §4.1：记录查询内容、返回值与耗时；失败也记（不吞异常）。 */
-    private inline fun <T> timed(label: String, block: () -> T): T {
+    /** 设计文档 §4.1：记录查询内容、返回值与耗时；失败也记（不吞异常，取消照常上抛）。 */
+    private inline fun <T> timed(
+        label: String,
+        resultFormat: (T) -> String = { if (it == Unit) "OK" else it.toString() },
+        block: () -> T,
+    ): T {
         val start = System.currentTimeMillis()
         val outcome = runCatching(block)
-        val result = outcome.fold(
-            { if (it == Unit) "OK" else it.toString() },
-            { "失败: ${it.message}" },
-        )
-        if (outcome.isFailure) {
-            Timber.i(outcome.exceptionOrNull(), "DB %s 失败", label)
-        } else {
-            Timber.i("DB %s ← %s (%dms)", label, result, System.currentTimeMillis() - start)
+        val t = outcome.exceptionOrNull()
+        if (t is CancellationException) throw t
+        outcome.onSuccess {
+            Timber.i("DB %s ← %s (%dms)", label, resultFormat(it), System.currentTimeMillis() - start)
+        }.onFailure {
+            Timber.w(it, "DB %s 失败", label)
         }
         return outcome.getOrThrow()
     }
