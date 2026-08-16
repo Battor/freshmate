@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,9 +73,11 @@ fun MainScreen(viewModel: MainViewModel, onOpenHistory: () -> Unit, onOpenSettin
             CenterAlignedTopAppBar(
                 title = { Text("食刻 FreshMate") },
                 actions = {
-                    // 设置按钮 Task 11 加入；本任务只放历史入口，避免死按钮
                     IconButton(onClick = onOpenHistory) {
                         Icon(Icons.Filled.History, contentDescription = "历史")
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "设置")
                     }
                 },
             )
