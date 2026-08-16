@@ -25,8 +25,9 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 runCatching {
+                    // 软删除条目不发通知（闹钟竞态时仍可能收到过期 PendingIntent）
                     val item = FoodItemDatabase.get(context).foodItemDao().getById(itemId)
-                        ?: return@runCatching
+                        ?.takeIf { it.deletedAt == null } ?: return@runCatching
                     val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
                     val remaining = Duration.between(LocalDateTime.now(), expiry)
                     if (remaining.isNegative || remaining.isZero) return@runCatching

@@ -1,7 +1,6 @@
 package com.battor.freshmate.data
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -28,10 +27,6 @@ interface FoodItemDao {
 
     @Update
     suspend fun update(item: FoodItem)
-
-    /** Task 6 移除：Repository 现仍调用硬删除。 */
-    @Delete
-    suspend fun delete(item: FoodItem)
 
     /** 软删除/还原的唯一写入口：deletedAt 传 null 即还原。 */
     @Query("UPDATE food_items SET deleted_at = :deletedAt WHERE id = :id")

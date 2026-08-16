@@ -1,17 +1,15 @@
 package com.battor.freshmate.ui.main
 
+import com.battor.freshmate.FakeRepository
+import com.battor.freshmate.FakeScheduler
 import com.battor.freshmate.data.Category
 import com.battor.freshmate.data.FoodItem
-import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.inputmethod.InputMethodId
-import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.util.ShelfLifeUnit
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -127,13 +125,34 @@ class MainViewModelTest {
         val item = repo.items.value[0]
         vm.delete(item)
         advanceUntilIdle()
-        assertTrue(repo.items.value.isEmpty())
+        assertTrue(repo.items.value.all { it.deletedAt != null }) // 软删除：仍在库，标记已删
         assertEquals(item.id, scheduler.cancelled.singleOrNull())
 
         vm.undoDelete(item)
         advanceUntilIdle()
-        assertEquals(1, repo.items.value.size)
+        assertEquals(1, repo.getAll().size) // 撤销后回到活跃
         assertEquals("牛奶", repo.items.value[0].name)
+        // FakeScheduler 全程累计：保存时 1 次 + 撤销重排 1 次
+        assertEquals(2, scheduler.scheduled.size)
+    }
+
+    @Test fun `软删除条目不出现在主列表`() = runTest(dispatcher) {
+        saveNew()
+        vm.delete(repo.items.value[0])
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.items.isEmpty())
+        assertTrue(vm.uiState.value.groups.isEmpty())
+    }
+
+    @Test fun `已删除条目经撤销还原保留全部字段`() = runTest(dispatcher) {
+        saveNew()
+        val before = repo.items.value[0]
+        vm.delete(before)
+        advanceUntilIdle()
+        vm.undoDelete(before)
+        advanceUntilIdle()
+        val after = repo.getAll().single()
+        assertEquals(before.copy(deletedAt = null), after)
     }
 
     @Test fun `编辑已有条目保留录入时间`() = runTest(dispatcher) {
@@ -365,35 +384,4 @@ class MainViewModelTest {
         vm.updateEditing { it.copy(quantity = "2") }
         assertTrue(vm.uiState.value.hasFormContent)
     }
-}
-
-class FakeRepository : FoodRepository {
-    val items = MutableStateFlow<List<FoodItem>>(emptyList())
-    var failNextInsert = false
-    private var nextId = 1L
-    override fun observeAll(): Flow<List<FoodItem>> = items
-    override suspend fun insert(item: FoodItem): Long {
-        if (failNextInsert) {
-            failNextInsert = false
-            throw RuntimeException("db error")
-        }
-        val id = nextId++
-        items.value = items.value + item.copy(id = id)
-        return id
-    }
-    override suspend fun update(item: FoodItem) {
-        items.value = items.value.map { if (it.id == item.id) item else it }
-    }
-    override suspend fun delete(item: FoodItem) {
-        items.value = items.value.filterNot { it.id == item.id }
-    }
-    override suspend fun getAll(): List<FoodItem> = items.value
-}
-
-class FakeScheduler : ReminderScheduling {
-    val scheduled = mutableListOf<FoodItem>()
-    val cancelled = mutableListOf<Long>()
-    override fun schedule(item: FoodItem) { scheduled.add(item) }
-    override fun cancel(itemId: Long) { cancelled.add(itemId) }
-    override suspend fun rescheduleAll() {}
 }

@@ -7,6 +7,7 @@ import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.notification.ReminderScheduling
+import com.battor.freshmate.notification.scheduleOrCancel
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.reminderTimes
@@ -197,10 +198,11 @@ class MainViewModel(
         _uiState.update { it.copy(pendingSave = null) }
     }
 
+    /** 软删除：条目移入历史页，取消提醒。 */
     fun delete(item: FoodItem) {
         viewModelScope.launch {
             try {
-                repository.delete(item)
+                repository.softDelete(item, nowProvider())
                 scheduler.cancel(item.id)
             } catch (e: Exception) {
                 _errorEvent.value = "删除失败，请重试"
@@ -208,12 +210,12 @@ class MainViewModel(
         }
     }
 
-    /** 恢复指定的被删条目（避免多条删除排队时撤销错对象）。 */
+    /** 5 秒 Snackbar 撤销 = 立即还原（同一条目同 id，闹钟重排）。 */
     fun undoDelete(item: FoodItem) {
         viewModelScope.launch {
             try {
-                val id = repository.insert(item.copy(id = 0))
-                scheduleOrCancel(item.copy(id = id))
+                repository.restore(item)
+                scheduler.scheduleOrCancel(item, nowProvider())
             } catch (e: Exception) {
                 _errorEvent.value = "恢复失败，请重试"
             }
@@ -222,12 +224,6 @@ class MainViewModel(
 
     fun onPermissionRequested() {
         _uiState.update { it.copy(requestNotificationPermission = false) }
-    }
-
-    /** 未过期则排提醒，已过期则取消（保持调度与数据状态对称）。 */
-    private fun scheduleOrCancel(item: FoodItem) {
-        val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
-        if (expiry > nowProvider()) scheduler.schedule(item) else scheduler.cancel(item.id)
     }
 
     private fun persist(editing: EditingState, days: Int) {
@@ -242,6 +238,7 @@ class MainViewModel(
                 shelfLifeDays = days,
                 quantity = editing.quantity.trim().ifEmpty { null },
                 createdAt = groupKey(editing.createdAt),
+                // 编辑保存回到活跃态（编辑入口只对活跃条目开放）
             )
             val itemId = try {
                 if (editing.editingItemId == null) {
@@ -257,7 +254,7 @@ class MainViewModel(
                 saving = false
             }
             val saved = item.copy(id = itemId)
-            scheduleOrCancel(saved)
+            scheduler.scheduleOrCancel(saved, nowProvider())
             _uiState.update {
                 // 新条目暂存后表单清空继续，「本次添加」徽标转移到该组；
                 // 编辑已有条目仍是保存即退出，徽标不动

@@ -1,5 +1,6 @@
 package com.battor.freshmate.data
 
+import java.time.LocalDateTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
@@ -7,9 +8,11 @@ import timber.log.Timber
 
 interface FoodRepository {
     fun observeAll(): Flow<List<FoodItem>>
+    fun observeDeleted(): Flow<List<FoodItem>>
     suspend fun insert(item: FoodItem): Long
     suspend fun update(item: FoodItem)
-    suspend fun delete(item: FoodItem)
+    suspend fun softDelete(item: FoodItem, deletedAt: LocalDateTime)
+    suspend fun restore(item: FoodItem)
     suspend fun getAll(): List<FoodItem>
 }
 
@@ -17,14 +20,20 @@ class FoodItemRepository(private val dao: FoodItemDao) : FoodRepository {
     override fun observeAll(): Flow<List<FoodItem>> =
         dao.observeAll().onEach { Timber.i("DB observeAll ← %d items", it.size) }
 
+    override fun observeDeleted(): Flow<List<FoodItem>> =
+        dao.observeDeleted().onEach { Timber.i("DB observeDeleted ← %d items", it.size) }
+
     override suspend fun insert(item: FoodItem): Long =
         timed("insert(${item.summary()})") { dao.insert(item) }
 
     override suspend fun update(item: FoodItem) =
         timed("update(${item.summary()})") { dao.update(item) }
 
-    override suspend fun delete(item: FoodItem) =
-        timed("delete(id=${item.id} ${item.name})") { dao.delete(item) }
+    override suspend fun softDelete(item: FoodItem, deletedAt: LocalDateTime) =
+        timed("softDelete(id=${item.id} ${item.name})") { dao.setDeletedAt(item.id, deletedAt) }
+
+    override suspend fun restore(item: FoodItem) =
+        timed("restore(id=${item.id} ${item.name})") { dao.setDeletedAt(item.id, null) }
 
     override suspend fun getAll(): List<FoodItem> =
         timed("getAll", resultFormat = { "${it.size} items" }) { dao.getAllOnce() }
