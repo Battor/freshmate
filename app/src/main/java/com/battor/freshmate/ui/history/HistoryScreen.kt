@@ -41,6 +41,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -173,9 +176,26 @@ private fun HistoryItemCard(
 
     SwipeToDismissBox(
         state = dismissState,
+        // 不可还原：两个方向都禁拖，不给误导性的绿色背景；可还原时仅开放右滑
         enableDismissFromEndToStart = false,
-        // 组不活跃（不可还原）时整体变淡提示禁用
-        modifier = Modifier.alpha(if (restorable) 1f else 0.4f),
+        enableDismissFromStartToEnd = restorable,
+        // 组不活跃（不可还原）时整体变淡提示禁用；TalkBack 的「还原」动作同样仅可还原时提供
+        modifier = Modifier
+            .alpha(if (restorable) 1f else 0.4f)
+            .then(
+                if (restorable) {
+                    Modifier.semantics {
+                        customActions = listOf(
+                            CustomAccessibilityAction("还原") {
+                                onRequestRestore(item)
+                                true
+                            },
+                        )
+                    }
+                } else {
+                    Modifier
+                },
+            ),
         backgroundContent = {
             Box(
                 modifier = Modifier.fillMaxSize()
