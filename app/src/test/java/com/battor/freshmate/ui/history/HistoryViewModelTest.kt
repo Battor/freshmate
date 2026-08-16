@@ -9,6 +9,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -118,11 +119,30 @@ class HistoryViewModelTest {
         advanceUntilIdle()
         deleteActive(expired)
 
-        vm.confirmRestoreFor(vm.uiState.value.groups[0].items.single { it.name == "酸奶" })
+        val deleted = vm.uiState.value.groups[0].items.single { it.name == "酸奶" }
+        vm.requestRestore(deleted) // 组由面包保活，通过门禁
+        vm.confirmRestore()
         advanceUntilIdle()
         assertEquals(2, repo.getAll().size)
         assertTrue(scheduler.scheduled.isEmpty())
         assertTrue(scheduler.cancelled.contains(expired.id))
+    }
+
+    @Test fun `组在确认前失效时还原被拒绝`() = runTest(dispatcher) {
+        val g = LocalDateTime.of(2026, 8, 14, 9, 0)
+        val a = insertActive("牛奶", g)
+        val b = insertActive("面包", g)
+        advanceUntilIdle()
+        deleteActive(a)
+        val deleted = vm.uiState.value.groups[0].items.single { it.name == "牛奶" }
+
+        vm.requestRestore(deleted)
+        deleteActive(b) // 组在请求与确认之间失效
+        vm.confirmRestore()
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.restoring)
+        assertEquals(0, repo.getAll().size) // 未还原
+        assertTrue(repo.observeDeleted().first().let { it.size == 2 })
     }
 
     @Test fun `scheduleOrCancel按到期时间分支`() = runTest(dispatcher) {

@@ -52,7 +52,8 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
     override suspend fun rescheduleAll() = withContext(Dispatchers.IO) {
         val items = FoodItemDatabase.get(context).foodItemDao().getAllOnce()
         Timber.i("ALARM rescheduleAll ← %d items", items.size)
-        items.forEach { scheduleOrCancel(it, LocalDateTime.now()) }
+        val now = LocalDateTime.now()
+        items.forEach { scheduleOrCancel(it, now) }
     }
 
     private fun broadcast(itemId: Long, index: Int): PendingIntent =

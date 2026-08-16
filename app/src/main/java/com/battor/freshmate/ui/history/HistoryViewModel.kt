@@ -11,6 +11,7 @@ import java.time.LocalDateTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -52,7 +53,8 @@ class HistoryViewModel(
         viewModelScope.launch {
             repository.observeDeleted().collect { deleted ->
                 _uiState.update {
-                    it.copy(groups = deleted.groupBy { d -> groupKey(d.deletedAt!!) }
+                    // deletedAt 非 null 由 DAO 过滤保证，违反即快速失败
+                    it.copy(groups = deleted.groupBy { d -> groupKey(requireNotNull(d.deletedAt)) }
                         .map { (at, list) -> DeletedGroup(at, list) }
                         .sortedByDescending { g -> g.deletedAt })
                 }
@@ -63,12 +65,6 @@ class HistoryViewModel(
     /** 右滑触发：仅组活跃的条目可进入待确认状态。 */
     fun requestRestore(item: FoodItem) {
         if (uiState.value.isRestorable(item)) _uiState.update { it.copy(restoring = item) }
-    }
-
-    /** 测试捷径：跳过 requestRestore 直接确认（不可还原条目仍会被拒绝）。 */
-    fun confirmRestoreFor(item: FoodItem) {
-        _uiState.update { it.copy(restoring = item) }
-        confirmRestore()
     }
 
     fun cancelRestore() {
@@ -87,6 +83,8 @@ class HistoryViewModel(
                 repository.restore(item)
                 scheduler.scheduleOrCancel(item, nowProvider())
                 _message.value = "已还原「${item.name}」到原组"
+            } catch (e: CancellationException) {
+                throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
                 _message.value = "还原失败，请重试"
             }

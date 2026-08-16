@@ -15,6 +15,7 @@ import com.battor.freshmate.util.shelfLifeToDays
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -204,6 +205,8 @@ class MainViewModel(
             try {
                 repository.softDelete(item, nowProvider())
                 scheduler.cancel(item.id)
+            } catch (e: CancellationException) {
+                throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
                 _errorEvent.value = "删除失败，请重试"
             }
@@ -216,6 +219,8 @@ class MainViewModel(
             try {
                 repository.restore(item)
                 scheduler.scheduleOrCancel(item, nowProvider())
+            } catch (e: CancellationException) {
+                throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
                 _errorEvent.value = "恢复失败，请重试"
             }
