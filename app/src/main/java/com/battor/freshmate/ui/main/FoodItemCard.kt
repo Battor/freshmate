@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -43,6 +44,8 @@ fun FoodItemCard(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     enabled: Boolean = true,
+    /** 视觉变淡（其它组在编辑期间）；enabled=false 只管交互，颜色由本参数控制。 */
+    dimmed: Boolean = false,
 ) {
     val now = remember { LocalDateTime.now() }
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
@@ -70,8 +73,10 @@ fun FoodItemCard(
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
-        // TalkBack 用户无法滑动删除，提供自定义无障碍删除动作
-        modifier = Modifier.semantics {
+        // 编辑期间其它组的条目变淡提示禁用；enabled=false 只禁交互，颜色不交给 M3 禁用配色
+        modifier = Modifier
+            .alpha(if (dimmed) 0.4f else 1f)
+            .semantics {
             customActions = listOf(
                 CustomAccessibilityAction("删除") {
                     onDelete()
@@ -93,7 +98,13 @@ fun FoodItemCard(
             onClick = onClick,
             enabled = enabled,
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = container),
+            // 禁用态钉同样的状态色：编辑期间当前组卡片只禁交互、不变色
+            colors = CardDefaults.cardColors(
+                containerColor = container,
+                contentColor = onColor,
+                disabledContainerColor = container,
+                disabledContentColor = onColor,
+            ),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(

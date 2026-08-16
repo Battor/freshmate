@@ -95,6 +95,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             form = editing,
                             editingItemId = null,
                             cardsEnabled = false,
+                            cardsDimmed = false,
                             // 空表单点框内空白 = 放弃返回；有内容时不响应，防误触丢失
                             boxClick = if (state.hasFormContent) null else { { viewModel.backToMethodSelection() } },
                             onStartEdit = {},
@@ -115,6 +116,8 @@ fun MainScreen(viewModel: MainViewModel) {
                             form = editing?.takeIf { it.createdAt == group.createdAt },
                             editingItemId = editing?.editingItemId,
                             cardsEnabled = editing == null,
+                            // 编辑期间：表单所在组的子项保持原色（仅禁点），其它组变淡
+                            cardsDimmed = editing != null && !formHost,
                             boxClick = when {
                                 editing == null -> { { viewModel.startAddTo(group.createdAt) } }
                                 formHost && !state.hasFormContent -> {
@@ -181,6 +184,7 @@ private fun GroupBox(
     form: EditingState?,
     editingItemId: Long?,
     cardsEnabled: Boolean,
+    cardsDimmed: Boolean,
     boxClick: (() -> Unit)?,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
@@ -231,6 +235,7 @@ private fun GroupBox(
                         onClick = { onStartEdit(item) },
                         onDelete = { onDeleteItem(item) },
                         enabled = cardsEnabled,
+                        dimmed = cardsDimmed,
                     )
                 }
             }
