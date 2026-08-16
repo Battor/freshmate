@@ -21,8 +21,8 @@ class BootReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 runCatching { ReminderScheduler(context).rescheduleAll() }
+                    .onSuccess { Timber.i("BCAST %s 重排完成", action) }
                     .onFailure { android.util.Log.w("BootReceiver", "重排提醒失败", it) }
-                Timber.i("BCAST %s 重排完成", action)
             } finally {
                 pendingResult.finish()
             }
