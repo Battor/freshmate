@@ -53,7 +53,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                         Timber.i("NOTIFY 提醒已发 itemId=%d", itemId)
                     }
                 }.onFailure {
-                    android.util.Log.w("ReminderReceiver", "处理提醒失败", it)
+                    Timber.w(it, "NOTIFY 处理提醒 itemId=%d 失败", itemId)
                 }
             } finally {
                 pendingResult.finish()
