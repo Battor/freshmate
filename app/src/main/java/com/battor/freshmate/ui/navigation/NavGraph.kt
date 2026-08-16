@@ -1,8 +1,12 @@
 package com.battor.freshmate.ui.navigation
 
 import android.content.Context
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -19,6 +23,7 @@ import com.battor.freshmate.ui.main.MainScreen
 import com.battor.freshmate.ui.main.MainViewModel
 import com.battor.freshmate.ui.settings.AboutScreen
 import com.battor.freshmate.ui.settings.SettingsScreen
+import com.battor.freshmate.update.UpdateViewModel
 import java.io.File
 
 /** 路由常量：拼错导航名只在编译期发现，不在运行期静默失败。 */
@@ -37,10 +42,17 @@ fun FreshMateNavGraph() {
         composable(Routes.MAIN) {
             val context = LocalContext.current.applicationContext
             val viewModel: MainViewModel = viewModel(factory = mainFactory(context))
+            // Activity 级共享：main 的静默检查与 settings 的对话框用同一个 UpdateViewModel
+            val updateViewModel = sharedUpdateViewModel()
+            LaunchedEffect(Unit) { updateViewModel.check(manual = false) }
+            val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
             MainScreen(
                 viewModel = viewModel,
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                updateHint = updateState.silentFound?.let { "发现新版本 ${it.versionName}" },
+                onUpdateHintShown = updateViewModel::clearSilentFound,
+                onOpenUpdate = { navController.navigate(Routes.SETTINGS) },
             )
         }
         composable(Routes.HISTORY) {
@@ -49,10 +61,18 @@ fun FreshMateNavGraph() {
             HistoryScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
+            val updateViewModel = sharedUpdateViewModel()
+            val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onOpenLogs = { navController.navigate(Routes.LOG_VIEWER) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
+                updateState = updateState,
+                onCheckUpdate = { updateViewModel.check(manual = true) },
+                onDownload = updateViewModel::download,
+                onInstall = updateViewModel::install,
+                onDismissNotice = updateViewModel::clearNotice,
+                onDismissUpdate = updateViewModel::dismissManifest,
             )
         }
         composable(Routes.LOG_VIEWER) {
@@ -64,6 +84,20 @@ fun FreshMateNavGraph() {
         }
         composable(Routes.ABOUT) { AboutScreen(onBack = { navController.popBackStack() }) }
     }
+}
+
+/**
+ * Activity 作用域的 UpdateViewModel：main（启动静默检查）与 settings（对话框/下载/安装）
+ * 必须共享同一实例。viewModel() 默认按 NavBackStackEntry 作用域，这里显式挂到 Activity。
+ */
+@Composable
+private fun sharedUpdateViewModel(): UpdateViewModel {
+    val context = LocalContext.current.applicationContext
+    val activity = LocalContext.current as ComponentActivity
+    return viewModel(
+        viewModelStoreOwner = activity,
+        factory = viewModelFactory { initializer { UpdateViewModel(context) } },
+    )
 }
 
 /** 各路由自建 ViewModel（仓库/调度器构造集中在此，避免三处复制）。 */

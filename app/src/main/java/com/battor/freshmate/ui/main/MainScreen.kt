@@ -50,7 +50,14 @@ private val GroupHeaderFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MainViewModel, onOpenHistory: () -> Unit, onOpenSettings: () -> Unit) {
+fun MainScreen(
+    viewModel: MainViewModel,
+    onOpenHistory: () -> Unit,
+    onOpenSettings: () -> Unit,
+    updateHint: String? = null,
+    onUpdateHintShown: () -> Unit = {},
+    onOpenUpdate: () -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val errorEvent by viewModel.errorEvent.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -61,6 +68,14 @@ fun MainScreen(viewModel: MainViewModel, onOpenHistory: () -> Unit, onOpenSettin
             snackbarHostState.showSnackbar(it)
             viewModel.onErrorShown()
         }
+    }
+
+    // 启动静默检查发现新版：Snackbar 一条 + 「查看」跳设置页（一次性，展示即清）
+    LaunchedEffect(updateHint) {
+        if (updateHint == null) return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(updateHint, actionLabel = "查看")
+        onUpdateHintShown()
+        if (result == SnackbarResult.ActionPerformed) onOpenUpdate()
     }
 
     NotificationPermissionEffect(
