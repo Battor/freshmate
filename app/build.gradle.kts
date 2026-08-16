@@ -15,6 +15,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "UPDATE_MANIFEST_URL", "\"https://example.com/freshmate/manifest.json\"")
     }
 
     buildTypes {
