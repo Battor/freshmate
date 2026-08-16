@@ -13,6 +13,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 interface ReminderScheduling {
     fun schedule(item: FoodItem)
@@ -29,6 +30,7 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
         val times = futureReminderTimes(expiry, item.shelfLifeDays, LocalDateTime.now())
         val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
             alarmManager.canScheduleExactAlarms()
+        Timber.i("ALARM schedule itemId=%d 到期=%s 时点数=%d 精确=%b", item.id, expiry, times.size, canExact)
         times.forEachIndexed { index, time ->
             val pi = broadcast(item.id, index)
             val atMillis = time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -41,14 +43,16 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
     }
 
     override fun cancel(itemId: Long) {
+        Timber.i("ALARM cancel itemId=%d", itemId)
         (0 until ReminderIds.REMINDER_COUNT).forEach { index ->
             alarmManager.cancel(broadcast(itemId, index))
         }
     }
 
     override suspend fun rescheduleAll() = withContext(Dispatchers.IO) {
-        val dao = FoodItemDatabase.get(context).foodItemDao()
-        dao.getAllOnce().forEach { item ->
+        val items = FoodItemDatabase.get(context).foodItemDao().getAllOnce()
+        Timber.i("ALARM rescheduleAll ← %d items", items.size)
+        items.forEach { item ->
             val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
             if (expiry > LocalDateTime.now()) schedule(item) else cancel(item.id)
         }

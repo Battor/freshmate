@@ -14,11 +14,13 @@ import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class ReminderBroadcastReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val itemId = intent.getLongExtra(EXTRA_ITEM_ID, -1L)
         if (itemId == -1L) return
+        Timber.i("BCAST reminder itemId=%d", itemId)
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -48,6 +50,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                     if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
                         NotificationManagerCompat.from(context)
                             .notify(ReminderIds.requestCode(itemId, 0), builder.build())
+                        Timber.i("NOTIFY 提醒已发 itemId=%d", itemId)
                     }
                 }.onFailure {
                     android.util.Log.w("ReminderReceiver", "处理提醒失败", it)

@@ -6,6 +6,7 @@ import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -15,11 +16,13 @@ class BootReceiver : BroadcastReceiver() {
         ) {
             return
         }
+        Timber.i("BCAST %s", action)
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 runCatching { ReminderScheduler(context).rescheduleAll() }
                     .onFailure { android.util.Log.w("BootReceiver", "重排提醒失败", it) }
+                Timber.i("BCAST %s 重排完成", action)
             } finally {
                 pendingResult.finish()
             }

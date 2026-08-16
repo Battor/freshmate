@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
+import timber.log.Timber
 
 /** 首次保存后请求通知权限（设计文档 §7）。 */
 @Composable
@@ -37,7 +38,13 @@ fun NotificationPermissionEffect(
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { _ -> onHandled() }
+    ) {
+        Timber.i(
+            "PERM 通知权限 granted=%b",
+            NotificationManagerCompat.from(context).areNotificationsEnabled(),
+        )
+        onHandled()
+    }
 
     LaunchedEffect(request) {
         if (!request) return@LaunchedEffect
