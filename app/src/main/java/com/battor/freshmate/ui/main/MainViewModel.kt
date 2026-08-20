@@ -10,7 +10,7 @@ import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.notification.scheduleOrCancel
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
-import com.battor.freshmate.util.reminderTimes
+import com.battor.freshmate.util.mergedReminderTimes
 import com.battor.freshmate.util.shelfLifeToDays
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -179,7 +179,10 @@ class MainViewModel(
             return
         }
         val expiry = expiryDateTime(editing.productionDate, editing.createdAt, days)
-        val skipped = reminderTimes(expiry, days).count { it <= nowProvider() }
+        // 只统计"真实错过"的时点：晚于生产开始（expiry−days）且不晚于 now。
+        // 早于生产开始的绝对档（如 3 天保质期的 7 天档）对新录入条目无意义，不触发确认弹窗。
+        val start = expiry.minusDays(days.toLong())
+        val skipped = mergedReminderTimes(expiry, days).count { it > start && it <= nowProvider() }
         if (skipped > 0) {
             _uiState.update {
                 it.copy(pendingSave = PendingSave(editing.copy(name = name), days, skipped))
