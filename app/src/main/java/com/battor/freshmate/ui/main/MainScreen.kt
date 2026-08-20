@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
@@ -41,11 +40,16 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -54,6 +58,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.util.ExpiryStatus
 import java.time.LocalDateTime
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,9 +103,15 @@ fun MainScreen(
         onHandled = { viewModel.onPermissionRequested() },
     )
 
-    // 表单打开（渲染为列表首项）时滚到顶部，保证用户立刻看到（桶空白不可点后无其它视觉反馈）
+    // 表单打开滚到顶部；关闭（保存/放弃）回到打开前的位置
+    var restoreIndex by remember { mutableStateOf(0) }
     LaunchedEffect(state.editing != null) {
-        if (state.editing != null) listState.animateScrollToItem(0)
+        if (state.editing != null) {
+            restoreIndex = listState.firstVisibleItemIndex
+            listState.animateScrollToItem(0)
+        } else {
+            listState.scrollToItem(restoreIndex)
+        }
     }
 
     // 回到前台刷新页面时刻：条目跨档（如滑入"已过期"）后桶及时迁移
@@ -147,9 +158,18 @@ fun MainScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             PermissionBanners()
+            // 400ms 短暂亮灯给「散入各桶」一个可见反馈，不做假加载
+            var refreshing by remember { mutableStateOf(false) }
             PullToRefreshBox(
-                isRefreshing = false,
-                onRefresh = { viewModel.disperseSession() },
+                isRefreshing = refreshing,
+                onRefresh = {
+                    refreshing = true
+                    viewModel.disperseSession()
+                    scope.launch {
+                        delay(400)
+                        refreshing = false
+                    }
+                },
                 state = rememberPullToRefreshState(),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
@@ -178,6 +198,7 @@ fun MainScreen(
                                 items = state.pinnedItems,
                                 now = state.now,
                                 cardsEnabled = state.editing == null,
+                                onHeaderAction = { viewModel.disperseSession() },
                                 onStartEdit = { viewModel.startEdit(it) },
                                 onDeleteItem = { item ->
                                     viewModel.delete(item)
@@ -268,6 +289,7 @@ private fun BucketBox(
     items: List<FoodItem>,
     now: LocalDateTime,
     cardsEnabled: Boolean,
+    onHeaderAction: (() -> Unit)? = null,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
 ) {
@@ -277,7 +299,7 @@ private fun BucketBox(
         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     }
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = border,
         modifier = Modifier.fillMaxWidth(),
@@ -293,15 +315,27 @@ private fun BucketBox(
                     style = MaterialTheme.typography.labelLarge,
                     color = statusColors.on,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(statusColors.container)
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                 )
             } else {
+                // 「本次添加」组头：浅主色背景 chip 让散入动作可发现；TalkBack 提供自定义动作
                 Text(
                     header,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                        .semantics {
+                            onHeaderAction?.let {
+                                customActions = listOf(
+                                    CustomAccessibilityAction("散入各桶") { it(); true },
+                                )
+                            }
+                        },
                 )
             }
             items.forEach { item ->

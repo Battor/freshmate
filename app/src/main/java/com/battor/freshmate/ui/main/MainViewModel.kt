@@ -78,17 +78,13 @@ class MainViewModel(
         val editing: EditingState? = null,
         val pendingSave: PendingSave? = null,
         val requestNotificationPermission: Boolean = false,
+        /** 「本次添加」置顶区条目（新→旧）。 */
+        val pinnedItems: List<FoodItem> = emptyList(),
+        /** 过期时间分桶；置顶区条目不重复入桶。 */
+        val buckets: List<ExpiryBucket> = emptyList(),
     ) {
         val isEditing: Boolean get() = editing != null
         val isAddForm: Boolean get() = editing != null && editing.editingItemId == null
-
-        /** 「本次添加」置顶区条目（新→旧）。 */
-        val pinnedItems: List<FoodItem>
-            get() = items.filter { it.id in sessionItemIds }.sortedByDescending { it.createdAt }
-
-        /** 过期时间分桶；置顶区条目不重复入桶。 */
-        val buckets: List<ExpiryBucket>
-            get() = bucketItems(items.filter { it.id !in sessionItemIds }, now)
 
         /**
          * 表单是否已有内容：新增表单 = 任一字段非空；编辑表单 = 与原条目有差异。
@@ -125,10 +121,18 @@ class MainViewModel(
     private var permissionRequested = false
     private var saving = false
 
+    /** 派生态随 items/now/sessionItemIds 变化时重算（避免每次重组全量重算）。 */
+    private fun withDerived(state: UiState): UiState = state.copy(
+        pinnedItems = state.items
+            .filter { it.id in state.sessionItemIds }
+            .sortedByDescending { it.createdAt },
+        buckets = bucketItems(state.items.filter { it.id !in state.sessionItemIds }, state.now),
+    )
+
     init {
         viewModelScope.launch {
             repository.observeAll().collect { items ->
-                _uiState.update { it.copy(items = items, now = nowProvider()) }
+                _uiState.update { withDerived(it.copy(items = items, now = nowProvider())) }
             }
         }
     }
@@ -143,12 +147,12 @@ class MainViewModel(
 
     /** 下拉刷新：本次添加区散入各桶（清空会话集合，纯内存态）。 */
     fun disperseSession() {
-        _uiState.update { it.copy(sessionItemIds = emptySet()) }
+        _uiState.update { withDerived(it.copy(sessionItemIds = emptySet())) }
     }
 
     /** ON_RESUME 时刷新页面时刻：分桶随时间流动（条目跨档后桶迁移，不依赖数据库变化）。 */
     fun refreshNow() {
-        _uiState.update { it.copy(now = nowProvider()) }
+        _uiState.update { withDerived(it.copy(now = nowProvider())) }
     }
 
     /** ← 放弃当前表单（新增/编辑通用）：仅关闭表单，「本次添加」置顶区不动。 */
@@ -293,7 +297,9 @@ class MainViewModel(
                 // 新条目暂存后表单清空继续，并进入「本次添加」置顶区；
                 // 编辑已有条目仍是保存即退出，会话集合不动
                 if (editing.editingItemId == null) {
-                    it.copy(editing = clearedForm(editing), sessionItemIds = it.sessionItemIds + itemId)
+                    withDerived(
+                        it.copy(editing = clearedForm(editing), sessionItemIds = it.sessionItemIds + itemId),
+                    )
                 } else {
                     it.copy(editing = null)
                 }

@@ -25,6 +25,8 @@ class HistoryViewModel(
 ) : ViewModel() {
 
     data class UiState(
+        /** 页面级统一时刻：卡片状态文本共用（卡片不再各自 remember）。 */
+        val now: LocalDateTime = LocalDateTime.MIN,
         val groups: List<DeletedGroup> = emptyList(),
         val restoring: FoodItem? = null,
     )
@@ -43,9 +45,12 @@ class HistoryViewModel(
             repository.observeDeleted().collect { deleted ->
                 _uiState.update {
                     // deletedAt 非 null 由 DAO 过滤保证，违反即快速失败
-                    it.copy(groups = deleted.groupBy { d -> deletedAtKey(requireNotNull(d.deletedAt)) }
-                        .map { (at, list) -> DeletedGroup(at, list) }
-                        .sortedByDescending { g -> g.deletedAt })
+                    it.copy(
+                        now = nowProvider(),
+                        groups = deleted.groupBy { d -> deletedAtKey(requireNotNull(d.deletedAt)) }
+                            .map { (at, list) -> DeletedGroup(at, list) }
+                            .sortedByDescending { g -> g.deletedAt },
+                    )
                 }
             }
         }

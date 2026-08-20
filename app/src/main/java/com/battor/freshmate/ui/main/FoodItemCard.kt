@@ -9,12 +9,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -28,7 +28,6 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
@@ -79,7 +78,11 @@ fun FoodItemCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(ExpiredRed, RoundedCornerShape(16.dp))
+                    // 删除背景用色板已过期档容器色：深色主题下同步变深
+                    .background(
+                        LocalStatusColors.current.expired.container,
+                        MaterialTheme.shapes.large,
+                    )
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterEnd,
             ) { Icon(Icons.Filled.Delete, contentDescription = "删除", tint = Color.White) }
@@ -88,7 +91,7 @@ fun FoodItemCard(
         Card(
             onClick = onClick,
             enabled = enabled,
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             // 禁用态钉同样的状态色：编辑期间卡片只禁交互、不变色
             colors = CardDefaults.cardColors(
                 containerColor = container,
@@ -110,10 +113,12 @@ fun FoodItemCard(
                     modifier = Modifier.size(28.dp),
                 )
                 Column(Modifier.weight(1f)) {
-                    Text(item.name, color = onColor, fontSize = 16.sp)
-                    item.quantity?.let { Text("数量：$it", color = onColor, fontSize = 12.sp) }
+                    Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
+                    item.quantity?.let {
+                        Text("数量：$it", color = onColor, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
-                Text(expiryText(item, now), color = onColor, fontSize = 13.sp)
+                Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

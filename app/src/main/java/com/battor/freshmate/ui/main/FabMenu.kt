@@ -16,6 +16,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,10 +48,16 @@ fun FabMenu(
             SmallFloatingActionButton(
                 onClick = onBack,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.padding(end = 12.dp),
+                // 48dp 触摸目标；end padding 保证与 ✓ 按钮间距
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .minimumInteractiveComponentSize(),
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "放弃返回") }
             if (showSave) {
-                SmallFloatingActionButton(onClick = onSave) {
+                SmallFloatingActionButton(
+                    onClick = onSave,
+                    modifier = Modifier.minimumInteractiveComponentSize(),
+                ) {
                     Icon(
                         Icons.Filled.Check,
                         contentDescription = if (isAddForm) "暂存并继续" else "保存",

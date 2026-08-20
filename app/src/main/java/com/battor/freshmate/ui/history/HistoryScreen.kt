@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Restore
@@ -44,7 +43,6 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.ui.main.RestoreGreen
@@ -97,7 +95,7 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
             ) {
                 state.groups.forEach { group ->
                     item(key = "del_${group.deletedAt}") {
-                        DeletedGroupBox(group, viewModel::requestRestore)
+                        DeletedGroupBox(group, state.now, viewModel::requestRestore)
                     }
                 }
             }
@@ -118,10 +116,11 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
 @Composable
 private fun DeletedGroupBox(
     group: DeletedGroup,
+    now: LocalDateTime,
     onRequestRestore: (FoodItem) -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         modifier = Modifier.fillMaxWidth(),
@@ -130,12 +129,12 @@ private fun DeletedGroupBox(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "删除于 ${group.deletedAt.format(DeletedAtFormat)}",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             group.items.forEach { item ->
-                HistoryItemCard(item, onRequestRestore)
+                HistoryItemCard(item, now, onRequestRestore)
             }
         }
     }
@@ -149,9 +148,9 @@ private fun DeletedGroupBox(
 @Composable
 private fun HistoryItemCard(
     item: FoodItem,
+    now: LocalDateTime,
     onRequestRestore: (FoodItem) -> Unit,
 ) {
-    val now = remember { LocalDateTime.now() }
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
     val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
 
@@ -181,14 +180,14 @@ private fun HistoryItemCard(
         backgroundContent = {
             Box(
                 modifier = Modifier.fillMaxSize()
-                    .background(RestoreGreen, RoundedCornerShape(16.dp))
+                    .background(RestoreGreen, MaterialTheme.shapes.large)
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterStart,
             ) { Icon(Icons.Filled.Restore, contentDescription = "还原", tint = Color.White) }
         },
     ) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             // 钉同样的状态色：不活跃条目只变淡、不变 M3 禁用配色
             colors = CardDefaults.cardColors(
                 containerColor = container, contentColor = onColor,
@@ -208,9 +207,9 @@ private fun HistoryItemCard(
                     modifier = Modifier.size(28.dp),
                 )
                 Column(Modifier.weight(1f)) {
-                    Text(item.name, color = onColor, fontSize = 16.sp)
+                    Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
                 }
-                Text(expiryText(item, now), color = onColor, fontSize = 13.sp)
+                Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
