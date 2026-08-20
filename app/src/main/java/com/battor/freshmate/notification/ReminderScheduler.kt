@@ -7,8 +7,6 @@ import android.content.Intent
 import android.os.Build
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.data.FoodItemDatabase
-import com.battor.freshmate.util.expiryDateTime
-import com.battor.freshmate.util.futureReminderTimes
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
@@ -26,11 +24,11 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
 
     override fun schedule(item: FoodItem) {
         cancel(item.id)
-        val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
-        val times = futureReminderTimes(expiry, item.shelfLifeDays, LocalDateTime.now())
+        // 提醒时点来自保存时的快照（需求-3），调度器只读不算
+        val times = item.reminderTimes
         val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
             alarmManager.canScheduleExactAlarms()
-        Timber.i("ALARM schedule itemId=%d 到期=%s 时点数=%d 精确=%b", item.id, expiry, times.size, canExact)
+        Timber.i("ALARM schedule itemId=%d 时点数=%d 精确=%b", item.id, times.size, canExact)
         times.forEachIndexed { index, time ->
             val pi = broadcast(item.id, index)
             val atMillis = time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()

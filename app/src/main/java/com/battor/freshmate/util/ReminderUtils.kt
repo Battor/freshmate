@@ -38,18 +38,3 @@ fun computeReminderTimes(
     val future = mergedReminderTimes(expiry, shelfLifeDays).filter { it > now }
     return if (future.isEmpty() && expiry > now) listOf(roundDownToHalfHour(expiry)) else future
 }
-
-// 临时保留：ReminderScheduler 后续任务改读快照后删除
-/** 只保留严格晚于 now 的提醒时点（<= now 视为已过去）。旧比例档实现。 */
-fun futureReminderTimes(
-    expiry: LocalDateTime,
-    shelfLifeDays: Int,
-    now: LocalDateTime,
-): List<LocalDateTime> {
-    val total = Duration.ofDays(shelfLifeDays.toLong())
-    return listOf(3L, 5L, 6L)
-        .map { divisor -> roundDownToHalfHour(expiry.minus(total.dividedBy(divisor))) }
-        .distinct()
-        .sorted()
-        .filter { it > now }
-}
