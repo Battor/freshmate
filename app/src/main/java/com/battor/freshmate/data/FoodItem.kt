@@ -16,6 +16,10 @@ data class FoodItem(
     val quantity: String?,
     @ColumnInfo(name = "created_at") val createdAt: LocalDateTime,
 
+    /** 提醒时点快照（需求-3）：新增/编辑保存时算好，调度器只读不算。 */
+    @ColumnInfo(name = "reminder_times")
+    val reminderTimes: List<LocalDateTime> = emptyList(),
+
     /** 软删除时刻（设计文档 §7.1）：null = 活跃；非 null = 已删除（历史页可见）。 */
     @ColumnInfo(name = "deleted_at") val deletedAt: LocalDateTime? = null,
 )

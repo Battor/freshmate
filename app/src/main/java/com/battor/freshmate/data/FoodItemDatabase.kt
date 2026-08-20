@@ -17,9 +17,17 @@ class Converters {
     @TypeConverter fun localDateTimeToString(v: LocalDateTime?): String? = v?.toString()
     @TypeConverter fun stringToLocalDateTime(v: String?): LocalDateTime? =
         v?.let(LocalDateTime::parse)
+
+    @TypeConverter
+    fun localDateTimeListToString(v: List<LocalDateTime>?): String? =
+        v?.takeIf { it.isNotEmpty() }?.joinToString(",") { it.toString() }
+
+    @TypeConverter
+    fun stringToLocalDateTimeList(v: String?): List<LocalDateTime>? =
+        v?.takeIf { it.isNotBlank() }?.split(",")?.map { LocalDateTime.parse(it) }
 }
 
-@Database(entities = [FoodItem::class], version = 2, exportSchema = true)
+@Database(entities = [FoodItem::class], version = 3, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class FoodItemDatabase : RoomDatabase() {
     abstract fun foodItemDao(): FoodItemDao
@@ -41,7 +49,7 @@ abstract class FoodItemDatabase : RoomDatabase() {
                     FoodItemDatabase::class.java,
                     "freshmate.db",
                 ).addMigrations(MIGRATION_1_2)
-                    // 迁移失败的最后兜底（设计文档 §8）：清库重建优于每次启动崩溃循环
+                    // 迁移失败的最后兜底（设计文档 §8）：清库重建优于每次启动崩溃循环；2→3 同理靠 destructive 兜底
                     .fallbackToDestructiveMigration()
                     .build().also { instance = it }
             }
