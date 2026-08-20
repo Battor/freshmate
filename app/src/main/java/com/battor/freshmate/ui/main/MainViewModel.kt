@@ -17,19 +17,12 @@ import com.battor.freshmate.util.mergedReminderTimes
 import com.battor.freshmate.util.shelfLifeToDays
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-/**
- * 组键：录入时刻截断到分钟——仅历史页删除分组仍在用（需求-3 后主列表不再分组），
- * 随历史页重构（Task 7）移除。
- */
-fun groupKey(time: LocalDateTime): LocalDateTime = time.truncatedTo(ChronoUnit.MINUTES)
 
 /** 列表分桶（需求-3）：桶序 = 紧急度（EXPIRED→SAFE），桶内按到期时间升序（最紧急在前）。 */
 data class ExpiryBucket(val status: ExpiryStatus, val items: List<FoodItem>)

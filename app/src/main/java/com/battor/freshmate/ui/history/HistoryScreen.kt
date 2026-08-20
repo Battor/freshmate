@@ -39,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -98,7 +97,7 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
             ) {
                 state.groups.forEach { group ->
                     item(key = "del_${group.deletedAt}") {
-                        DeletedGroupBox(group, state::isRestorable, viewModel::requestRestore)
+                        DeletedGroupBox(group, viewModel::requestRestore)
                     }
                 }
             }
@@ -109,7 +108,7 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = viewModel::cancelRestore,
             title = { Text("还原条目") },
-            text = { Text("把「${item.name}」还原到原组吗？") },
+            text = { Text("把「${item.name}」还原吗？还原后将回到对应的到期分组。") },
             confirmButton = { TextButton(onClick = viewModel::confirmRestore) { Text("还原") } },
             dismissButton = { TextButton(onClick = viewModel::cancelRestore) { Text("取消") } },
         )
@@ -119,10 +118,8 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
 @Composable
 private fun DeletedGroupBox(
     group: DeletedGroup,
-    isRestorable: (FoodItem) -> Boolean,
     onRequestRestore: (FoodItem) -> Unit,
 ) {
-    val restorableCount = group.items.count(isRestorable)
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -136,29 +133,22 @@ private fun DeletedGroupBox(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
-                    "  可还原 $restorableCount/${group.items.size}",
-                    fontSize = 11.sp,
-                    color = if (restorableCount > 0) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
             group.items.forEach { item ->
-                HistoryItemCard(item, isRestorable(item), onRequestRestore)
+                HistoryItemCard(item, onRequestRestore)
             }
         }
     }
 }
 
 /**
- * 右滑（Start→End）露绿色还原背景；组不活跃时禁用滑动并整体变淡。
+ * 右滑（Start→End）露绿色还原背景。
  * confirmValueChange 返回 false：条目此刻仍在已删除列表（对话框待确认），
  * 让卡片立即回弹，由对话框驱动后续状态变化。
  */
 @Composable
 private fun HistoryItemCard(
     item: FoodItem,
-    restorable: Boolean,
     onRequestRestore: (FoodItem) -> Unit,
 ) {
     val now = remember { LocalDateTime.now() }
@@ -167,7 +157,7 @@ private fun HistoryItemCard(
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (restorable && value == SwipeToDismissBoxValue.StartToEnd) {
+            if (value == SwipeToDismissBoxValue.StartToEnd) {
                 onRequestRestore(item)
             }
             false
@@ -176,26 +166,18 @@ private fun HistoryItemCard(
 
     SwipeToDismissBox(
         state = dismissState,
-        // 不可还原：两个方向都禁拖，不给误导性的绿色背景；可还原时仅开放右滑
+        // 仅开放右滑还原，左滑不响应
         enableDismissFromEndToStart = false,
-        enableDismissFromStartToEnd = restorable,
-        // 组不活跃（不可还原）时整体变淡提示禁用；TalkBack 的「还原」动作同样仅可还原时提供
-        modifier = Modifier
-            .alpha(if (restorable) 1f else 0.4f)
-            .then(
-                if (restorable) {
-                    Modifier.semantics {
-                        customActions = listOf(
-                            CustomAccessibilityAction("还原") {
-                                onRequestRestore(item)
-                                true
-                            },
-                        )
-                    }
-                } else {
-                    Modifier
+        enableDismissFromStartToEnd = true,
+        // TalkBack 恒提供「还原」自定义动作（需求-3：随时可还原，无门禁）
+        modifier = Modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction("还原") {
+                    onRequestRestore(item)
+                    true
                 },
-            ),
+            )
+        },
         backgroundContent = {
             Box(
                 modifier = Modifier.fillMaxSize()
@@ -227,9 +209,6 @@ private fun HistoryItemCard(
                 )
                 Column(Modifier.weight(1f)) {
                     Text(item.name, color = onColor, fontSize = 16.sp)
-                    if (!restorable) {
-                        Text("原组已不存在", color = onColor, fontSize = 12.sp)
-                    }
                 }
                 Text(expiryText(item, now), color = onColor, fontSize = 13.sp)
             }

@@ -6,8 +6,8 @@ import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.notification.scheduleOrCancel
-import com.battor.freshmate.ui.main.groupKey
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,12 +26,8 @@ class HistoryViewModel(
 
     data class UiState(
         val groups: List<DeletedGroup> = emptyList(),
-        /** 主列表活跃条目的组键集合——还原条件（设计文档 §7.2：仅组活跃时可还原）。 */
-        val activeGroupKeys: Set<LocalDateTime> = emptySet(),
         val restoring: FoodItem? = null,
-    ) {
-        fun isRestorable(item: FoodItem): Boolean = groupKey(item.createdAt) in activeGroupKeys
-    }
+    )
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -44,17 +40,10 @@ class HistoryViewModel(
 
     init {
         viewModelScope.launch {
-            repository.observeAll().collect { active ->
-                _uiState.update {
-                    it.copy(activeGroupKeys = active.map { i -> groupKey(i.createdAt) }.toSet())
-                }
-            }
-        }
-        viewModelScope.launch {
             repository.observeDeleted().collect { deleted ->
                 _uiState.update {
                     // deletedAt 非 null 由 DAO 过滤保证，违反即快速失败
-                    it.copy(groups = deleted.groupBy { d -> groupKey(requireNotNull(d.deletedAt)) }
+                    it.copy(groups = deleted.groupBy { d -> deletedAtKey(requireNotNull(d.deletedAt)) }
                         .map { (at, list) -> DeletedGroup(at, list) }
                         .sortedByDescending { g -> g.deletedAt })
                 }
@@ -62,9 +51,9 @@ class HistoryViewModel(
         }
     }
 
-    /** 右滑触发：仅组活跃的条目可进入待确认状态。 */
+    /** 右滑触发：随时可还原（需求-3：组模型取消，无门禁），进入待确认状态。 */
     fun requestRestore(item: FoodItem) {
-        if (uiState.value.isRestorable(item)) _uiState.update { it.copy(restoring = item) }
+        _uiState.update { it.copy(restoring = item) }
     }
 
     fun cancelRestore() {
@@ -73,16 +62,12 @@ class HistoryViewModel(
 
     fun confirmRestore() {
         val item = _uiState.value.restoring ?: return
-        if (!uiState.value.isRestorable(item)) {
-            _uiState.update { it.copy(restoring = null) }
-            return
-        }
         _uiState.update { it.copy(restoring = null) }
         viewModelScope.launch {
             try {
                 repository.restore(item)
                 scheduler.scheduleOrCancel(item, nowProvider())
-                _message.value = "已还原「${item.name}」到原组"
+                _message.value = "已还原「${item.name}」"
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
@@ -91,3 +76,6 @@ class HistoryViewModel(
         }
     }
 }
+
+/** 删除时刻截断到分钟：同分钟删除的条目归为一组。 */
+private fun deletedAtKey(time: LocalDateTime): LocalDateTime = time.truncatedTo(ChronoUnit.MINUTES)

@@ -18,7 +18,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -72,21 +71,8 @@ class HistoryViewModelTest {
         assertEquals(listOf("面包"), groups[0].items.map { it.name })
     }
 
-    @Test fun `组活跃时可还原组不存在时不可还原`() = runTest(dispatcher) {
-        val g = LocalDateTime.of(2026, 8, 14, 9, 0)
-        val a = insertActive("牛奶", g)
-        val b = insertActive("面包", g)
-        advanceUntilIdle()
-        deleteActive(a) // g 组仍有活跃的面包
-        assertTrue(vm.uiState.value.isRestorable(vm.uiState.value.groups[0].items[0]))
-
-        deleteActive(b) // g 组全部删除
-        assertFalse(vm.uiState.value.isRestorable(vm.uiState.value.groups[0].items[0]))
-    }
-
     @Test fun `确认还原清空deletedAt并重排提醒`() = runTest(dispatcher) {
         val g = LocalDateTime.of(2026, 8, 14, 9, 0)
-        insertActive("面包", g)
         val a = insertActive("牛奶", g)
         advanceUntilIdle()
         deleteActive(a)
@@ -100,10 +86,10 @@ class HistoryViewModelTest {
         vm.requestRestore(deleted)
         vm.confirmRestore()
         advanceUntilIdle()
-        assertEquals(2, repo.getAll().size)
+        assertEquals(1, repo.getAll().size)
         assertTrue(scheduler.scheduled.any { it.id == a.id })
         assertNull(vm.uiState.value.restoring)
-        assertEquals("已还原「牛奶」到原组", vm.message.value)
+        assertEquals("已还原「牛奶」", vm.message.value)
     }
 
     @Test fun `已过期条目还原不排提醒只取消`() = runTest(dispatcher) {
@@ -115,34 +101,16 @@ class HistoryViewModelTest {
             val id = repo.insert(item)
             repo.items.value.first { it.id == id }
         }
-        insertActive("面包", expired.createdAt) // 保组活跃
         advanceUntilIdle()
         deleteActive(expired)
 
         val deleted = vm.uiState.value.groups[0].items.single { it.name == "酸奶" }
-        vm.requestRestore(deleted) // 组由面包保活，通过门禁
+        vm.requestRestore(deleted) // 需求-3：随时可还原，无组门禁
         vm.confirmRestore()
         advanceUntilIdle()
-        assertEquals(2, repo.getAll().size)
+        assertEquals(1, repo.getAll().size)
         assertTrue(scheduler.scheduled.isEmpty())
         assertTrue(scheduler.cancelled.contains(expired.id))
-    }
-
-    @Test fun `组在确认前失效时还原被拒绝`() = runTest(dispatcher) {
-        val g = LocalDateTime.of(2026, 8, 14, 9, 0)
-        val a = insertActive("牛奶", g)
-        val b = insertActive("面包", g)
-        advanceUntilIdle()
-        deleteActive(a)
-        val deleted = vm.uiState.value.groups[0].items.single { it.name == "牛奶" }
-
-        vm.requestRestore(deleted)
-        deleteActive(b) // 组在请求与确认之间失效
-        vm.confirmRestore()
-        advanceUntilIdle()
-        assertNull(vm.uiState.value.restoring)
-        assertEquals(0, repo.getAll().size) // 未还原
-        assertTrue(repo.observeDeleted().first().let { it.size == 2 })
     }
 
     @Test fun `scheduleOrCancel按到期时间分支`() = runTest(dispatcher) {
