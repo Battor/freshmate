@@ -378,6 +378,28 @@ class MainViewModelTest {
         assertFalse(saved.reminderTimes.isEmpty()) // 至少保底一个
     }
 
+    @Test fun `编辑置顶区条目保存后仍在置顶区`() = runTest(dispatcher) {
+        saveNew()
+        val item = repo.items.value[0]
+        vm.startEdit(item)
+        vm.updateEditing { it.copy(name = "鲜牛奶") }
+        vm.save()
+        advanceUntilIdle()
+        assertEquals("鲜牛奶", repo.items.value[0].name)
+        assertEquals(setOf(item.id), vm.uiState.value.sessionItemIds) // 编辑保存不动会话集合
+        assertEquals(1, vm.uiState.value.pinnedItems.size)
+    }
+
+    @Test fun `置顶区条目删除后撤销仍在置顶区`() = runTest(dispatcher) {
+        saveNew()
+        val item = repo.items.value[0]
+        vm.delete(item)
+        advanceUntilIdle()
+        vm.undoDelete(item)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.pinnedItems.isNotEmpty()) // 删除不清会话集合，撤销自然回置顶区
+    }
+
     @Test fun `编辑改保质期后快照重算`() = runTest(dispatcher) {
         saveNew()
         vm.startEdit(repo.items.value[0])

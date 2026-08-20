@@ -84,7 +84,7 @@ fun FoodItemCard(
             onClick = onClick,
             enabled = enabled,
             shape = RoundedCornerShape(16.dp),
-            // 禁用态钉同样的状态色：编辑期间当前组卡片只禁交互、不变色
+            // 禁用态钉同样的状态色：编辑期间卡片只禁交互、不变色
             colors = CardDefaults.cardColors(
                 containerColor = container,
                 contentColor = onColor,

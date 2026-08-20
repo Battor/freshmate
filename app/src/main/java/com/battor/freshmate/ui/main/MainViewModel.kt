@@ -27,18 +27,19 @@ import kotlinx.coroutines.launch
 /** 列表分桶（需求-3）：桶序 = 紧急度（EXPIRED→SAFE），桶内按到期时间升序（最紧急在前）。 */
 data class ExpiryBucket(val status: ExpiryStatus, val items: List<FoodItem>)
 
-fun bucketItems(items: List<FoodItem>, now: LocalDateTime): List<ExpiryBucket> =
-    ExpiryStatus.entries.mapNotNull { status ->
-        items
-            .filter { expiryStatus(expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays), now) == status }
-            .takeIf { it.isNotEmpty() }
-            ?.let { list ->
-                ExpiryBucket(
-                    status,
-                    list.sortedBy { expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays) },
-                )
-            }
+fun bucketItems(items: List<FoodItem>, now: LocalDateTime): List<ExpiryBucket> {
+    val byStatus = items.groupBy {
+        expiryStatus(expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays), now)
     }
+    return ExpiryStatus.entries.mapNotNull { status ->
+        byStatus[status]?.let { list ->
+            ExpiryBucket(
+                status,
+                list.sortedBy { expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays) },
+            )
+        }
+    }
+}
 
 class MainViewModel(
     private val repository: FoodRepository,
@@ -91,7 +92,7 @@ class MainViewModel(
 
         /**
          * 表单是否已有内容：新增表单 = 任一字段非空；编辑表单 = 与原条目有差异。
-         * 驱动 ✓ 按钮显隐与"空表单点组内空白退出"（有内容时不退出，防误触丢失）。
+         * 驱动 ✓ 按钮显隐。
          */
         val hasFormContent: Boolean
             get() = editing?.let { e ->

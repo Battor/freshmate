@@ -28,9 +28,9 @@ import androidx.compose.ui.unit.dp
 import com.battor.freshmate.inputmethod.InputMethodId
 
 /**
- * 两态（2026-08-16 组容器模型）：
+ * 两态 FAB：
  * - 表单打开：←（放弃返回）；表单有内容时追加 ✓（新增 = 暂存并继续；编辑 = 保存）。
- * - 无表单：+ 号菜单（手动/语音/图片），新录入永远新开一组。
+ * - 无表单：+ 号菜单，三种录入方式（手动/语音/图片）任选其一新开表单。
  */
 @Composable
 fun FabMenu(
@@ -40,9 +40,10 @@ fun FabMenu(
     onStartInput: (InputMethodId) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     if (formOpen) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
             SmallFloatingActionButton(
                 onClick = onBack,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -59,7 +60,7 @@ fun FabMenu(
         }
     } else {
         var expanded by remember { mutableStateOf(false) }
-        Box {
+        Box(modifier = modifier) {
             FloatingActionButton(onClick = { expanded = true }) {
                 Icon(Icons.Filled.Add, contentDescription = "添加")
             }

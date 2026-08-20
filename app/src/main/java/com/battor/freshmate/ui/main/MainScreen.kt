@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
@@ -60,6 +61,7 @@ fun MainScreen(
     val errorEvent by viewModel.errorEvent.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
     LaunchedEffect(errorEvent) {
         errorEvent?.let {
@@ -87,6 +89,11 @@ fun MainScreen(
         onHandled = { viewModel.onPermissionRequested() },
     )
 
+    // 表单打开（渲染为列表首项）时滚到顶部，保证用户立刻看到（桶空白不可点后无其它视觉反馈）
+    LaunchedEffect(state.editing != null) {
+        if (state.editing != null) listState.animateScrollToItem(0)
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -110,6 +117,7 @@ fun MainScreen(
                 onStartInput = { viewModel.startNew(it) },
                 onSave = { viewModel.save() },
                 onBack = { viewModel.backToMethodSelection() },
+                modifier = Modifier.imePadding(), // edge-to-edge 下键盘弹出时 FAB 随 IME 抬升，不被遮挡
             )
         },
     ) { padding ->
@@ -122,6 +130,7 @@ fun MainScreen(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize().imePadding(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),

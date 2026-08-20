@@ -18,8 +18,7 @@ enum class ExpiryStatus(val label: String) {
 
 fun expiryStatus(expiry: LocalDateTime, now: LocalDateTime): ExpiryStatus {
     val remaining = Duration.between(now, expiry)
-    if (!remaining.isNegative && remaining.isZero) return ExpiryStatus.EXPIRED
-    if (remaining.isNegative) return ExpiryStatus.EXPIRED
+    if (remaining <= Duration.ZERO) return ExpiryStatus.EXPIRED
     return when {
         remaining <= Duration.ofDays(1) -> ExpiryStatus.DUE_1D
         remaining <= Duration.ofDays(3) -> ExpiryStatus.DUE_3D
