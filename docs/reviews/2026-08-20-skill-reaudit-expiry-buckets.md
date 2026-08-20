@@ -18,11 +18,15 @@
 | 9 | UI(低) | persist 吞 CancellationException | 补上抛（与 delete/undoDelete 同风格） |
 | 10 | styles(低) | `0xFFC62828` 与 ExpiredRed 双写 | 色板引用常量 |
 
-## 遗留未修（下轮候选，均低/打磨级）
+## 第二批修复（提交 711db22 / d592435，2026-08-20 同日）
 
-- styles：删除滑动背景绕过色板（深色主题不对称，`FoodItemCard` 滑动背景直接用 ExpiredRed）；卡片裸 fontSize 三连在 FoodItemCard/HistoryScreen 重复；16dp/8dp 圆角魔法数未集中（`MaterialTheme.shapes` 未用）
-- UI：计算属性（pinnedItems/buckets/hasFormContent）每次重组重算；下拉刷新对 TalkBack/开关控制不可达；历史页卡片仍各自 `remember { now }`；编辑保存后视口停在顶部不回原位；SmallFAB 40dp < 48dp 触摸目标；已删条目 id 残留 sessionItemIds（还原后重回置顶区，影响极小）；下拉刷新指示器恒不显示（散入瞬时完成）
-- 安全(记录)：`requestCode` 的 itemId Long→Int 截断理论上可碰撞（个人应用量级达不到）；DB v3 清库重建上线前需换正式迁移
+用户要求把中低项一并修掉，10 项落地：删除滑动背景接入色板（深色对称）；裸 fontSize → typography（bodyLarge/bodySmall/bodyMedium）；圆角集中 `MaterialTheme.shapes`（AppShapes 8/12/16dp）；pinnedItems/buckets 改存储字段随更新点预算（withDerived）；「本次添加」组头加无障碍「散入各桶」动作；历史页卡片 now 由 VM 统一下发；表单关闭恢复原滚动位置；SmallFAB 48dp 触摸目标；下拉刷新 400ms 可见反馈；requestCode 加 itemId 上界 require。
+
+## 遗留（记录在案）
+
+- 已删条目 id 残留 sessionItemIds：**保留为预期行为**——撤销/还原后重回置顶区有测试锚定（`置顶区条目删除后撤销仍在置顶区`）
+- DB v3 清库重建：上线前需换正式迁移，否则升级用户数据全丢
+- ItemForm.kt 仍有一处 13sp 裸字号（不在两批修复范围，下轮随手）
 
 ## 通过面摘要
 
