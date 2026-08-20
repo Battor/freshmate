@@ -18,13 +18,14 @@ class Converters {
     @TypeConverter fun stringToLocalDateTime(v: String?): LocalDateTime? =
         v?.let(LocalDateTime::parse)
 
+    /** 空列表序列化为空串：reminder_times 列 NOT NULL，已过期条目快照为空列表也必须能落库。 */
     @TypeConverter
-    fun localDateTimeListToString(v: List<LocalDateTime>?): String? =
-        v?.takeIf { it.isNotEmpty() }?.joinToString(",") { it.toString() }
+    fun localDateTimeListToString(v: List<LocalDateTime>): String =
+        v.joinToString(",") { it.toString() }
 
     @TypeConverter
-    fun stringToLocalDateTimeList(v: String?): List<LocalDateTime>? =
-        v?.takeIf { it.isNotBlank() }?.split(",")?.map { LocalDateTime.parse(it) }
+    fun stringToLocalDateTimeList(v: String): List<LocalDateTime> =
+        v.takeIf { it.isNotBlank() }?.split(",")?.map { LocalDateTime.parse(it) } ?: emptyList()
 }
 
 @Database(entities = [FoodItem::class], version = 3, exportSchema = true)
