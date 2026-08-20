@@ -24,8 +24,8 @@ class Converters {
         v.joinToString(",") { it.toString() }
 
     @TypeConverter
-    fun stringToLocalDateTimeList(v: String): List<LocalDateTime> =
-        v.takeIf { it.isNotBlank() }?.split(",")?.map { LocalDateTime.parse(it) } ?: emptyList()
+    fun stringToLocalDateTimeList(v: String?): List<LocalDateTime> =
+        v?.takeIf { it.isNotBlank() }?.split(",")?.map { LocalDateTime.parse(it) } ?: emptyList()
 }
 
 @Database(entities = [FoodItem::class], version = 3, exportSchema = true)

@@ -29,6 +29,7 @@ fun mergedReminderTimes(expiry: LocalDateTime, shelfLifeDays: Int): List<LocalDa
 /**
  * 录入/编辑保存时的提醒快照：merged 只保留严格晚于 now 的时点；
  * 全部已过但条目未过期（expiry > now）时保底追加到期时刻本身；已过期返回空列表。
+ * 保底时点取整后可能 ≤ now（到期就在本半小时内），届时闹钟立即触发一次，属预期行为。
  */
 fun computeReminderTimes(
     expiry: LocalDateTime,

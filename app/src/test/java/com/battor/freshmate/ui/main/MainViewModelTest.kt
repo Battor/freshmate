@@ -98,7 +98,7 @@ class MainViewModelTest {
 
     @Test fun `提醒时点已过时先弹确认`() = runTest(dispatcher) {
         vm.startNew(InputMethodId.MANUAL)
-        // 生产日期 8/1 + 7 天 → 8/8 已过期，3 个时点全部已过
+        // 生产日期 8/1 + 7 天 → 8/8 已过期，真实错过的提醒时点全部已过
         vm.updateEditing {
             it.copy(name = "酸奶", shelfLifeValue = "7", productionDate = LocalDate.of(2026, 8, 1))
         }
@@ -393,6 +393,17 @@ class MainViewModelTest {
             LocalDateTime.of(2026, 8, 22, 10, 0), 7, now,
         )
         assertEquals(expected, saved.reminderTimes)
+        // 字面值锚点（7 天保质期、now=8-15 10:00 录入）：候选合并后为
+        // [8-15 10:00, 8-19 10:00, 8-21 00:00]（1/3→8-20 02:00 距 8-19 10:00 仅 16h 被并、
+        // 1/5→8-21 00:24 取整 8-21 00:00 保留，1/6=28h 与 1 天档并入 8-21 00:00 的 24h 窗口），
+        // 7 天档 = now 不严格晚于 now 被滤
+        assertEquals(
+            listOf(
+                LocalDateTime.of(2026, 8, 19, 10, 0),
+                LocalDateTime.of(2026, 8, 21, 0, 0),
+            ),
+            saved.reminderTimes,
+        )
         assertFalse(saved.reminderTimes.isEmpty()) // 至少保底一个
     }
 

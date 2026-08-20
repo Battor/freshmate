@@ -188,7 +188,8 @@ class MainViewModel(
         // 只统计"真实错过"的时点：晚于生产开始（expiry−days）且不晚于 now。
         // 早于生产开始的绝对档（如 3 天保质期的 7 天档）对新录入条目无意义，不触发确认弹窗。
         val start = expiry.minusDays(days.toLong())
-        val skipped = mergedReminderTimes(expiry, days).count { it > start && it <= nowProvider() }
+        val now = nowProvider() // skipped 统计与剩余提醒共用同一时刻
+        val skipped = mergedReminderTimes(expiry, days).count { it > start && it <= now }
         if (skipped > 0) {
             _uiState.update {
                 it.copy(
@@ -196,7 +197,7 @@ class MainViewModel(
                         editing.copy(name = name),
                         days,
                         skippedReminders = skipped,
-                        remainingReminders = computeReminderTimes(expiry, days, nowProvider()).size,
+                        remainingReminders = computeReminderTimes(expiry, days, now).size,
                     ),
                 )
             }
