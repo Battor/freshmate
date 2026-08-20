@@ -1,21 +1,22 @@
 package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +29,8 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,17 +38,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.battor.freshmate.data.FoodItem
-import com.battor.freshmate.ui.main.MainViewModel.EditingState
+import com.battor.freshmate.util.ExpiryStatus
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
-
-private val GroupHeaderFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,69 +115,88 @@ fun MainScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             PermissionBanners()
-            LazyColumn(
+            PullToRefreshBox(
+                isRefreshing = false,
+                onRefresh = { viewModel.disperseSession() },
+                state = rememberPullToRefreshState(),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                val editing = state.editing
-                // 新组（表单目标组尚无条目）：顶部渲染仅含组头 + 表单的框，不重排现有组
-                if (editing != null && state.items.none { groupKey(it.createdAt) == editing.createdAt }) {
-                    item(key = "new_group_form") {
-                        GroupBox(
-                            createdAt = editing.createdAt,
-                            items = emptyList(),
-                            active = false,
-                            form = editing,
-                            editingItemId = null,
-                            cardsEnabled = false,
-                            cardsDimmed = false,
-                            // 空表单点框内空白 = 放弃返回；有内容时不响应，防误触丢失
-                            boxClick = if (state.hasFormContent) null else { { viewModel.backToMethodSelection() } },
-                            onStartEdit = {},
-                            onDeleteItem = {},
-                            onStateChange = { newState -> viewModel.updateEditing { newState } },
-                            onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
-                        )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().imePadding(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // 表单固定渲染在列表顶部（需求-3：组不再承载表单）
+                    state.editing?.let { editing ->
+                        item(key = "form") {
+                            ItemForm(
+                                state = editing,
+                                onStateChange = { newState -> viewModel.updateEditing { newState } },
+                                onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
+                            )
+                        }
                     }
-                }
-                // 每组一个组容器；表单目标组在框内原位渲染表单
-                state.groups.forEach { group ->
-                    item(key = "group_${group.createdAt}") {
-                        val formHost = editing != null && editing.createdAt == group.createdAt
-                        GroupBox(
-                            createdAt = group.createdAt,
-                            items = group.items,
-                            active = group.createdAt == state.activeGroup,
-                            form = editing?.takeIf { it.createdAt == group.createdAt },
-                            editingItemId = editing?.editingItemId,
-                            cardsEnabled = editing == null,
-                            // 编辑期间：表单所在组的子项保持原色（仅禁点），其它组变淡
-                            cardsDimmed = editing != null && !formHost,
-                            boxClick = when {
-                                editing == null -> { { viewModel.startAddTo(group.createdAt) } }
-                                formHost && !state.hasFormContent -> {
-                                    { viewModel.backToMethodSelection() }
-                                }
-                                else -> null
-                            },
-                            onStartEdit = { viewModel.startEdit(it) },
-                            onDeleteItem = { item ->
-                                viewModel.delete(item)
-                                scope.launch {
-                                    val result = snackbarHostState.showSnackbar(
-                                        "已删除「${item.name}」",
-                                        actionLabel = "撤销",
-                                        duration = SnackbarDuration.Short,
-                                    )
-                                    if (result == SnackbarResult.ActionPerformed) {
-                                        viewModel.undoDelete(item)
+                    // 本次添加置顶区（会话内存态；下拉刷新/冷启动散入各桶）
+                    if (state.pinnedItems.isNotEmpty()) {
+                        item(key = "pinned") {
+                            BucketBox(
+                                header = "本次添加",
+                                status = null,
+                                items = state.pinnedItems,
+                                now = state.now,
+                                cardsEnabled = state.editing == null,
+                                onStartEdit = { viewModel.startEdit(it) },
+                                onDeleteItem = { item ->
+                                    viewModel.delete(item)
+                                    scope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            "已删除「${item.name}」",
+                                            actionLabel = "撤销",
+                                            duration = SnackbarDuration.Short,
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            viewModel.undoDelete(item)
+                                        }
                                     }
-                                }
-                            },
-                            onStateChange = { newState -> viewModel.updateEditing { newState } },
-                            onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
-                        )
+                                },
+                            )
+                        }
+                    }
+                    // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
+                    state.buckets.forEach { bucket ->
+                        item(key = "bucket_${bucket.status}") {
+                            BucketBox(
+                                header = bucket.status.label,
+                                status = bucket.status,
+                                items = bucket.items,
+                                now = state.now,
+                                cardsEnabled = state.editing == null,
+                                onStartEdit = { viewModel.startEdit(it) },
+                                onDeleteItem = { item ->
+                                    viewModel.delete(item)
+                                    scope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            "已删除「${item.name}」",
+                                            actionLabel = "撤销",
+                                            duration = SnackbarDuration.Short,
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            viewModel.undoDelete(item)
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    if (state.items.isEmpty() && state.editing == null) {
+                        item(key = "empty") {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("暂无食品，点 + 添加", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
             }
@@ -206,97 +224,62 @@ fun MainScreen(
 }
 
 /**
- * 组容器（2026-08-16 组容器模型）：边框把组头与子条目框成一组。
- * - 普通：1dp 极浅描边；「本次添加」与正在编辑（表单挂本组）：2dp 主色描边。
- *   不加背景晕染——组内子项的状态色（绿/黄/橙/红）原样保留，编辑态的醒目
- *   由主色边框 + 框内 primaryContainer 表单卡片承担。
- * - 点击组头或框内空白区域（boxClick 非 null 时）：无表单 = 续加；本组空表单 = 放弃返回。
- * - 表单挂到本组时在框内渲染：编辑 = 被编辑条目原位置替换为表单（其余子项不动）；
- *   新增 = 渲染在组尾。列表次序始终不变。
+ * 桶容器（需求-3）：浅边框 + 状态色桶头 + 子条目卡片。
+ * status = null 表示「本次添加」置顶区（主色 2dp 边框、组头用主色文本）。
+ * 点卡片 = 编辑；组头与组空白不可点击（桶按过期时间聚合，无组级交互）。
  */
 @Composable
-private fun GroupBox(
-    createdAt: LocalDateTime,
+private fun BucketBox(
+    header: String,
+    status: ExpiryStatus?,
     items: List<FoodItem>,
-    active: Boolean,
-    form: EditingState?,
-    editingItemId: Long?,
+    now: LocalDateTime,
     cardsEnabled: Boolean,
-    cardsDimmed: Boolean,
-    boxClick: (() -> Unit)?,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
-    onStateChange: (EditingState) -> Unit,
-    onPlaceholderHint: (String) -> Unit,
 ) {
-    val border = if (active || form != null) {
+    val border = if (status == null) {
         BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
     } else {
         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     }
-    // 整框可点（组头 + 空白区域）；去掉波纹避免干扰框内卡片与表单
-    val interactionSource = remember { MutableInteractionSource() }
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         border = border,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = boxClick != null,
-            ) { boxClick?.invoke() },
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            val statusColors = status?.let { LocalStatusColors.current.of(it) }
+            if (statusColors != null) {
                 Text(
-                    createdAt.format(GroupHeaderFormat),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    header,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = statusColors.on,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(statusColors.container)
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
                 )
-                if (active) {
-                    Text(
-                        " 本次添加",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
+            } else {
+                Text(
+                    header,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
             items.forEach { item ->
-                if (item.id == editingItemId) {
-                    // 编辑：表单渲染在被编辑条目的原位置，其余子项不动
-                    form?.let { GroupForm(it, onStateChange, onPlaceholderHint) }
-                } else {
-                    FoodItemCard(
-                        item = item,
-                        onClick = { onStartEdit(item) },
-                        onDelete = { onDeleteItem(item) },
-                        enabled = cardsEnabled,
-                        dimmed = cardsDimmed,
-                    )
-                }
-            }
-            // 新增（点组续加 / + 菜单）：表单渲染在组尾
-            if (form != null && editingItemId == null) {
-                GroupForm(form, onStateChange, onPlaceholderHint)
+                FoodItemCard(
+                    item = item,
+                    now = now,
+                    onClick = { onStartEdit(item) },
+                    onDelete = { onDeleteItem(item) },
+                    enabled = cardsEnabled,
+                )
             }
         }
     }
-}
-
-@Composable
-private fun GroupForm(
-    form: EditingState,
-    onStateChange: (EditingState) -> Unit,
-    onPlaceholderHint: (String) -> Unit,
-) {
-    ItemForm(
-        state = form,
-        onStateChange = onStateChange,
-        onPlaceholderHint = onPlaceholderHint,
-    )
 }

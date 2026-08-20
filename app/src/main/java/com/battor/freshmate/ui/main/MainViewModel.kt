@@ -8,9 +8,11 @@ import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.notification.scheduleOrCancel
+import com.battor.freshmate.util.ExpiryStatus
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.computeReminderTimes
 import com.battor.freshmate.util.expiryDateTime
+import com.battor.freshmate.util.expiryStatus
 import com.battor.freshmate.util.mergedReminderTimes
 import com.battor.freshmate.util.shelfLifeToDays
 import java.time.LocalDate
@@ -23,22 +25,27 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** 列表分组：同一录入时刻（精确到分钟）的条目归为一组，按录入时间倒序。 */
-data class FoodItemGroup(val createdAt: LocalDateTime, val items: List<FoodItem>)
-
-fun groupItems(items: List<FoodItem>): List<FoodItemGroup> =
-    items.groupBy { groupKey(it.createdAt) }
-        .map { (minute, list) ->
-            FoodItemGroup(minute, list.sortedByDescending { it.createdAt })
-        }
-        .sortedByDescending { it.createdAt }
-
 /**
- * 组键：录入时刻截断到分钟。分组、表单归属组、徽标比对共用同一把钥匙——
- * 若表单/条目持有精确到秒的时刻，将无法与组键匹配，导致表单无处渲染
- * （表现为点击卡片后卡片消失且看不到表单）。
+ * 组键：录入时刻截断到分钟——仅历史页删除分组仍在用（需求-3 后主列表不再分组），
+ * 随历史页重构（Task 7）移除。
  */
 fun groupKey(time: LocalDateTime): LocalDateTime = time.truncatedTo(ChronoUnit.MINUTES)
+
+/** 列表分桶（需求-3）：桶序 = 紧急度（EXPIRED→SAFE），桶内按到期时间升序（最紧急在前）。 */
+data class ExpiryBucket(val status: ExpiryStatus, val items: List<FoodItem>)
+
+fun bucketItems(items: List<FoodItem>, now: LocalDateTime): List<ExpiryBucket> =
+    ExpiryStatus.entries.mapNotNull { status ->
+        items
+            .filter { expiryStatus(expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays), now) == status }
+            .takeIf { it.isNotEmpty() }
+            ?.let { list ->
+                ExpiryBucket(
+                    status,
+                    list.sortedBy { expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays) },
+                )
+            }
+    }
 
 class MainViewModel(
     private val repository: FoodRepository,
@@ -70,19 +77,24 @@ class MainViewModel(
 
     data class UiState(
         val items: List<FoodItem> = emptyList(),
-        val groups: List<FoodItemGroup> = emptyList(),
+        /** 页面级统一时刻：分桶与卡片状态文本共用（卡片不再各自 remember）。 */
+        val now: LocalDateTime = LocalDateTime.MIN,
+        /** 本次会话新录入条目 id：驱动「本次添加」置顶区；下拉刷新/冷启动清空后散入各桶。 */
+        val sessionItemIds: Set<Long> = emptySet(),
         val editing: EditingState? = null,
-        /** 「本次添加」徽标归属 = 最近一次暂存成功的目标组时刻，暂存成功才转移。 */
-        val activeGroup: LocalDateTime? = null,
         val pendingSave: PendingSave? = null,
         val requestNotificationPermission: Boolean = false,
     ) {
         val isEditing: Boolean get() = editing != null
         val isAddForm: Boolean get() = editing != null && editing.editingItemId == null
 
-        /** 「本次添加」组内的条目。 */
-        val activeGroupItems: List<FoodItem>
-            get() = activeGroup?.let { a -> items.filter { groupKey(it.createdAt) == a } } ?: emptyList()
+        /** 「本次添加」置顶区条目（新→旧）。 */
+        val pinnedItems: List<FoodItem>
+            get() = items.filter { it.id in sessionItemIds }.sortedByDescending { it.createdAt }
+
+        /** 过期时间分桶；置顶区条目不重复入桶。 */
+        val buckets: List<ExpiryBucket>
+            get() = bucketItems(items.filter { it.id !in sessionItemIds }, now)
 
         /**
          * 表单是否已有内容：新增表单 = 任一字段非空；编辑表单 = 与原条目有差异。
@@ -122,28 +134,25 @@ class MainViewModel(
     init {
         viewModelScope.launch {
             repository.observeAll().collect { items ->
-                _uiState.update { it.copy(items = items, groups = groupItems(items)) }
+                _uiState.update { it.copy(items = items, now = nowProvider()) }
             }
         }
     }
 
-    /** + 菜单录入：永远新开一组（新时间戳，组框在列表顶部生成）。 */
+    /** + 菜单录入：新开表单（新时间戳，作保质期无生产日期时的起算点）。 */
     fun startNew(method: InputMethodId) {
         if (saving) return
         _uiState.update {
-            it.copy(editing = EditingState(inputMethod = method, createdAt = groupKey(nowProvider())))
+            it.copy(editing = EditingState(inputMethod = method, createdAt = nowProvider()))
         }
     }
 
-    /** 点击组框续加（组容器模型）：表单挂到该组，新条目沿用该组录入时刻起算保质期。 */
-    fun startAddTo(createdAt: LocalDateTime) {
-        if (saving) return
-        _uiState.update {
-            it.copy(editing = EditingState(inputMethod = InputMethodId.MANUAL, createdAt = groupKey(createdAt)))
-        }
+    /** 下拉刷新：本次添加区散入各桶（清空会话集合，纯内存态）。 */
+    fun disperseSession() {
+        _uiState.update { it.copy(sessionItemIds = emptySet()) }
     }
 
-    /** ← 放弃当前表单（新增/编辑通用）：仅关闭表单，「本次添加」徽标不动。 */
+    /** ← 放弃当前表单（新增/编辑通用）：仅关闭表单，「本次添加」置顶区不动。 */
     fun backToMethodSelection() {
         if (saving) return
         _uiState.update { it.copy(editing = null, pendingSave = null) }
@@ -161,7 +170,7 @@ class MainViewModel(
                     shelfLifeValue = item.shelfLifeDays.toString(),
                     shelfLifeUnit = ShelfLifeUnit.DAY,
                     quantity = item.quantity ?: "",
-                    createdAt = groupKey(item.createdAt),
+                    createdAt = item.createdAt,
                 ),
             )
         }
@@ -260,7 +269,7 @@ class MainViewModel(
                 productionDate = editing.productionDate,
                 shelfLifeDays = days,
                 quantity = editing.quantity.trim().ifEmpty { null },
-                createdAt = groupKey(editing.createdAt),
+                createdAt = editing.createdAt,
                 reminderTimes = computeReminderTimes(expiry, days, nowProvider()),
                 // 编辑保存回到活跃态（编辑入口只对活跃条目开放）
             )
@@ -280,10 +289,10 @@ class MainViewModel(
             val saved = item.copy(id = itemId)
             scheduler.scheduleOrCancel(saved, nowProvider())
             _uiState.update {
-                // 新条目暂存后表单清空继续，「本次添加」徽标转移到该组；
-                // 编辑已有条目仍是保存即退出，徽标不动
+                // 新条目暂存后表单清空继续，并进入「本次添加」置顶区；
+                // 编辑已有条目仍是保存即退出，会话集合不动
                 if (editing.editingItemId == null) {
-                    it.copy(editing = clearedForm(editing), activeGroup = editing.createdAt)
+                    it.copy(editing = clearedForm(editing), sessionItemIds = it.sessionItemIds + itemId)
                 } else {
                     it.copy(editing = null)
                 }
@@ -298,8 +307,8 @@ class MainViewModel(
     /**
      * 暂存一条后返回的"下一张空白表单"（2026-08-15 用户选定策略：保留输入方式和分类）。
      *
-     * 名称/日期/保质期/数量/错误标记必须清空（数据安全）；createdAt 必须沿用目标组时刻
-     * （否则下一条会脱离该组）。
+     * 名称/日期/保质期/数量/错误标记必须清空（数据安全）；createdAt 沿用当前值，
+     * 供下一张表单在无生产日期时作保质期起算点。
      */
     private fun clearedForm(current: EditingState): EditingState = EditingState(
         inputMethod = current.inputMethod,

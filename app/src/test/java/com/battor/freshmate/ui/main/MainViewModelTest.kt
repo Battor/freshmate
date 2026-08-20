@@ -5,6 +5,7 @@ import com.battor.freshmate.FakeScheduler
 import com.battor.freshmate.data.Category
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.inputmethod.InputMethodId
+import com.battor.freshmate.util.ExpiryStatus
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.computeReminderTimes
 import java.time.LocalDate
@@ -78,14 +79,13 @@ class MainViewModelTest {
         assertEquals(1, repo.items.value.size)
         assertEquals("牛奶", repo.items.value[0].name)
         assertEquals(7, repo.items.value[0].shelfLifeDays)
-        assertEquals(now, repo.items.value[0].createdAt)
         assertEquals(1, scheduler.scheduled.size)
-        // 暂存后表单清空继续，「本次添加」徽标指向该组
+        // 暂存后表单清空继续，条目进入「本次添加」置顶区
         val editing = vm.uiState.value.editing
         assertNotNull(editing)
         assertTrue(editing!!.name.isEmpty())
-        assertEquals(now, vm.uiState.value.activeGroup)
-        assertEquals(1, vm.uiState.value.activeGroupItems.size)
+        assertEquals(setOf(repo.items.value[0].id), vm.uiState.value.sessionItemIds)
+        assertEquals(1, vm.uiState.value.pinnedItems.size)
     }
 
     @Test fun `填写单位换算成天数入库`() = runTest(dispatcher) {
@@ -113,11 +113,11 @@ class MainViewModelTest {
         assertNull(vm.uiState.value.pendingSave)
     }
 
-    @Test fun `放弃新表单返回时徽标不受影响`() = runTest(dispatcher) {
+    @Test fun `放弃新表单返回时置顶区不受影响`() = runTest(dispatcher) {
         vm.startNew(InputMethodId.MANUAL)
         vm.backToMethodSelection()
         assertNull(vm.uiState.value.editing)
-        assertNull(vm.uiState.value.activeGroup)
+        assertTrue(vm.uiState.value.pinnedItems.isEmpty())
         assertTrue(repo.items.value.isEmpty())
     }
 
@@ -142,7 +142,7 @@ class MainViewModelTest {
         vm.delete(repo.items.value[0])
         advanceUntilIdle()
         assertTrue(vm.uiState.value.items.isEmpty())
-        assertTrue(vm.uiState.value.groups.isEmpty())
+        assertTrue(vm.uiState.value.buckets.isEmpty())
     }
 
     @Test fun `已删除条目经撤销还原保留全部字段`() = runTest(dispatcher) {
@@ -176,17 +176,6 @@ class MainViewModelTest {
         assertTrue(vm.uiState.value.requestNotificationPermission)
         vm.onPermissionRequested()
         assertFalse(vm.uiState.value.requestNotificationPermission)
-    }
-
-    @Test fun `按录入时间倒序分组`() {
-        val a = FoodItem(name = "a", category = Category.DAIRY, productionDate = null,
-            shelfLifeDays = 7, quantity = null, createdAt = LocalDateTime.of(2026, 8, 15, 10, 0))
-        val b = a.copy(name = "b", createdAt = LocalDateTime.of(2026, 8, 15, 10, 0, 30))
-        val c = a.copy(name = "c", createdAt = LocalDateTime.of(2026, 8, 14, 9, 0))
-        val groups = groupItems(listOf(c, a, b))
-        assertEquals(2, groups.size)
-        assertEquals(listOf("b", "a"), groups[0].items.map { it.name }) // 同分钟同组，组内倒序
-        assertEquals(listOf("c"), groups[1].items.map { it.name })
     }
 
     @Test fun `取消过期确认不保存`() = runTest(dispatcher) {
@@ -258,12 +247,12 @@ class MainViewModelTest {
         assertEquals(1, repo.items.value.size)
     }
 
-    @Test fun `同批多次暂存共享录入时间`() = runTest(dispatcher) {
+    @Test fun `同会话多次暂存都在置顶区`() = runTest(dispatcher) {
         saveNew()
         saveNew(name = "面包")
         assertEquals(2, repo.items.value.size)
-        assertEquals(repo.items.value[0].createdAt, repo.items.value[1].createdAt)
-        assertEquals(2, vm.uiState.value.activeGroupItems.size)
+        assertEquals(2, vm.uiState.value.pinnedItems.size)
+        assertTrue(vm.uiState.value.buckets.isEmpty()) // 置顶区条目不重复出现在桶中
     }
 
     @Test fun `暂存后表单清空但保留输入方式和分类`() = runTest(dispatcher) {
@@ -290,78 +279,60 @@ class MainViewModelTest {
         assertNull(editing.productionDate)
     }
 
-    @Test fun `返回放弃表单时徽标不动`() = runTest(dispatcher) {
-        saveNew()
-        vm.startNew(InputMethodId.VOICE)
-        vm.backToMethodSelection()
-        assertNull(vm.uiState.value.editing)
-        assertEquals(now, vm.uiState.value.activeGroup)
-        assertEquals(1, vm.uiState.value.activeGroupItems.size)
-    }
-
-    @Test fun `点组续加复用该组的录入时间`() = runTest(dispatcher) {
-        saveNew()
-        now = now.plusMinutes(5)
-        val oldGroup = repo.items.value[0].createdAt
-        vm.startAddTo(oldGroup)
-        vm.updateEditing { it.copy(name = "面包", shelfLifeValue = "3") }
-        vm.save()
-        advanceUntilIdle()
-        assertEquals(2, repo.items.value.size)
-        assertTrue(repo.items.value.all { it.createdAt == oldGroup })
-    }
-
-    @Test fun `暂存成功后徽标转移到目标组`() = runTest(dispatcher) {
-        saveNew()
-        now = now.plusMinutes(5)
-        val oldGroup = repo.items.value[0].createdAt
-        vm.startAddTo(oldGroup)
-        vm.updateEditing { it.copy(name = "面包", shelfLifeValue = "3") }
-        vm.save()
-        advanceUntilIdle()
-        assertEquals(oldGroup, vm.uiState.value.activeGroup)
-        assertEquals(2, vm.uiState.value.activeGroupItems.size)
-    }
-
-    @Test fun `点组续加未暂存返回时徽标不动`() = runTest(dispatcher) {
-        saveNew()
-        now = now.plusMinutes(5)
-        val oldGroup = repo.items.value[0].createdAt
-        vm.startAddTo(oldGroup)
-        vm.backToMethodSelection()
-        assertEquals(oldGroup, vm.uiState.value.activeGroup)
-        assertNull(vm.uiState.value.editing)
-    }
-
-    @Test fun `加菜单每次新开一组`() = runTest(dispatcher) {
-        saveNew()
-        now = now.plusMinutes(5)
-        saveNew(name = "面包")
-        assertEquals(2, repo.items.value.size)
-        assertEquals(2, repo.items.value.map { it.createdAt }.toSet().size)
-        // 徽标随最近一次暂存转移到新组
-        assertEquals(now, vm.uiState.value.activeGroup)
-    }
-
-    @Test fun `录入时刻截断到分钟保证表单与分组键一致`() = runTest(dispatcher) {
-        now = LocalDateTime.of(2026, 8, 15, 10, 0, 30)
-        saveNew()
-        val key = LocalDateTime.of(2026, 8, 15, 10, 0)
-        assertEquals(key, repo.items.value[0].createdAt)
-        assertEquals(key, vm.uiState.value.activeGroup) // 徽标可与组键匹配
-        assertEquals(key, vm.uiState.value.editing?.createdAt) // 暂存后续录表单仍归属同组
-    }
-
-    @Test fun `编辑含秒的旧数据条目也对齐分组键`() = runTest(dispatcher) {
-        // 模拟修复前入库的历史数据（createdAt 含秒）
-        val legacy = FoodItem(
-            id = 1, name = "旧数据", category = Category.DAIRY, productionDate = null,
-            shelfLifeDays = 7, quantity = null,
-            createdAt = LocalDateTime.of(2026, 8, 14, 9, 0, 45),
+    @Test fun `按绝对过期时间分桶且桶序为紧急度`() {
+        val now = LocalDateTime.of(2026, 8, 20, 10, 0)
+        fun of(name: String, hours: Long) = FoodItem(
+            name = name, category = Category.DAIRY, productionDate = null,
+            shelfLifeDays = 30, quantity = null, createdAt = now.minusHours(hours),
         )
-        repo.items.value = listOf(legacy)
-        vm.startEdit(legacy)
-        assertEquals(LocalDateTime.of(2026, 8, 14, 9, 0), vm.uiState.value.editing?.createdAt)
+        // 到期 = createdAt + 30 天，相对 now 的剩余 = 720h - hours
+        val buckets = bucketItems(
+            listOf(
+                of("远", 100),   // 剩 620h ≈ 25.8 天 → SAFE
+                of("一", 696),   // 剩 24h → DUE_1D
+                of("过", 744),   // 剩 -24h → EXPIRED
+                of("三", 648),   // 剩 72h → DUE_3D
+                of("七", 552),   // 剩 168h → DUE_7D
+                of("十四", 384), // 剩 336h → DUE_14D
+            ),
+            now,
+        )
+        assertEquals(
+            listOf(
+                ExpiryStatus.EXPIRED, ExpiryStatus.DUE_1D, ExpiryStatus.DUE_3D,
+                ExpiryStatus.DUE_7D, ExpiryStatus.DUE_14D, ExpiryStatus.SAFE,
+            ),
+            buckets.map { it.status },
+        )
+    }
+
+    @Test fun `桶内按到期时间升序最紧急在前`() {
+        val now = LocalDateTime.of(2026, 8, 20, 10, 0)
+        fun of(name: String, hours: Long) = FoodItem(
+            name = name, category = Category.DAIRY, productionDate = null,
+            shelfLifeDays = 30, quantity = null, createdAt = now.minusHours(hours),
+        )
+        // 两条都落在 DUE_3D（剩 54h / 30h），同桶内按到期时间升序
+        val buckets = bucketItems(listOf(of("晚到期", 666), of("早到期", 690)), now)
+        assertEquals(1, buckets.size)
+        assertEquals(listOf("早到期", "晚到期"), buckets[0].items.map { it.name })
+    }
+
+    @Test fun `空桶不渲染`() {
+        val now = LocalDateTime.of(2026, 8, 20, 10, 0)
+        val only = FoodItem(
+            name = "a", category = Category.DAIRY, productionDate = null,
+            shelfLifeDays = 30, quantity = null, createdAt = now,
+        )
+        assertEquals(1, bucketItems(listOf(only), now).size)
+    }
+
+    @Test fun `下拉刷新清空会话置顶区条目散入各桶`() = runTest(dispatcher) {
+        saveNew() // 到期 8-22 10:00，now=8-15 10:00 → 剩整 7 天 → DUE_7D
+        assertTrue(vm.uiState.value.pinnedItems.isNotEmpty())
+        vm.disperseSession()
+        assertTrue(vm.uiState.value.pinnedItems.isEmpty())
+        assertEquals(listOf(ExpiryStatus.DUE_7D), vm.uiState.value.buckets.map { it.status })
     }
 
     @Test fun `空新增表单无内容填任一字段后才有`() = runTest(dispatcher) {
