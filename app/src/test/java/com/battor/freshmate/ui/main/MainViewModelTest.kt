@@ -6,6 +6,7 @@ import com.battor.freshmate.data.Category
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.util.ShelfLifeUnit
+import com.battor.freshmate.util.computeReminderTimes
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
@@ -383,5 +384,28 @@ class MainViewModelTest {
         vm.startEdit(repo.items.value[0])
         vm.updateEditing { it.copy(quantity = "2") }
         assertTrue(vm.uiState.value.hasFormContent)
+    }
+
+    @Test fun `保存时算好提醒快照落库`() = runTest(dispatcher) {
+        saveNew() // now 8-15 10:00 录入，保质期 7 天 → 到期 8-22 10:00
+        val saved = repo.items.value.single()
+        val expected = computeReminderTimes(
+            LocalDateTime.of(2026, 8, 22, 10, 0), 7, now,
+        )
+        assertEquals(expected, saved.reminderTimes)
+        assertFalse(saved.reminderTimes.isEmpty()) // 至少保底一个
+    }
+
+    @Test fun `编辑改保质期后快照重算`() = runTest(dispatcher) {
+        saveNew()
+        vm.startEdit(repo.items.value[0])
+        vm.updateEditing { it.copy(shelfLifeValue = "30") }
+        vm.save()
+        advanceUntilIdle()
+        val saved = repo.items.value.single()
+        assertEquals(
+            computeReminderTimes(LocalDateTime.of(2026, 9, 14, 10, 0), 30, now),
+            saved.reminderTimes,
+        )
     }
 }

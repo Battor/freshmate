@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.battor.freshmate.data.FoodItem
-import com.battor.freshmate.notification.ReminderIds
 import com.battor.freshmate.ui.main.MainViewModel.EditingState
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -193,7 +192,7 @@ fun MainScreen(
             text = {
                 Text(
                     "「${pending.editing.name}」已有 ${pending.skippedReminders} 个提醒时点过去，" +
-                        "剩余提醒时点 ${ReminderIds.REMINDER_COUNT - pending.skippedReminders} 个。确认保存吗？",
+                        "剩余提醒时点 ${pending.remainingReminders} 个。确认保存吗？",
                 )
             },
             confirmButton = {

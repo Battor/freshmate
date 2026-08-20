@@ -9,6 +9,7 @@ import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.notification.scheduleOrCancel
 import com.battor.freshmate.util.ShelfLifeUnit
+import com.battor.freshmate.util.computeReminderTimes
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.mergedReminderTimes
 import com.battor.freshmate.util.shelfLifeToDays
@@ -59,8 +60,13 @@ class MainViewModel(
         val shelfLifeError: Boolean = false,
     )
 
-    /** 有提醒时点已过、等待用户确认的保存（设计文档 §6）。 */
-    data class PendingSave(val editing: EditingState, val days: Int, val skippedReminders: Int)
+    /** 有提醒时点已过、等待用户确认的保存（设计文档 §6；需求-3 改按快照统计）。 */
+    data class PendingSave(
+        val editing: EditingState,
+        val days: Int,
+        val skippedReminders: Int,
+        val remainingReminders: Int,
+    )
 
     data class UiState(
         val items: List<FoodItem> = emptyList(),
@@ -185,7 +191,14 @@ class MainViewModel(
         val skipped = mergedReminderTimes(expiry, days).count { it > start && it <= nowProvider() }
         if (skipped > 0) {
             _uiState.update {
-                it.copy(pendingSave = PendingSave(editing.copy(name = name), days, skipped))
+                it.copy(
+                    pendingSave = PendingSave(
+                        editing.copy(name = name),
+                        days,
+                        skippedReminders = skipped,
+                        remainingReminders = computeReminderTimes(expiry, days, nowProvider()).size,
+                    ),
+                )
             }
             return
         }
@@ -238,6 +251,7 @@ class MainViewModel(
         if (saving) return // 防重复保存（save()/confirmPendingSave() 均经由本方法落库）
         saving = true
         viewModelScope.launch {
+            val expiry = expiryDateTime(editing.productionDate, editing.createdAt, days)
             val item = FoodItem(
                 id = editing.editingItemId ?: 0,
                 name = editing.name.trim(),
@@ -246,6 +260,7 @@ class MainViewModel(
                 shelfLifeDays = days,
                 quantity = editing.quantity.trim().ifEmpty { null },
                 createdAt = groupKey(editing.createdAt),
+                reminderTimes = computeReminderTimes(expiry, days, nowProvider()),
                 // 编辑保存回到活跃态（编辑入口只对活跃条目开放）
             )
             val itemId = try {
