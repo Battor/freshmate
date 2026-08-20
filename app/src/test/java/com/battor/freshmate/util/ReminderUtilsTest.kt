@@ -52,6 +52,23 @@ class ReminderUtilsTest {
     }
 
     @Test
+    fun `过去候选不吞掉未来的提醒`() {
+        // 到期 08-22 10:00、保质期 7 天、now = 08-19 20:00：
+        // 若先合并后过滤，8-19 10:00（已过去）会作链锚吞掉 8-20 02:00——错误；
+        // spec 顺序（先滤后并）：[8-20 02:00, 8-21 00:00, 8-21 06:00, 8-21 10:00]
+        // → 8-20 02:00 留、8-21 00:00（22h）吞、8-21 06:00（28h）留、8-21 10:00 吞
+        val e = LocalDateTime.of(2026, 8, 22, 10, 0)
+        val n = LocalDateTime.of(2026, 8, 19, 20, 0)
+        assertEquals(
+            listOf(
+                LocalDateTime.of(2026, 8, 20, 2, 0),
+                LocalDateTime.of(2026, 8, 21, 6, 0),
+            ),
+            computeReminderTimes(e, 7, n),
+        )
+    }
+
+    @Test
     fun `候选全部已过但未到期时保底追加到期时刻`() {
         // 到期 08-20 12:00，保质期 1 天，now 10:00：所有候选（1/3、1/5、1/6、1 天前）均 ≤ now
         val e = LocalDateTime.of(2026, 8, 20, 12, 0)
