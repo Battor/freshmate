@@ -8,8 +8,12 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.battor.freshmate.ui.main.DarkStatusPalette
+import com.battor.freshmate.ui.main.LightStatusPalette
+import com.battor.freshmate.ui.main.LocalStatusColors
 
 private val LightColors = lightColorScheme(
     primary = GreenDark,          // 深绿，配白字对比度 ~6.6:1
@@ -60,5 +64,8 @@ fun FreshMateTheme(
         darkTheme -> DarkColors
         else -> LightColors
     }
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    val palette = if (darkTheme) DarkStatusPalette else LightStatusPalette
+    CompositionLocalProvider(LocalStatusColors provides palette) {
+        MaterialTheme(colorScheme = colorScheme, content = content)
+    }
 }

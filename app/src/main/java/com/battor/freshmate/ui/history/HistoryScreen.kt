@@ -51,7 +51,7 @@ import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.ui.main.RestoreGreen
 import com.battor.freshmate.ui.main.categoryIcon
 import com.battor.freshmate.ui.main.expiryText
-import com.battor.freshmate.ui.main.statusColors
+import com.battor.freshmate.ui.main.LocalStatusColors
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
 import java.time.LocalDateTime
@@ -163,7 +163,7 @@ private fun HistoryItemCard(
 ) {
     val now = remember { LocalDateTime.now() }
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
-    val (container, onColor) = statusColors(expiryStatus(expiry, item.shelfLifeDays, now))
+    val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->

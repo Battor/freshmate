@@ -1,33 +1,41 @@
 package com.battor.freshmate.util
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.time.Duration
 import java.time.LocalDateTime
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class ExpiryStatusTest {
-    private val now = LocalDateTime.of(2026, 8, 15, 10, 0)
+    private val now = LocalDateTime.of(2026, 8, 20, 10, 0)
 
-    private fun statusOf(remaining: Duration, totalDays: Long = 30): ExpiryStatus =
-        expiryStatus(now.plus(remaining), totalDays.toInt(), now)
+    @Test fun `过期即EXPIRED`() {
+        val e = now.minusHours(1)
+        assertEquals(ExpiryStatus.EXPIRED, expiryStatus(e, now))
+    }
 
-    @Test
-    fun `已过期`() = assertEquals(ExpiryStatus.EXPIRED, statusOf(Duration.ofMinutes(-1)))
+    @Test fun `恰好到期即EXPIRED`() {
+        assertEquals(ExpiryStatus.EXPIRED, expiryStatus(now, now))
+    }
 
-    @Test
-    fun `恰好到期算过期`() = assertEquals(ExpiryStatus.EXPIRED, statusOf(Duration.ZERO))
+    @Test fun `恰在24h边界归DUE_1D`() =
+        assertEquals(ExpiryStatus.DUE_1D, expiryStatus(now.plusHours(24), now))
 
-    @Test
-    fun testCriticalAtSixth() { assertEquals(ExpiryStatus.CRITICAL, statusOf(Duration.ofDays(5))) }
+    @Test fun `恰在72h边界归DUE_3D`() =
+        assertEquals(ExpiryStatus.DUE_3D, expiryStatus(now.plusHours(72), now))
 
-    @Test
-    fun testWarningAtFifth() { assertEquals(ExpiryStatus.WARNING, statusOf(Duration.ofDays(6))) }
+    @Test fun `恰在168h边界归DUE_7D`() =
+        assertEquals(ExpiryStatus.DUE_7D, expiryStatus(now.plusHours(168), now))
 
-    @Test
-    fun testCautionAtThird() { assertEquals(ExpiryStatus.CAUTION, statusOf(Duration.ofDays(10))) }
+    @Test fun `恰在336h边界归DUE_14D`() =
+        assertEquals(ExpiryStatus.DUE_14D, expiryStatus(now.plusHours(336), now))
 
-    @Test
-    fun testSafeBeyondThird() { assertEquals(ExpiryStatus.SAFE, statusOf(Duration.ofDays(15))) }
+    @Test fun `超过14天SAFE`() =
+        assertEquals(ExpiryStatus.SAFE, expiryStatus(now.plusHours(337), now))
+
+    @Test fun `剩余2天归DUE_3D而非按旧比例`() {
+        // 旧比例式：保质期 30 天剩 2 天已是 CRITICAL；新绝对式：2 天 = DUE_3D
+        assertEquals(ExpiryStatus.DUE_3D, expiryStatus(now.plusDays(2), now))
+    }
 
     @Test
     fun `剩余文案 - 天加小时`() =

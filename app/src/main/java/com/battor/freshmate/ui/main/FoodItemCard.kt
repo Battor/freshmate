@@ -46,8 +46,7 @@ fun FoodItemCard(
 ) {
     val now = remember { LocalDateTime.now() }
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
-    val status = expiryStatus(expiry, item.shelfLifeDays, now)
-    val (container, onColor) = statusColors(status)
+    val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->

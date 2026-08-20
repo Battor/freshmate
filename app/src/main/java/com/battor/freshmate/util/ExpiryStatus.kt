@@ -3,19 +3,28 @@ package com.battor.freshmate.util
 import java.time.Duration
 import java.time.LocalDateTime
 
-/** 条目紧急度，值越靠后越紧急。 */
-enum class ExpiryStatus { SAFE, CAUTION, WARNING, CRITICAL, EXPIRED }
+/**
+ * 条目紧急度（需求-3 改为绝对时间六档，与主列表分桶同阈值），值越靠后越宽松。
+ * 红(EXPIRED) → DUE_1D → DUE_3D → DUE_7D → DUE_14D → 绿(SAFE)。
+ */
+enum class ExpiryStatus(val label: String) {
+    EXPIRED("已过期"),
+    DUE_1D("1 天内到期"),
+    DUE_3D("3 天内到期"),
+    DUE_7D("7 天内到期"),
+    DUE_14D("14 天内到期"),
+    SAFE("更久到期"),
+}
 
-fun expiryStatus(expiry: LocalDateTime, shelfLifeDays: Int, now: LocalDateTime): ExpiryStatus {
+fun expiryStatus(expiry: LocalDateTime, now: LocalDateTime): ExpiryStatus {
     val remaining = Duration.between(now, expiry)
     if (!remaining.isNegative && remaining.isZero) return ExpiryStatus.EXPIRED
     if (remaining.isNegative) return ExpiryStatus.EXPIRED
-    val total = Duration.ofDays(shelfLifeDays.toLong())
-    val ratio = remaining.toMillis().toDouble() / total.toMillis()
     return when {
-        ratio <= 1.0 / 6 -> ExpiryStatus.CRITICAL
-        ratio <= 1.0 / 5 -> ExpiryStatus.WARNING
-        ratio <= 1.0 / 3 -> ExpiryStatus.CAUTION
+        remaining <= Duration.ofDays(1) -> ExpiryStatus.DUE_1D
+        remaining <= Duration.ofDays(3) -> ExpiryStatus.DUE_3D
+        remaining <= Duration.ofDays(7) -> ExpiryStatus.DUE_7D
+        remaining <= Duration.ofDays(14) -> ExpiryStatus.DUE_14D
         else -> ExpiryStatus.SAFE
     }
 }

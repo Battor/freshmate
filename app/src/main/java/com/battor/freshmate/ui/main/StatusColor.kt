@@ -1,5 +1,6 @@
 package com.battor.freshmate.ui.main
 
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.util.ExpiryStatus
@@ -15,6 +16,49 @@ val ExpiredRed = Color(0xFFC62828)
 /** 历史页右滑还原背景（镜像主列表删除的 ExpiredRed）。 */
 val RestoreGreen = Color(0xFF3EB04A)
 
+/** 一档状态色：(容器色, 前景色)。 */
+data class StatusColors(val container: Color, val on: Color)
+
+/** 六档色板（红→绿），浅色用粉彩容器色，深色用低饱和容器 + 浅前景。 */
+data class StatusPalette(
+    val expired: StatusColors,
+    val due1d: StatusColors,
+    val due3d: StatusColors,
+    val due7d: StatusColors,
+    val due14d: StatusColors,
+    val safe: StatusColors,
+) {
+    fun of(status: ExpiryStatus): StatusColors = when (status) {
+        ExpiryStatus.EXPIRED -> expired
+        ExpiryStatus.DUE_1D -> due1d
+        ExpiryStatus.DUE_3D -> due3d
+        ExpiryStatus.DUE_7D -> due7d
+        ExpiryStatus.DUE_14D -> due14d
+        ExpiryStatus.SAFE -> safe
+    }
+}
+
+val LightStatusPalette = StatusPalette(
+    expired = StatusColors(Color(0xFFC62828), Color(0xFFFFFFFF)),
+    due1d = StatusColors(Color(0xFFFFCDD2), Color(0xFF8E1418)),
+    due3d = StatusColors(Color(0xFFFFE0B2), Color(0xFF8C4A00)),
+    due7d = StatusColors(Color(0xFFFFF3BF), Color(0xFF6B5A00)),
+    due14d = StatusColors(Color(0xFFEDF5C0), Color(0xFF3F5327)),
+    safe = StatusColors(Color(0xFFDCF5CE), Color(0xFF274F1B)),
+)
+
+val DarkStatusPalette = StatusPalette(
+    expired = StatusColors(Color(0xFFB71C1C), Color(0xFFFFFFFF)),
+    due1d = StatusColors(Color(0xFF5D2A30), Color(0xFFF6C4C8)),
+    due3d = StatusColors(Color(0xFF54462E), Color(0xFFFCD9A6)),
+    due7d = StatusColors(Color(0xFF565030), Color(0xFFF0E8A0)),
+    due14d = StatusColors(Color(0xFF424D2B), Color(0xFFDCE8B0)),
+    safe = StatusColors(Color(0xFF2F4A26), Color(0xFFC8E8B8)),
+)
+
+/** 由 Theme.kt 随深浅色提供；卡片/桶头/历史页统一读取。 */
+val LocalStatusColors = staticCompositionLocalOf { LightStatusPalette }
+
 /** 条目右侧状态文本：已过期 x / 还有 x 到期。 */
 fun expiryText(item: FoodItem, now: LocalDateTime): String {
     val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
@@ -24,13 +68,4 @@ fun expiryText(item: FoodItem, now: LocalDateTime): String {
     } else {
         "还有 ${formatRemaining(remaining)} 到期"
     }
-}
-
-/** 返回 (背景容器色, 前景色)。绿 → 黄 → 橙红 → 深红 → 已过期。 */
-fun statusColors(status: ExpiryStatus): Pair<Color, Color> = when (status) {
-    ExpiryStatus.SAFE -> Color(0xFFDCF5CE) to Color(0xFF274F1B)
-    ExpiryStatus.CAUTION -> Color(0xFFFFF3BF) to Color(0xFF6B5A00)
-    ExpiryStatus.WARNING -> Color(0xFFFFE0B2) to Color(0xFF8C4A00)
-    ExpiryStatus.CRITICAL -> Color(0xFFFFCDD2) to Color(0xFF8E1418)
-    ExpiryStatus.EXPIRED -> ExpiredRed to Color(0xFFFFFFFF)
 }
