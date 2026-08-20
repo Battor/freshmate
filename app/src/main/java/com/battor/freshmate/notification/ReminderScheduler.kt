@@ -26,7 +26,9 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
         cancel(item.id)
         // 提醒时点来自保存时的快照（需求-3），调度器只读不算；
         // 重启/还原重排时快照里已流逝的时点丢弃（过去时间戳会被系统立即触发）
+        // take 兜底：快照异常超长时不产生 cancel 清不掉的孤儿闹钟
         val times = item.reminderTimes.filter { it > LocalDateTime.now() }
+            .take(ReminderIds.REMINDER_COUNT)
         val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
             alarmManager.canScheduleExactAlarms()
         Timber.i("ALARM schedule itemId=%d 时点数=%d 精确=%b", item.id, times.size, canExact)

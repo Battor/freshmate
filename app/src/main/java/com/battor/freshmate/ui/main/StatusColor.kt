@@ -39,7 +39,7 @@ data class StatusPalette(
 }
 
 val LightStatusPalette = StatusPalette(
-    expired = StatusColors(Color(0xFFC62828), Color(0xFFFFFFFF)),
+    expired = StatusColors(ExpiredRed, Color(0xFFFFFFFF)),
     due1d = StatusColors(Color(0xFFFFCDD2), Color(0xFF8E1418)),
     due3d = StatusColors(Color(0xFFFFE0B2), Color(0xFF8C4A00)),
     due7d = StatusColors(Color(0xFFFFF3BF), Color(0xFF6B5A00)),

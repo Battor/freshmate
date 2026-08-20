@@ -6,10 +6,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,7 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.util.ExpiryStatus
 import java.time.LocalDateTime
@@ -94,6 +103,14 @@ fun MainScreen(
         if (state.editing != null) listState.animateScrollToItem(0)
     }
 
+    // 回到前台刷新页面时刻：条目跨档（如滑入"已过期"）后桶及时迁移
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refreshNow()
+        }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -108,7 +125,12 @@ fun MainScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                snackbarHostState,
+                modifier = Modifier.windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
+            )
+        },
         floatingActionButton = {
             FabMenu(
                 formOpen = state.isEditing,
@@ -117,11 +139,13 @@ fun MainScreen(
                 onStartInput = { viewModel.startNew(it) },
                 onSave = { viewModel.save() },
                 onBack = { viewModel.backToMethodSelection() },
-                modifier = Modifier.imePadding(), // edge-to-edge 下键盘弹出时 FAB 随 IME 抬升，不被遮挡
+                // edge-to-edge 下键盘弹出时 FAB 随 IME 抬升，不被遮挡；
+                // exclude navigationBars：Scaffold 已消费的导航栏 inset 不重复计入
+                modifier = Modifier.windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             PermissionBanners()
             PullToRefreshBox(
                 isRefreshing = false,

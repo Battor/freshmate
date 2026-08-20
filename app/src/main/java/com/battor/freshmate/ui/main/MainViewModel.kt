@@ -146,6 +146,11 @@ class MainViewModel(
         _uiState.update { it.copy(sessionItemIds = emptySet()) }
     }
 
+    /** ON_RESUME 时刷新页面时刻：分桶随时间流动（条目跨档后桶迁移，不依赖数据库变化）。 */
+    fun refreshNow() {
+        _uiState.update { it.copy(now = nowProvider()) }
+    }
+
     /** ← 放弃当前表单（新增/编辑通用）：仅关闭表单，「本次添加」置顶区不动。 */
     fun backToMethodSelection() {
         if (saving) return
@@ -274,6 +279,8 @@ class MainViewModel(
                     repository.update(item)
                     item.id
                 }
+            } catch (e: CancellationException) {
+                throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
                 _errorEvent.value = "保存失败，请重试"
                 return@launch // 编辑表单保留，等待用户重试

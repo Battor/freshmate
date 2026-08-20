@@ -63,12 +63,17 @@ fun FoodItemCard(
         // enabled=false 只禁交互，颜色不交给 M3 禁用配色（编辑期间卡片保持原状态色）
         modifier = Modifier
             .semantics {
-            customActions = listOf(
-                CustomAccessibilityAction("删除") {
-                    onDelete()
-                    true
-                },
-            )
+            // TalkBack 自定义删除动作与滑动手势同受 enabled 门禁：表单打开期间不暴露
+            customActions = if (enabled) {
+                listOf(
+                    CustomAccessibilityAction("删除") {
+                        onDelete()
+                        true
+                    },
+                )
+            } else {
+                emptyList()
+            }
         },
         backgroundContent = {
             Box(

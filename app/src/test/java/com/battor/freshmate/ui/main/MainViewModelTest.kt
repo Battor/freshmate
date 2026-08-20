@@ -412,4 +412,11 @@ class MainViewModelTest {
             saved.reminderTimes,
         )
     }
+
+    @Test fun `refreshNow刷新页面时刻`() = runTest(dispatcher) {
+        saveNew()
+        now = now.plusDays(3)
+        vm.refreshNow()
+        assertEquals(now, vm.uiState.value.now)
+    }
 }

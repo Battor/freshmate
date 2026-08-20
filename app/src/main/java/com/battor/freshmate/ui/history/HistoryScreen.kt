@@ -108,7 +108,7 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = viewModel::cancelRestore,
             title = { Text("还原条目") },
-            text = { Text("把「${item.name}」还原吗？还原后将回到对应的到期分组。") },
+            text = { Text("把「${item.name}」还原吗？还原后将回到主列表对应的过期时间桶。") },
             confirmButton = { TextButton(onClick = viewModel::confirmRestore) { Text("还原") } },
             dismissButton = { TextButton(onClick = viewModel::cancelRestore) { Text("取消") } },
         )
