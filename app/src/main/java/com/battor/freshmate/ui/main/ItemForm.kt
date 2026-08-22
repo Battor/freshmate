@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -106,6 +107,13 @@ private fun EditingState.withAutoProductionDate(shelfLifeText: String): EditingS
         this
     }
 
+/** 需求-6：编辑区中性化——输入框统一近白填充，不再透出卡片底色。 */
+@Composable
+private fun neutralFieldColors() = OutlinedTextFieldDefaults.colors(
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+)
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ItemForm(
@@ -147,6 +155,7 @@ fun ItemForm(
                         )
                     }
                 },
+                colors = neutralFieldColors(),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -186,6 +195,7 @@ fun ItemForm(
                         )
                     }
                 },
+                colors = neutralFieldColors(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -223,6 +233,7 @@ fun ItemForm(
                 value = state.quantity,
                 onValueChange = { onStateChange(state.copy(quantity = it)) },
                 label = { Text(stringResource(R.string.field_quantity)) },
+                colors = neutralFieldColors(),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -342,6 +353,7 @@ private fun ProductionDateField(
         interactionSource = interactionSource,
         label = { Text(stringResource(R.string.field_production_date)) },
         placeholder = { Text(stringResource(R.string.hint_production_date)) },
+        colors = neutralFieldColors(),
         singleLine = true,
         trailingIcon = if (productionDate != null) {
             {
