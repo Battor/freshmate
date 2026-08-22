@@ -37,6 +37,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -107,11 +108,14 @@ private fun EditingState.withAutoProductionDate(shelfLifeText: String): EditingS
         this
     }
 
-/** 需求-6：编辑区中性化——输入框统一近白填充，不再透出卡片底色。 */
+/** 需求-6：编辑区中性化——输入框统一 surfaceContainerLowest 填充（浅色近白/深色近黑），不透出卡片底色。 */
 @Composable
-private fun neutralFieldColors() = OutlinedTextFieldDefaults.colors(
+private fun neutralFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+    // error/disabled 态默认透明，会丢填充透出卡片底（需求-6 审查修复）
+    errorContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
 )
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -125,6 +129,7 @@ fun ItemForm(
 ) {
     val inputMethod = InputMethods.byId(state.inputMethod)
 
+    // 需求-6：编辑区中性化——容器/虚线框改中性 surface 色阶，不再用 primaryContainer 大色块
     Card(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
@@ -244,7 +249,7 @@ fun ItemForm(
 }
 
 /**
- * 表单内的「当前操作项目」指示（需求-5 走查反馈）：表单同底色 + 虚线边框，与已保存卡片区分。
+ * 表单内的「当前操作项目」指示（需求-5 走查反馈）：中性底色比表单卡深一档（surfaceContainerHighest）+ 虚线边框，与已保存卡片区分。
  * 内容实时反映表单当前值（名称/分类/数量/到期文案随输入变化）；
  * 空值回落原条目：名称清空时行不塌陷、保质期暂时非法时显示原到期时间。
  */
@@ -292,7 +297,8 @@ private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDa
         Column(Modifier.weight(1f)) {
             Text(
                 state.name.ifBlank { saved.name },
-                color = onColor,
+                // 名称是主信息，用 onSurface 与副行/到期文案的 onSurfaceVariant 拉开层级
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
             )
             state.quantity.trim().takeIf { it.isNotEmpty() }?.let {

@@ -16,7 +16,7 @@ App 整体继续跟随壁纸动态取色（顶栏、FAB、列表等不动），�
 
 **连带**：`ExpiryPreview` 文字色目前写死 `onPrimaryContainer` → 改 `onSurfaceVariant`（随表单底色换，保证对比度）。
 
-品牌回落主题（Android 10–11 的 `LightColors`/`DarkColors`）未定义 surfaceContainer* 档位，回落 M3 默认中性值，两种主题下同样成立。
+品牌回落主题（Android 10–11 的 `LightColors`/`DarkColors`）原未定义 surfaceContainer* 档位，M3 默认回落是偏紫灰、与品牌暖底色相冲突（2026-08-22 三方审查发现，opus+mobile-android-design 一致）——已在 `Color.kt`/`Theme.kt` 从 `LightBackground`/`DarkBackground` 暖调显式派生 Low/Lowest/High/Highest 容器色阶与 `onSurfaceVariant`，两种主题下均成立。
 
 ## 不动的部分
 

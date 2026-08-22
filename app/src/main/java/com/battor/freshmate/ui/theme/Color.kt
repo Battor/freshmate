@@ -22,3 +22,16 @@ val GreenLight = Color(0xFF8FE09A)
 val GreenOnLight = Color(0xFF0F3D0A)
 val SkyLight = Color(0xFF8CCBEF)
 val PeachLight = Color(0xFFFFB59A)
+
+// 需求-6：品牌回退主题的 surface 容器色阶与 onSurfaceVariant——
+// 从 LightBackground/DarkBackground 的暖调派生；M3 默认回落是偏紫灰，与品牌暖底色相冲突
+val LightSurfaceLowest = Color(0xFFFFFFFF)
+val LightSurfaceLow = Color(0xFFF8F6ED)
+val LightSurfaceHigh = Color(0xFFEDEBE0)
+val LightSurfaceHighest = Color(0xFFE7E5D8)
+val LightOnSurfaceVariant = Color(0xFF46483F)
+val DarkSurfaceLowest = Color(0xFF0F110E)
+val DarkSurfaceLow = Color(0xFF191B17)
+val DarkSurfaceHigh = Color(0xFF242620)
+val DarkSurfaceHighest = Color(0xFF2E3029)
+val DarkOnSurfaceVariant = Color(0xFFC4C9BE)

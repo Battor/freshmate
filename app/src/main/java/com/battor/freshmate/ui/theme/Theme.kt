@@ -33,6 +33,12 @@ private val LightColors = lightColorScheme(
     onTertiaryContainer = PeachOnContainer,
     background = LightBackground,
     surface = LightBackground,
+    // 需求-6：编辑区消费的容器色阶，从品牌暖底派生（默认回落偏紫灰，与暖底冲突）
+    surfaceContainerLowest = LightSurfaceLowest,
+    surfaceContainerLow = LightSurfaceLow,
+    surfaceContainerHigh = LightSurfaceHigh,
+    surfaceContainerHighest = LightSurfaceHighest,
+    onSurfaceVariant = LightOnSurfaceVariant,
 )
 
 /** 形状集中（8/12/16dp 恰为 M3 默认档位）：全应用统一经 MaterialTheme.shapes 引用。 */
@@ -57,6 +63,12 @@ private val DarkColors = darkColorScheme(
     onTertiaryContainer = PeachContainer,
     background = DarkBackground,
     surface = DarkBackground,
+    // 需求-6：编辑区消费的容器色阶，从品牌深底派生（默认回落偏紫灰，与偏绿深底冲突）
+    surfaceContainerLowest = DarkSurfaceLowest,
+    surfaceContainerLow = DarkSurfaceLow,
+    surfaceContainerHigh = DarkSurfaceHigh,
+    surfaceContainerHighest = DarkSurfaceHighest,
+    onSurfaceVariant = DarkOnSurfaceVariant,
 )
 
 @Composable
