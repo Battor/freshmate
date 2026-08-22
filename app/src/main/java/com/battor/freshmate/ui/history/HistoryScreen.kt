@@ -42,8 +42,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.ui.main.RestoreGreen
 import com.battor.freshmate.ui.main.categoryIcon
@@ -73,10 +75,10 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("历史") },
+                title = { Text(stringResource(R.string.history)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -85,7 +87,7 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
     ) { padding ->
         if (state.groups.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("暂无已删除条目", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.empty_history), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(
@@ -105,10 +107,10 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
     state.restoring?.let { item ->
         AlertDialog(
             onDismissRequest = viewModel::cancelRestore,
-            title = { Text("还原条目") },
-            text = { Text("把「${item.name}」还原吗？还原后将回到主列表对应的过期时间桶。") },
-            confirmButton = { TextButton(onClick = viewModel::confirmRestore) { Text("还原") } },
-            dismissButton = { TextButton(onClick = viewModel::cancelRestore) { Text("取消") } },
+            title = { Text(stringResource(R.string.restore_title)) },
+            text = { Text(stringResource(R.string.restore_confirm, item.name)) },
+            confirmButton = { TextButton(onClick = viewModel::confirmRestore) { Text(stringResource(R.string.restore)) } },
+            dismissButton = { TextButton(onClick = viewModel::cancelRestore) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -128,7 +130,7 @@ private fun DeletedGroupBox(
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "删除于 ${group.deletedAt.format(DeletedAtFormat)}",
+                    stringResource(R.string.deleted_at, group.deletedAt.format(DeletedAtFormat)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -154,6 +156,7 @@ private fun HistoryItemCard(
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
     val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
 
+    val restoreLabel = stringResource(R.string.restore)
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.StartToEnd) {
@@ -171,7 +174,7 @@ private fun HistoryItemCard(
         // TalkBack 恒提供「还原」自定义动作（需求-3：随时可还原，无门禁）
         modifier = Modifier.semantics {
             customActions = listOf(
-                CustomAccessibilityAction("还原") {
+                CustomAccessibilityAction(restoreLabel) {
                     onRequestRestore(item)
                     true
                 },
@@ -183,7 +186,7 @@ private fun HistoryItemCard(
                     .background(RestoreGreen, MaterialTheme.shapes.large)
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterStart,
-            ) { Icon(Icons.Filled.Restore, contentDescription = "还原", tint = Color.White) }
+            ) { Icon(Icons.Filled.Restore, contentDescription = restoreLabel, tint = Color.White) }
         },
     ) {
         Card(
@@ -202,7 +205,7 @@ private fun HistoryItemCard(
             ) {
                 Icon(
                     categoryIcon(item.category),
-                    contentDescription = item.category.label,
+                    contentDescription = stringResource(item.category.labelRes),
                     tint = onColor,
                     modifier = Modifier.size(28.dp),
                 )

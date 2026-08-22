@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
@@ -55,6 +56,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.util.ExpiryStatus
 import java.time.LocalDateTime
@@ -193,7 +195,7 @@ fun MainScreen(
                     if (state.pinnedItems.isNotEmpty()) {
                         item(key = "pinned") {
                             BucketBox(
-                                header = "本次添加",
+                                header = stringResource(R.string.pinned_header),
                                 status = null,
                                 items = state.pinnedItems,
                                 now = state.now,
@@ -220,7 +222,7 @@ fun MainScreen(
                     state.buckets.forEach { bucket ->
                         item(key = "bucket_${bucket.status}") {
                             BucketBox(
-                                header = bucket.status.label,
+                                header = stringResource(bucket.status.labelRes),
                                 status = bucket.status,
                                 items = bucket.items,
                                 now = state.now,
@@ -298,6 +300,8 @@ private fun BucketBox(
     } else {
         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     }
+    // semantics 块非 Composable 上下文，提前解析
+    val disperseLabel = stringResource(R.string.disperse_into_buckets)
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
@@ -332,7 +336,7 @@ private fun BucketBox(
                         .semantics {
                             onHeaderAction?.let {
                                 customActions = listOf(
-                                    CustomAccessibilityAction("散入各桶") { it(); true },
+                                    CustomAccessibilityAction(disperseLabel) { it(); true },
                                 )
                             }
                         },

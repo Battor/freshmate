@@ -1,7 +1,11 @@
 package com.battor.freshmate.ui.main
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.util.ExpiryStatus
 import com.battor.freshmate.util.expiryDateTime
@@ -59,13 +63,20 @@ val DarkStatusPalette = StatusPalette(
 /** 由 Theme.kt 随深浅色提供；卡片/桶头/历史页统一读取。 */
 val LocalStatusColors = staticCompositionLocalOf { LightStatusPalette }
 
-/** 条目右侧状态文本：已过期 x / 还有 x 到期。 */
+/** 条目右侧状态文本：已过期 x / 还有 x 到期（按当前语言）。 */
+@Composable
 fun expiryText(item: FoodItem, now: LocalDateTime): String {
     val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
     val remaining = Duration.between(now, expiry)
-    return if (remaining.isNegative || remaining.isZero) {
-        "已过期 ${formatExpired(remaining.negated())}"
+    val expired = remaining.isNegative || remaining.isZero
+    val duration = if (expired) {
+        formatExpired(LocalContext.current.resources, remaining.negated())
     } else {
-        "还有 ${formatRemaining(remaining)} 到期"
+        formatRemaining(LocalContext.current.resources, remaining)
+    }
+    return if (expired) {
+        "${stringResource(R.string.status_expired)} $duration"
+    } else {
+        stringResource(R.string.expiry_preview_remaining, duration)
     }
 }

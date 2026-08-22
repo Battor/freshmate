@@ -1,5 +1,6 @@
 package com.battor.freshmate.util
 
+import com.battor.freshmate.R
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -17,8 +18,8 @@ class ShelfLifeUnitTest {
     fun `换算年`() = assertEquals(365, shelfLifeToDays(1, ShelfLifeUnit.YEAR))
 
     @Test
-    fun `单位标签`() {
-        assertEquals("天", ShelfLifeUnit.DAY.label)
-        assertEquals("年", ShelfLifeUnit.YEAR.label)
+    fun `单位标签资源`() {
+        assertEquals(R.string.unit_day, ShelfLifeUnit.DAY.labelRes)
+        assertEquals(R.string.unit_year, ShelfLifeUnit.YEAR.labelRes)
     }
 }

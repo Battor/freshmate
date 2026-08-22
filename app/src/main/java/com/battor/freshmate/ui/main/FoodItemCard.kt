@@ -27,7 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
@@ -43,6 +45,7 @@ fun FoodItemCard(
 ) {
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
     val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
+    val deleteLabel = stringResource(R.string.delete)
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
@@ -65,7 +68,7 @@ fun FoodItemCard(
             // TalkBack 自定义删除动作与滑动手势同受 enabled 门禁：表单打开期间不暴露
             customActions = if (enabled) {
                 listOf(
-                    CustomAccessibilityAction("删除") {
+                    CustomAccessibilityAction(deleteLabel) {
                         onDelete()
                         true
                     },
@@ -85,7 +88,7 @@ fun FoodItemCard(
                     )
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterEnd,
-            ) { Icon(Icons.Filled.Delete, contentDescription = "删除", tint = Color.White) }
+            ) { Icon(Icons.Filled.Delete, contentDescription = deleteLabel, tint = Color.White) }
         },
     ) {
         Card(
@@ -108,14 +111,18 @@ fun FoodItemCard(
             ) {
                 Icon(
                     categoryIcon(item.category),
-                    contentDescription = item.category.label,
+                    contentDescription = stringResource(item.category.labelRes),
                     tint = onColor,
                     modifier = Modifier.size(28.dp),
                 )
                 Column(Modifier.weight(1f)) {
                     Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
                     item.quantity?.let {
-                        Text("数量：$it", color = onColor, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            stringResource(R.string.quantity_label, it),
+                            color = onColor,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
                 Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)

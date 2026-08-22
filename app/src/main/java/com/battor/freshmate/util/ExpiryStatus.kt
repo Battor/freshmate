@@ -1,5 +1,8 @@
 package com.battor.freshmate.util
 
+import android.content.res.Resources
+import androidx.annotation.StringRes
+import com.battor.freshmate.R
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -7,13 +10,13 @@ import java.time.LocalDateTime
  * 条目紧急度（需求-3 改为绝对时间六档，与主列表分桶同阈值），值越靠后越宽松。
  * 红(EXPIRED) → DUE_1D → DUE_3D → DUE_7D → DUE_14D → 绿(SAFE)。
  */
-enum class ExpiryStatus(val label: String) {
-    EXPIRED("已过期"),
-    DUE_1D("1 天内到期"),
-    DUE_3D("3 天内到期"),
-    DUE_7D("7 天内到期"),
-    DUE_14D("14 天内到期"),
-    SAFE("更久到期"),
+enum class ExpiryStatus(@StringRes val labelRes: Int) {
+    EXPIRED(R.string.status_expired),
+    DUE_1D(R.string.status_due_1d),
+    DUE_3D(R.string.status_due_3d),
+    DUE_7D(R.string.status_due_7d),
+    DUE_14D(R.string.status_due_14d),
+    SAFE(R.string.status_safe),
 }
 
 fun expiryStatus(expiry: LocalDateTime, now: LocalDateTime): ExpiryStatus {
@@ -28,22 +31,26 @@ fun expiryStatus(expiry: LocalDateTime, now: LocalDateTime): ExpiryStatus {
     }
 }
 
-/** "还有 3 天 17 小时到期"里的时间段，精确到半小时（向下取整）。 */
-fun formatRemaining(remaining: Duration): String {
+/** "还有 3 天 17 小时到期"里的时间段，精确到半小时（向下取整），按当前语言输出。 */
+fun formatRemaining(res: Resources, remaining: Duration): String {
     val totalMinutes = remaining.toMinutes().coerceAtLeast(0)
     val days = totalMinutes / 1440
     val hours = totalMinutes % 1440 / 60
     val halfHour = totalMinutes % 60 >= 30
     val parts = buildList {
-        if (days > 0) add("${days} 天")
-        if (hours > 0) add("${hours} 小时")
-        if (halfHour && days == 0L) add("30 分钟")
+        if (days > 0) add(res.getString(R.string.duration_days, days))
+        if (hours > 0) add(res.getString(R.string.duration_hours, hours))
+        if (halfHour && days == 0L) add(res.getString(R.string.duration_half_hour))
     }
-    return if (parts.isEmpty()) "不足 30 分钟" else parts.joinToString(" ")
+    return if (parts.isEmpty()) res.getString(R.string.duration_under_half_hour) else parts.joinToString(" ")
 }
 
-/** 已过期的时长文案："2 天" / "5 小时"。 */
-fun formatExpired(overdue: Duration): String {
+/** 已过期的时长文案："2 天" / "5 小时"，按当前语言输出。 */
+fun formatExpired(res: Resources, overdue: Duration): String {
     val days = overdue.toDays()
-    return if (days > 0) "$days 天" else "${overdue.toHours().coerceAtLeast(1)} 小时"
+    return if (days > 0) {
+        res.getString(R.string.duration_days, days)
+    } else {
+        res.getString(R.string.duration_hours, overdue.toHours().coerceAtLeast(1))
+    }
 }

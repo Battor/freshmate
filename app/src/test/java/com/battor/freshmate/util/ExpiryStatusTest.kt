@@ -1,12 +1,22 @@
 package com.battor.freshmate.util
 
+import android.content.Context
+import android.content.res.Resources
+import androidx.test.core.app.ApplicationProvider
 import java.time.Duration
 import java.time.LocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class ExpiryStatusTest {
     private val now = LocalDateTime.of(2026, 8, 20, 10, 0)
+    // Robolectric 默认资源 = values/（简体中文）
+    private val res: Resources = ApplicationProvider.getApplicationContext<Context>().resources
 
     @Test fun `过期即EXPIRED`() {
         val e = now.minusHours(1)
@@ -39,21 +49,21 @@ class ExpiryStatusTest {
 
     @Test
     fun `剩余文案 - 天加小时`() =
-        assertEquals("3 天 17 小时", formatRemaining(Duration.ofMinutes(3 * 1440 + 17 * 60 + 29)))
+        assertEquals("3 天 17 小时", formatRemaining(res, Duration.ofMinutes(3 * 1440 + 17 * 60 + 29)))
 
     @Test
     fun `剩余文案 - 不足半小时`() =
-        assertEquals("不足 30 分钟", formatRemaining(Duration.ofMinutes(20)))
+        assertEquals("不足 30 分钟", formatRemaining(res, Duration.ofMinutes(20)))
 
     @Test
     fun `剩余文案 - 半小时`() =
-        assertEquals("30 分钟", formatRemaining(Duration.ofMinutes(45)))
+        assertEquals("30 分钟", formatRemaining(res, Duration.ofMinutes(45)))
 
     @Test
     fun `过期文案 - 天`() =
-        assertEquals("已过期 2 天", "已过期 " + formatExpired(Duration.ofDays(2)))
+        assertEquals("已过期 2 天", "已过期 " + formatExpired(res, Duration.ofDays(2)))
 
     @Test
     fun `过期文案 - 小时`() =
-        assertEquals("已过期 5 小时", "已过期 " + formatExpired(Duration.ofHours(5)))
+        assertEquals("已过期 5 小时", "已过期 " + formatExpired(res, Duration.ofHours(5)))
 }

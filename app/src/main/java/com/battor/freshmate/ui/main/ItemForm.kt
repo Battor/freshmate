@@ -44,9 +44,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.annotation.StringRes
+import com.battor.freshmate.R
 import com.battor.freshmate.data.Category
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.inputmethod.InputMethods
@@ -62,12 +65,18 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-/** 快捷保质期：30天 / 3个月 / 6个月 / 1年（2026-08-15 用户反馈去掉 3天/7天） */
+/** 快捷保质期：30天 / 3个月 / 6个月 / 1年（2026-08-15 用户反馈去掉 3天/7天）；labelRes 带格式参数 %1$d。 */
+private data class QuickShelfLife(
+    @StringRes val labelRes: Int,
+    val value: Int,
+    val unit: ShelfLifeUnit,
+)
+
 private val QuickShelfLives = listOf(
-    Triple("30天", 30, ShelfLifeUnit.DAY),
-    Triple("3个月", 3, ShelfLifeUnit.MONTH),
-    Triple("6个月", 6, ShelfLifeUnit.MONTH),
-    Triple("1年", 1, ShelfLifeUnit.YEAR),
+    QuickShelfLife(R.string.quick_shelf_days, 30, ShelfLifeUnit.DAY),
+    QuickShelfLife(R.string.quick_shelf_months, 3, ShelfLifeUnit.MONTH),
+    QuickShelfLife(R.string.quick_shelf_months, 6, ShelfLifeUnit.MONTH),
+    QuickShelfLife(R.string.quick_shelf_years, 1, ShelfLifeUnit.YEAR),
 )
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -91,28 +100,33 @@ fun ItemForm(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             inputMethod.extraAction?.let { extra ->
-                ExtraActionRow(state.inputMethod, extra.icon, extra.label, onPlaceholderHint)
+                ExtraActionRow(state.inputMethod, extra.icon, extra.labelRes, onPlaceholderHint)
             }
 
             OutlinedTextField(
                 value = state.name,
                 onValueChange = { onStateChange(state.copy(name = it, nameError = false)) },
-                label = { Text("食品名称 *") },
+                label = { Text(stringResource(R.string.field_name)) },
                 isError = state.nameError,
                 supportingText = {
-                    if (state.nameError) Text("请输入名称", color = MaterialTheme.colorScheme.error)
+                    if (state.nameError) {
+                        Text(
+                            stringResource(R.string.error_name_required),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Text("分类")
+            Text(stringResource(R.string.label_category))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Category.entries.forEach { c ->
                     FilterChip(
                         selected = state.category == c,
                         onClick = { onStateChange(state.copy(category = c)) },
-                        label = { Text(c.label) },
+                        label = { Text(stringResource(c.labelRes)) },
                     )
                 }
             }
@@ -132,11 +146,14 @@ fun ItemForm(
                         ),
                     )
                 },
-                label = { Text("保质期 *") },
+                label = { Text(stringResource(R.string.field_shelf_life)) },
                 isError = state.shelfLifeError,
                 supportingText = {
                     if (state.shelfLifeError) {
-                        Text("请输入大于 0 的数字", color = MaterialTheme.colorScheme.error)
+                        Text(
+                            stringResource(R.string.error_shelf_life),
+                            color = MaterialTheme.colorScheme.error,
+                        )
                     }
                 },
                 singleLine = true,
@@ -151,22 +168,22 @@ fun ItemForm(
                         shape = SegmentedButtonDefaults.itemShape(
                             index, ShelfLifeUnit.entries.size,
                         ),
-                    ) { Text(unit.label) }
+                    ) { Text(stringResource(unit.labelRes)) }
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                QuickShelfLives.forEach { (label, value, unit) ->
+                QuickShelfLives.forEach { quick ->
                     AssistChip(
                         onClick = {
                             onStateChange(
                                 state.copy(
-                                    shelfLifeValue = value.toString(),
-                                    shelfLifeUnit = unit,
+                                    shelfLifeValue = quick.value.toString(),
+                                    shelfLifeUnit = quick.unit,
                                     shelfLifeError = false,
                                 ),
                             )
                         },
-                        label = { Text(label) },
+                        label = { Text(stringResource(quick.labelRes, quick.value)) },
                     )
                 }
             }
@@ -174,7 +191,7 @@ fun ItemForm(
             OutlinedTextField(
                 value = state.quantity,
                 onValueChange = { onStateChange(state.copy(quantity = it)) },
-                label = { Text("数量（可选，如 2 / 500g）") },
+                label = { Text(stringResource(R.string.field_quantity)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -195,11 +212,17 @@ private fun ExpiryPreview(state: EditingState) {
     val now = remember { LocalDateTime.now() }
     val remaining = Duration.between(now, expiry)
     val text = if (remaining.isNegative || remaining.isZero) {
-        "已过期 ${formatExpired(remaining.negated())}，保存后将不再提醒"
+        stringResource(
+            R.string.expiry_preview_expired,
+            formatExpired(LocalContext.current.resources, remaining.negated()),
+        )
     } else {
-        "还有 ${formatRemaining(remaining)} 到期"
+        stringResource(
+            R.string.expiry_preview_remaining,
+            formatRemaining(LocalContext.current.resources, remaining),
+        )
     }
-    Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -222,13 +245,13 @@ private fun ProductionDateField(
         onValueChange = {},
         readOnly = true,
         interactionSource = interactionSource,
-        label = { Text("生产日期") },
-        placeholder = { Text("不填则按录入日起算") },
+        label = { Text(stringResource(R.string.field_production_date)) },
+        placeholder = { Text(stringResource(R.string.hint_production_date)) },
         singleLine = true,
         trailingIcon = if (productionDate != null) {
             {
                 IconButton(onClick = { onChange(null) }) {
-                    Icon(Icons.Filled.Close, contentDescription = "清除生产日期")
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.clear_production_date))
                 }
             }
         } else {
@@ -253,10 +276,10 @@ private fun ProductionDateField(
                         }
                         showPicker = false
                     },
-                ) { Text("确定") }
+                ) { Text(stringResource(R.string.ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showPicker = false }) { Text("取消") }
+                TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.cancel)) }
             },
         ) { DatePicker(state = pickerState) }
     }
@@ -267,7 +290,7 @@ private fun ProductionDateField(
 private fun ExtraActionRow(
     id: InputMethodId,
     icon: ImageVector,
-    label: String,
+    @StringRes labelRes: Int,
     onPlaceholderHint: (String) -> Unit,
 ) {
     var recording by remember { mutableStateOf(false) }
@@ -283,13 +306,17 @@ private fun ExtraActionRow(
     } else {
         1f
     }
+    val label = stringResource(labelRes)
+    // 提前解析：stringResource 不能在 onClick 等非 Composable 上下文调用
+    val imageHint = stringResource(R.string.placeholder_image)
+    val voiceHint = stringResource(R.string.placeholder_voice)
     TextButton(
         onClick = {
             when {
-                id == InputMethodId.IMAGE -> onPlaceholderHint("图片识别即将上线")
+                id == InputMethodId.IMAGE -> onPlaceholderHint(imageHint)
                 // 录音中普通点击不打断录音（长按可结束）
                 recording -> Unit
-                else -> onPlaceholderHint("语音识别即将上线")
+                else -> onPlaceholderHint(voiceHint)
             }
         },
         modifier = if (id == InputMethodId.VOICE) {
@@ -310,8 +337,8 @@ private fun ExtraActionRow(
         Text(
             when {
                 id == InputMethodId.IMAGE -> label
-                recording -> "录音中…（占位，再按一次结束）"
-                else -> "$label（长按）"
+                recording -> stringResource(R.string.recording)
+                else -> stringResource(R.string.extra_with_long_press, label)
             },
         )
     }

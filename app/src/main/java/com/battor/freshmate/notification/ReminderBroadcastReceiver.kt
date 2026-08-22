@@ -33,8 +33,14 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                     if (remaining.isNegative || remaining.isZero) return@runCatching
                     val builder = NotificationCompat.Builder(context, ReminderIds.CHANNEL_ID)
                         .setSmallIcon(R.drawable.ic_reminder)
-                        .setContentTitle("食刻 FreshMate")
-                        .setContentText("「${item.name}」还有 ${formatRemaining(remaining)} 到期")
+                        .setContentTitle(context.getString(R.string.notification_title))
+                        .setContentText(
+                            context.getString(
+                                R.string.notification_body,
+                                item.name,
+                                formatRemaining(context.resources, remaining),
+                            ),
+                        )
                         .setAutoCancel(true)
                     val launchIntent =
                         context.packageManager.getLaunchIntentForPackage(context.packageName)
