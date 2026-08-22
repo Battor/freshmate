@@ -2,6 +2,7 @@ package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
@@ -47,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -81,7 +84,6 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
 
     val hintText = updateHint?.asString()
     val viewLabel = stringResource(R.string.view)
@@ -111,17 +113,6 @@ fun MainScreen(
         request = state.requestNotificationPermission,
         onHandled = { viewModel.onPermissionRequested() },
     )
-
-    // 表单打开滚到顶部；关闭（保存/放弃）回到打开前的位置
-    var restoreIndex by remember { mutableStateOf(0) }
-    LaunchedEffect(state.editing != null) {
-        if (state.editing != null) {
-            restoreIndex = listState.firstVisibleItemIndex
-            listState.animateScrollToItem(0)
-        } else {
-            listState.scrollToItem(restoreIndex)
-        }
-    }
 
     // 回到前台刷新页面时刻：条目跨档（如滑入"已过期"）后桶及时迁移
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -165,102 +156,145 @@ fun MainScreen(
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding(),
+        ) {
             PermissionBanners()
             // 400ms 短暂亮灯给「散入各桶」一个可见反馈，不做假加载
             var refreshing by remember { mutableStateOf(false) }
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = {
-                    refreshing = true
-                    viewModel.disperseSession()
-                    scope.launch {
-                        delay(400)
-                        refreshing = false
-                    }
-                },
-                state = rememberPullToRefreshState(),
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize().imePadding(),
-                    contentPadding = PaddingValues(16.dp),
+            // 表单（+编辑目标卡片）钉在内容区顶部，不随列表滚动（需求-5）；
+            // verticalScroll：表单高于可用空间（如键盘弹出）时自身可滚
+            state.editing?.let { editing ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    // 表单固定渲染在列表顶部（需求-3：组不再承载表单）
-                    state.editing?.let { editing ->
-                        item(key = "form") {
-                            ItemForm(
-                                state = editing,
-                                onStateChange = { newState -> viewModel.updateEditing { newState } },
-                                onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
-                            )
-                        }
+                    state.editingTarget?.let { target ->
+                        FoodItemCard(
+                            item = target,
+                            now = state.now,
+                            onClick = {},
+                            onDelete = {},
+                            enabled = false, // 纯展示：正在编辑的条目指示，不可交互
+                        )
                     }
-                    // 本次添加置顶区（会话内存态；下拉刷新/冷启动散入各桶）
-                    if (state.pinnedItems.isNotEmpty()) {
-                        item(key = "pinned") {
-                            BucketBox(
-                                header = stringResource(R.string.pinned_header),
-                                status = null,
-                                items = state.pinnedItems,
-                                now = state.now,
-                                cardsEnabled = state.editing == null,
-                                onHeaderAction = { viewModel.disperseSession() },
-                                onStartEdit = { viewModel.startEdit(it) },
-                                onDeleteItem = { item ->
-                                    viewModel.delete(item)
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            context.getString(R.string.deleted_snackbar, item.name),
-                                            actionLabel = context.getString(R.string.undo),
-                                            duration = SnackbarDuration.Short,
+                    ItemForm(
+                        state = editing,
+                        onStateChange = { newState -> viewModel.updateEditing { newState } },
+                        onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
+                    )
+                }
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                PullToRefreshBox(
+                    isRefreshing = refreshing,
+                    onRefresh = {
+                        refreshing = true
+                        viewModel.disperseSession()
+                        scope.launch {
+                            delay(400)
+                            refreshing = false
+                        }
+                    },
+                    state = rememberPullToRefreshState(),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // 编辑期间从列表隐藏正在编辑的条目（已上移为表单上方卡片）
+                        val editingId = state.editing?.editingItemId
+                        // 本次添加置顶区（会话内存态；下拉刷新/冷启动散入各桶）
+                        state.pinnedItems
+                            .filterNot { it.id == editingId }
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { pinned ->
+                                item(key = "pinned") {
+                                    BucketBox(
+                                        header = stringResource(R.string.pinned_header),
+                                        status = null,
+                                        items = pinned,
+                                        now = state.now,
+                                        cardsEnabled = state.editing == null,
+                                        onHeaderAction = { viewModel.disperseSession() },
+                                        onStartEdit = { viewModel.startEdit(it) },
+                                        onDeleteItem = { item ->
+                                            viewModel.delete(item)
+                                            scope.launch {
+                                                val result = snackbarHostState.showSnackbar(
+                                                    context.getString(R.string.deleted_snackbar, item.name),
+                                                    actionLabel = context.getString(R.string.undo),
+                                                    duration = SnackbarDuration.Short,
+                                                )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    viewModel.undoDelete(item)
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                        // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
+                        state.buckets.forEach { bucket ->
+                            bucket.items
+                                .filterNot { it.id == editingId }
+                                .takeIf { it.isNotEmpty() }
+                                ?.let { items ->
+                                    item(key = "bucket_${bucket.status}") {
+                                        BucketBox(
+                                            header = stringResource(bucket.status.labelRes),
+                                            status = bucket.status,
+                                            items = items,
+                                            now = state.now,
+                                            cardsEnabled = state.editing == null,
+                                            onStartEdit = { viewModel.startEdit(it) },
+                                            onDeleteItem = { item ->
+                                                viewModel.delete(item)
+                                                scope.launch {
+                                                    val result = snackbarHostState.showSnackbar(
+                                                        context.getString(R.string.deleted_snackbar, item.name),
+                                                        actionLabel = context.getString(R.string.undo),
+                                                        duration = SnackbarDuration.Short,
+                                                    )
+                                                    if (result == SnackbarResult.ActionPerformed) {
+                                                        viewModel.undoDelete(item)
+                                                    }
+                                                }
+                                            },
                                         )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.undoDelete(item)
-                                        }
                                     }
-                                },
-                            )
+                                }
                         }
-                    }
-                    // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
-                    state.buckets.forEach { bucket ->
-                        item(key = "bucket_${bucket.status}") {
-                            BucketBox(
-                                header = stringResource(bucket.status.labelRes),
-                                status = bucket.status,
-                                items = bucket.items,
-                                now = state.now,
-                                cardsEnabled = state.editing == null,
-                                onStartEdit = { viewModel.startEdit(it) },
-                                onDeleteItem = { item ->
-                                    viewModel.delete(item)
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            context.getString(R.string.deleted_snackbar, item.name),
-                                            actionLabel = context.getString(R.string.undo),
-                                            duration = SnackbarDuration.Short,
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.undoDelete(item)
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                    }
-                    if (state.items.isEmpty() && state.editing == null) {
-                        item(key = "empty") {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(stringResource(R.string.empty_list), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (state.items.isEmpty() && state.editing == null) {
+                            item(key = "empty") {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(stringResource(R.string.empty_list), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                         }
                     }
+                }
+                // 编辑期间遮罩：列表压暗 + 吸收点击防误触（下拉刷新手势同被拦截）；
+                // 顶栏与 FAB 不盖——浮动「← 返回」按钮在变暗的列表上更突出。
+                // scrim 为黑：深色主题下 onSurface 是浅色，浅色蒙层会「发白」而非「变暗」
+                if (state.editing != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.38f))
+                            .pointerInput(Unit) { detectTapGestures { } },
+                    )
                 }
             }
         }
