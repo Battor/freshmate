@@ -2,7 +2,7 @@ package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -74,6 +75,15 @@ import com.battor.freshmate.util.ExpiryStatus
 import java.time.LocalDateTime
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** 编辑遮罩透明度：对齐 M3 模态 scrim 令牌（黑 32%，BottomSheet/Drawer 同款）。 */
+private const val EDITING_SCRIM_ALPHA = 0.32f
+
+/** 桶头进度条宽度 = 组头文字宽度 × 1.5（需求-5 用户指定）。 */
+private const val BUCKET_BAR_WIDTH_SCALE = 1.5f
+
+/** 桶头进度条轨道透明度（on 色 20% 淡轨道）。 */
+private const val BUCKET_BAR_TRACK_ALPHA = 0.2f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,6 +135,21 @@ fun MainScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.refreshNow()
+        }
+    }
+
+    // 置顶区与各桶共用的删除+撤销流程
+    val onDeleteItem: (FoodItem) -> Unit = { item ->
+        viewModel.delete(item)
+        scope.launch {
+            val result = snackbarHostState.showSnackbar(
+                context.getString(R.string.deleted_snackbar, item.name),
+                actionLabel = context.getString(R.string.undo),
+                duration = SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.undoDelete(item)
+            }
         }
     }
 
@@ -198,14 +223,23 @@ fun MainScreen(
                 }
             }
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                // 编辑期间隐藏正在编辑的条目（已上移为表单上方卡片）；空桶/空置顶区整体不渲染
+                val editingId = state.editing?.editingItemId
+                val visiblePinned = state.pinnedItems.filterNot { it.id == editingId }
+                val visibleBuckets = state.buckets
+                    .map { it.copy(items = it.items.filterNot { item -> item.id == editingId }) }
+                    .filter { it.items.isNotEmpty() }
                 PullToRefreshBox(
                     isRefreshing = refreshing,
                     onRefresh = {
-                        refreshing = true
-                        viewModel.disperseSession()
-                        scope.launch {
-                            delay(400)
-                            refreshing = false
+                        // 编辑期间禁用散桶（遮罩已拦手势，此处为确定性门禁）
+                        if (state.editing == null) {
+                            refreshing = true
+                            viewModel.disperseSession()
+                            scope.launch {
+                                delay(400)
+                                refreshing = false
+                            }
                         }
                     },
                     state = rememberPullToRefreshState(),
@@ -216,68 +250,39 @@ fun MainScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        // 编辑期间从列表隐藏正在编辑的条目（已上移为表单上方卡片）
-                        val editingId = state.editing?.editingItemId
                         // 本次添加置顶区（会话内存态；下拉刷新/冷启动散入各桶）
-                        state.pinnedItems
-                            .filterNot { it.id == editingId }
-                            .takeIf { it.isNotEmpty() }
-                            ?.let { pinned ->
-                                item(key = "pinned") {
-                                    BucketBox(
-                                        header = stringResource(R.string.pinned_header),
-                                        status = null,
-                                        items = pinned,
-                                        now = state.now,
-                                        cardsEnabled = state.editing == null,
-                                        onHeaderAction = { viewModel.disperseSession() },
-                                        onStartEdit = { viewModel.startEdit(it) },
-                                        onDeleteItem = { item ->
-                                            viewModel.delete(item)
-                                            scope.launch {
-                                                val result = snackbarHostState.showSnackbar(
-                                                    context.getString(R.string.deleted_snackbar, item.name),
-                                                    actionLabel = context.getString(R.string.undo),
-                                                    duration = SnackbarDuration.Short,
-                                                )
-                                                if (result == SnackbarResult.ActionPerformed) {
-                                                    viewModel.undoDelete(item)
-                                                }
-                                            }
-                                        },
-                                    )
-                                }
+                        if (visiblePinned.isNotEmpty()) {
+                            item(key = "pinned") {
+                                BucketBox(
+                                    header = stringResource(R.string.pinned_header),
+                                    status = null,
+                                    items = visiblePinned,
+                                    now = state.now,
+                                    cardsEnabled = state.editing == null,
+                                    // 编辑期间不暴露「散入各桶」无障碍动作（TalkBack 焦点不受遮罩阻挡）
+                                    onHeaderAction = if (state.editing == null) {
+                                        { viewModel.disperseSession() }
+                                    } else {
+                                        null
+                                    },
+                                    onStartEdit = { viewModel.startEdit(it) },
+                                    onDeleteItem = onDeleteItem,
+                                )
                             }
+                        }
                         // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
-                        state.buckets.forEach { bucket ->
-                            bucket.items
-                                .filterNot { it.id == editingId }
-                                .takeIf { it.isNotEmpty() }
-                                ?.let { items ->
-                                    item(key = "bucket_${bucket.status}") {
-                                        BucketBox(
-                                            header = stringResource(bucket.status.labelRes),
-                                            status = bucket.status,
-                                            items = items,
-                                            now = state.now,
-                                            cardsEnabled = state.editing == null,
-                                            onStartEdit = { viewModel.startEdit(it) },
-                                            onDeleteItem = { item ->
-                                                viewModel.delete(item)
-                                                scope.launch {
-                                                    val result = snackbarHostState.showSnackbar(
-                                                        context.getString(R.string.deleted_snackbar, item.name),
-                                                        actionLabel = context.getString(R.string.undo),
-                                                        duration = SnackbarDuration.Short,
-                                                    )
-                                                    if (result == SnackbarResult.ActionPerformed) {
-                                                        viewModel.undoDelete(item)
-                                                    }
-                                                }
-                                            },
-                                        )
-                                    }
-                                }
+                        visibleBuckets.forEach { bucket ->
+                            item(key = "bucket_${bucket.status}") {
+                                BucketBox(
+                                    header = stringResource(bucket.status.labelRes),
+                                    status = bucket.status,
+                                    items = bucket.items,
+                                    now = state.now,
+                                    cardsEnabled = state.editing == null,
+                                    onStartEdit = { viewModel.startEdit(it) },
+                                    onDeleteItem = onDeleteItem,
+                                )
+                            }
                         }
                         if (state.items.isEmpty() && state.editing == null) {
                             item(key = "empty") {
@@ -291,15 +296,21 @@ fun MainScreen(
                         }
                     }
                 }
-                // 编辑期间遮罩：列表压暗 + 吸收点击防误触（下拉刷新手势同被拦截）；
-                // 顶栏与 FAB 不盖——浮动「← 返回」按钮在变暗的列表上更突出。
+                // 编辑期间遮罩：列表压暗 + 吸收指针防误触——消费全部指针事件（含拖动），
+                // 列表滚动与下拉刷新手势一并拦住；顶栏与 FAB 不盖，浮动「← 返回」更突出。
                 // scrim 为黑：深色主题下 onSurface 是浅色，浅色蒙层会「发白」而非「变暗」
                 if (state.editing != null) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.38f))
-                            .pointerInput(Unit) { detectTapGestures { } },
+                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = EDITING_SCRIM_ALPHA))
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    while (true) {
+                                        awaitPointerEvent().changes.forEach { it.consume() }
+                                    }
+                                }
+                            },
                     )
                 }
             }
@@ -363,21 +374,30 @@ private fun BucketBox(
             modifier = Modifier.padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            val statusColors = status?.let { LocalStatusColors.current.of(it) }
-            if (statusColors != null) {
+            if (status != null) {
+                val statusColors = LocalStatusColors.current.of(status)
                 // 进度条宽度 = 组头文字实际宽度 × 1.5（需求-5 用户指定，精确测量非估算）
                 val textMeasurer = rememberTextMeasurer()
                 val textStyle = MaterialTheme.typography.labelLarge
-                val textWidth = textMeasurer.measure(header, textStyle).size.width
-                val barWidth = with(LocalDensity.current) { textWidth.toDp() * 1.5f }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // 桶级紧急度：剩余段=状态容器色（与子项卡片同色），轨道=同色 30% 透明；
-                    // EXPIRED 窗口取满 → 整条深红实心
+                val textWidth = remember(header, textStyle) {
+                    textMeasurer.measure(header, textStyle).size.width
+                }
+                val barWidth = with(LocalDensity.current) { textWidth.toDp() * BUCKET_BAR_WIDTH_SCALE }
+                // 合并为单焦点：进度条静默，语义由右侧文字承载
+                //（避免 TalkBack 朗读对「窗口刻度」无意义的百分比）
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.semantics(mergeDescendants = true) {},
+                ) {
+                    // 桶级紧急度：填充段=状态深色调 on（粉彩容器色叠浅色 surface 几乎不可见，
+                    // 用同族深色才压得住底）；EXPIRED 例外取饱和深红容器色 → 整条红实心
                     LinearProgressIndicator(
-                        progress = { status!!.progressWindowDays / 14f },
-                        modifier = Modifier.width(barWidth),
-                        color = statusColors.container,
-                        trackColor = statusColors.container.copy(alpha = 0.3f),
+                        progress = { status.windowProgress },
+                        modifier = Modifier.width(barWidth).clearAndSetSemantics { },
+                        color = if (status == ExpiryStatus.EXPIRED) statusColors.container else statusColors.on,
+                        trackColor = statusColors.on.copy(alpha = BUCKET_BAR_TRACK_ALPHA),
+                        gapSize = 0.dp,
+                        drawStopIndicator = {},
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(header, style = textStyle, color = statusColors.on)

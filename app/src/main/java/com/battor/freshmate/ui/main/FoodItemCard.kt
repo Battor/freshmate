@@ -59,38 +59,7 @@ fun FoodItemCard(
         },
     )
 
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = false,
-        // enabled=false 只禁交互，颜色不交给 M3 禁用配色（编辑期间卡片保持原状态色）
-        modifier = Modifier
-            .semantics {
-            // TalkBack 自定义删除动作与滑动手势同受 enabled 门禁：表单打开期间不暴露
-            customActions = if (enabled) {
-                listOf(
-                    CustomAccessibilityAction(deleteLabel) {
-                        onDelete()
-                        true
-                    },
-                )
-            } else {
-                emptyList()
-            }
-        },
-        backgroundContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    // 删除背景用色板已过期档容器色：深色主题下同步变深
-                    .background(
-                        LocalStatusColors.current.expired.container,
-                        MaterialTheme.shapes.large,
-                    )
-                    .padding(horizontal = 20.dp),
-                contentAlignment = Alignment.CenterEnd,
-            ) { Icon(Icons.Filled.Delete, contentDescription = deleteLabel, tint = Color.White) }
-        },
-    ) {
+    val card: @Composable () -> Unit = {
         Card(
             onClick = onClick,
             enabled = enabled,
@@ -128,5 +97,38 @@ fun FoodItemCard(
                 Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
             }
         }
+    }
+
+    if (enabled) {
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = false,
+            modifier = Modifier
+                .semantics {
+                // TalkBack 自定义删除动作与滑动手势同受 enabled 门禁：表单打开期间不暴露
+                customActions = listOf(
+                    CustomAccessibilityAction(deleteLabel) {
+                        onDelete()
+                        true
+                    },
+                )
+            },
+            backgroundContent = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // 删除背景用色板已过期档容器色：深色主题下同步变深
+                        .background(
+                            LocalStatusColors.current.expired.container,
+                            MaterialTheme.shapes.large,
+                        )
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterEnd,
+                ) { Icon(Icons.Filled.Delete, contentDescription = deleteLabel, tint = Color.White) }
+            },
+        ) { card() }
+    } else {
+        // 禁用态直接渲染卡片：SwipeToDismissBox 的拖动手势不受 enabled 门禁，会拖出再回弹
+        card()
     }
 }
