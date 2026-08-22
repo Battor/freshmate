@@ -128,7 +128,7 @@ fun ItemForm(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            editingTarget?.let { EditingTargetCard(it, now) }
+            editingTarget?.let { saved -> EditingTargetCard(state, saved, now) }
 
             inputMethod.extraAction?.let { extra ->
                 ExtraActionRow(state.inputMethod, extra.icon, extra.labelRes, onPlaceholderHint)
@@ -232,10 +232,19 @@ fun ItemForm(
     }
 }
 
-/** 表单内的「当前操作项目」指示（需求-5 走查反馈）：表单同底色 + 虚线边框，与已保存卡片区分。 */
+/**
+ * 表单内的「当前操作项目」指示（需求-5 走查反馈）：表单同底色 + 虚线边框，与已保存卡片区分。
+ * 内容实时反映表单当前值（名称/分类/数量/到期文案随输入变化）；
+ * 空值回落原条目：名称清空时行不塌陷、保质期暂时非法时显示原到期时间。
+ */
 @Composable
-private fun EditingTargetCard(item: FoodItem, now: LocalDateTime) {
+private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDateTime) {
     val onColor = MaterialTheme.colorScheme.onPrimaryContainer
+    // 到期时刻：表单值有效则现算，否则回落原条目（与 ExpiryPreview 的换算口径一致）
+    val liveExpiry = state.shelfLifeValue.toIntOrNull()
+        ?.takeIf { it > 0 }
+        ?.let { expiryDateTime(state.productionDate, state.createdAt, shelfLifeToDays(it, state.shelfLifeUnit)) }
+        ?: expiryDateTime(saved.productionDate, saved.createdAt, saved.shelfLifeDays)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -264,14 +273,18 @@ private fun EditingTargetCard(item: FoodItem, now: LocalDateTime) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
-            categoryIcon(item.category),
+            categoryIcon(state.category),
             contentDescription = null,
             tint = onColor,
             modifier = Modifier.size(28.dp),
         )
         Column(Modifier.weight(1f)) {
-            Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
-            item.quantity?.let {
+            Text(
+                state.name.ifBlank { saved.name },
+                color = onColor,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            state.quantity.trim().takeIf { it.isNotEmpty() }?.let {
                 Text(
                     stringResource(R.string.quantity_label, it),
                     color = onColor,
@@ -279,7 +292,7 @@ private fun EditingTargetCard(item: FoodItem, now: LocalDateTime) {
                 )
             }
         }
-        Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
+        Text(expiryText(liveExpiry, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

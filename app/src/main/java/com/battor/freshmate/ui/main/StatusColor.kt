@@ -65,8 +65,12 @@ val LocalStatusColors = staticCompositionLocalOf { LightStatusPalette }
 
 /** 条目右侧状态文本：已过期 x / 还有 x 到期（按当前语言）。 */
 @Composable
-fun expiryText(item: FoodItem, now: LocalDateTime): String {
-    val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
+fun expiryText(item: FoodItem, now: LocalDateTime): String =
+    expiryText(expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays), now)
+
+/** 按到期时刻的重载：表单「当前操作项目」实时预览用（需求-5 走查反馈）。 */
+@Composable
+fun expiryText(expiry: LocalDateTime, now: LocalDateTime): String {
     val remaining = Duration.between(now, expiry)
     val expired = remaining.isNegative || remaining.isZero
     val duration = if (expired) {
