@@ -192,13 +192,24 @@ fun MainScreen(
             PermissionBanners()
             // 400ms 短暂亮灯给「散入各桶」一个可见反馈，不做假加载
             var refreshing by remember { mutableStateOf(false) }
-            // 表单（+编辑目标卡片）钉在内容区顶部，不随列表滚动（需求-5）；
-            // verticalScroll：表单高于可用空间（如键盘弹出）时自身可滚
-            state.editing?.let { editing ->
+            val editing = state.editing
+            if (editing != null) {
+                // 表单打开：整页一块滚动（需求-5 走查反馈）——表单 + 列表内容直接铺开，
+                // 滚过表单即见列表。列表用非 lazy 直铺：个人食材规模，
+                // 且 LazyColumn 嵌 verticalScroll 会因无限高约束崩溃。
+                // 编辑期间隐藏正在编辑的条目（已是表单内虚线框）；空桶/空置顶区整体不渲染
+                val editingId = editing.editingItemId
+                val visiblePinned = state.pinnedItems.filterNot { it.id == editingId }
+                val visibleBuckets = state.buckets
+                    .map { it.copy(items = it.items.filterNot { item -> item.id == editingId }) }
+                    .filter { it.items.isNotEmpty() }
                 Column(
                     modifier = Modifier
+                        .weight(1f)
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     ItemForm(
                         state = editing,
@@ -208,77 +219,89 @@ fun MainScreen(
                         editingTarget = state.editingTarget,
                         now = state.now,
                     )
+                    // 本次添加置顶区（编辑期间卡片禁交互、无散入动作）
+                    if (visiblePinned.isNotEmpty()) {
+                        BucketBox(
+                            header = stringResource(R.string.pinned_header),
+                            status = null,
+                            items = visiblePinned,
+                            now = state.now,
+                            cardsEnabled = false,
+                            onHeaderAction = null,
+                            onStartEdit = { viewModel.startEdit(it) },
+                            onDeleteItem = onDeleteItem,
+                        )
+                    }
+                    // 六个过期时间桶，空桶不渲染
+                    visibleBuckets.forEach { bucket ->
+                        BucketBox(
+                            header = stringResource(bucket.status.labelRes),
+                            status = bucket.status,
+                            items = bucket.items,
+                            now = state.now,
+                            cardsEnabled = false,
+                            onStartEdit = { viewModel.startEdit(it) },
+                            onDeleteItem = onDeleteItem,
+                        )
+                    }
                 }
-            }
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                // 编辑期间隐藏正在编辑的条目（已上移为表单上方卡片）；空桶/空置顶区整体不渲染
-                val editingId = state.editing?.editingItemId
-                val visiblePinned = state.pinnedItems.filterNot { it.id == editingId }
-                val visibleBuckets = state.buckets
-                    .map { it.copy(items = it.items.filterNot { item -> item.id == editingId }) }
-                    .filter { it.items.isNotEmpty() }
-                PullToRefreshBox(
-                    isRefreshing = refreshing,
-                    onRefresh = {
-                        // 编辑期间禁用散桶（遮罩已拦手势，此处为确定性门禁）
-                        if (state.editing == null) {
+            } else {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    PullToRefreshBox(
+                        isRefreshing = refreshing,
+                        onRefresh = {
                             refreshing = true
                             viewModel.disperseSession()
                             scope.launch {
                                 delay(400)
                                 refreshing = false
                             }
-                        }
-                    },
-                    state = rememberPullToRefreshState(),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    LazyColumn(
+                        },
+                        state = rememberPullToRefreshState(),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        // 本次添加置顶区（会话内存态；下拉刷新/冷启动散入各桶）
-                        if (visiblePinned.isNotEmpty()) {
-                            item(key = "pinned") {
-                                BucketBox(
-                                    header = stringResource(R.string.pinned_header),
-                                    status = null,
-                                    items = visiblePinned,
-                                    now = state.now,
-                                    cardsEnabled = state.editing == null,
-                                    // 编辑期间不暴露「散入各桶」无障碍动作（TalkBack 焦点不受遮罩阻挡）
-                                    onHeaderAction = if (state.editing == null) {
-                                        { viewModel.disperseSession() }
-                                    } else {
-                                        null
-                                    },
-                                    onStartEdit = { viewModel.startEdit(it) },
-                                    onDeleteItem = onDeleteItem,
-                                )
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            // 本次添加置顶区（会话内存态；下拉刷新/冷启动散入各桶）
+                            if (state.pinnedItems.isNotEmpty()) {
+                                item(key = "pinned") {
+                                    BucketBox(
+                                        header = stringResource(R.string.pinned_header),
+                                        status = null,
+                                        items = state.pinnedItems,
+                                        now = state.now,
+                                        cardsEnabled = true,
+                                        onHeaderAction = { viewModel.disperseSession() },
+                                        onStartEdit = { viewModel.startEdit(it) },
+                                        onDeleteItem = onDeleteItem,
+                                    )
+                                }
                             }
-                        }
-                        // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
-                        visibleBuckets.forEach { bucket ->
-                            item(key = "bucket_${bucket.status}") {
-                                BucketBox(
-                                    header = stringResource(bucket.status.labelRes),
-                                    status = bucket.status,
-                                    items = bucket.items,
-                                    now = state.now,
-                                    cardsEnabled = state.editing == null,
-                                    onStartEdit = { viewModel.startEdit(it) },
-                                    onDeleteItem = onDeleteItem,
-                                )
+                            // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
+                            state.buckets.forEach { bucket ->
+                                item(key = "bucket_${bucket.status}") {
+                                    BucketBox(
+                                        header = stringResource(bucket.status.labelRes),
+                                        status = bucket.status,
+                                        items = bucket.items,
+                                        now = state.now,
+                                        cardsEnabled = true,
+                                        onStartEdit = { viewModel.startEdit(it) },
+                                        onDeleteItem = onDeleteItem,
+                                    )
+                                }
                             }
-                        }
-                        if (state.items.isEmpty() && state.editing == null) {
-                            item(key = "empty") {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(stringResource(R.string.empty_list), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (state.items.isEmpty()) {
+                                item(key = "empty") {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(stringResource(R.string.empty_list), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
                         }
