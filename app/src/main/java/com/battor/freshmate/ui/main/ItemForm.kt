@@ -120,7 +120,7 @@ fun ItemForm(
     Card(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -239,7 +239,7 @@ fun ItemForm(
  */
 @Composable
 private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDateTime) {
-    val onColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val onColor = MaterialTheme.colorScheme.onSurfaceVariant
     // 到期时刻：表单值有效则现算，否则回落原条目（与 ExpiryPreview 的换算口径一致）
     val liveExpiry = state.shelfLifeValue.toIntOrNull()
         ?.takeIf { it > 0 }
@@ -249,7 +249,7 @@ private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDa
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.primaryContainer)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .drawBehind {
                 // Compose 无内建虚线边框：Stroke + dashPathEffect 手绘圆角矩形
                 val stroke = 1.5.dp.toPx()
@@ -317,7 +317,7 @@ private fun ExpiryPreview(state: EditingState) {
             formatRemaining(LocalContext.current.resources, remaining),
         )
     }
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
