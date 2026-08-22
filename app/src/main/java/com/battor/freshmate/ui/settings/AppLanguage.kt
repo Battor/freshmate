@@ -20,7 +20,9 @@ enum class AppLanguage(val tag: String?) {
             if (locales.isEmpty) return SYSTEM
             val locale = locales[0] ?: return SYSTEM
             return when {
-                locale.language == "zh" && locale.country.equals("TW", ignoreCase = true) -> TRADITIONAL_CHINESE
+                locale.language == "zh" &&
+                    (locale.country.equals("TW", ignoreCase = true) || locale.script.equals("Hant", ignoreCase = true)) ->
+                    TRADITIONAL_CHINESE
                 locale.language == "zh" -> SIMPLIFIED_CHINESE
                 locale.language == "en" -> ENGLISH
                 else -> SYSTEM

@@ -17,12 +17,10 @@ class SettingsRepositoryTest {
     private val repo = DataStoreSettingsRepository(context)
 
     @Test
-    fun 未写入时默认跟随系统() = runBlocking {
+    fun 默认跟随系统_写入后可读回() = runBlocking {
+        // 同一方法内先断言默认再写读：preferencesDataStore 委托是文件级单例，
+        // 跨测试方法共享实例，方法拆开会有执行顺序耦合
         assertEquals(ThemeMode.SYSTEM, repo.themeMode.first())
-    }
-
-    @Test
-    fun 写入后可读回() = runBlocking {
         repo.setThemeMode(ThemeMode.DARK)
         assertEquals(ThemeMode.DARK, repo.themeMode.first())
         repo.setThemeMode(ThemeMode.LIGHT)

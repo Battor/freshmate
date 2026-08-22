@@ -25,7 +25,6 @@
                 android:value="true" />
         </service>
 
-
         <activity
             android:name=".MainActivity"
             android:exported="true"

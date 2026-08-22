@@ -18,8 +18,11 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
         viewModelScope.launch { repository.setThemeMode(mode) }
     }
 
-    /** 语言切换会重建 Activity 并重建本 VM，init 时读一次即可。 */
-    val language: AppLanguage = AppLanguage.fromLocales(AppCompatDelegate.getApplicationLocales())
+    /**
+     * 每次调用现读：locale 切换会重建 Activity，但 NavBackStackEntry 的 ViewModelStore
+     * 跨重建保留（本 VM 不随之重建），缓存 val 会陈旧。
+     */
+    fun currentLanguage(): AppLanguage = AppLanguage.fromLocales(AppCompatDelegate.getApplicationLocales())
 
     fun setLanguage(language: AppLanguage) {
         AppLanguage.apply(language)

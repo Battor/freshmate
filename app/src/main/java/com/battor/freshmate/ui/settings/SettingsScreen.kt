@@ -2,6 +2,7 @@ package com.battor.freshmate.ui.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,15 +34,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.battor.freshmate.R
 import com.battor.freshmate.data.ThemeMode
 import com.battor.freshmate.update.UpdateViewModel
@@ -171,7 +173,7 @@ fun SettingsScreen(
 /** 主题设置：UI 只有两档（浅色/深色）；SYSTEM 态显示系统当前模式（进入时检测）。 */
 @Composable
 private fun ThemeSettingItem(viewModel: SettingsViewModel) {
-    val themeMode by viewModel.themeMode.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
     // SYSTEM 态跟随系统当前模式展示（isSystemInDarkTheme 变化会触发重组刷新）
     val isDark = when (themeMode) {
@@ -209,7 +211,7 @@ private fun LanguageSettingItem(viewModel: SettingsViewModel) {
     val zhCn = stringResource(R.string.language_name_zh_cn)
     val zhTw = stringResource(R.string.language_name_zh_tw)
     val en = stringResource(R.string.language_name_en)
-    val current = viewModel.language
+    val current = viewModel.currentLanguage()
     val currentLabel = when (current) {
         AppLanguage.SYSTEM -> followSystem
         AppLanguage.SIMPLIFIED_CHINESE -> zhCn
@@ -241,7 +243,7 @@ private fun LanguageSettingItem(viewModel: SettingsViewModel) {
     }
 }
 
-/** M3 单选对话框：RadioButton 行 + 点行即选。 */
+/** M3 单选对话框：整行 selectable（Role.RadioButton），RadioButton 自身无独立点击语义。 */
 @Composable
 private fun <T> SingleChoiceDialog(
     title: String,
@@ -259,15 +261,20 @@ private fun <T> SingleChoiceDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(value) },
+                            .selectable(
+                                selected = value == selected,
+                                role = Role.RadioButton,
+                                onClick = { onSelect(value) },
+                            ),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(selected = value == selected, onClick = { onSelect(value) })
-                        Text(label, modifier = Modifier.padding(top = 14.dp))
+                        RadioButton(selected = value == selected, onClick = null)
+                        Text(label, modifier = Modifier.padding(start = 12.dp))
                     }
                 }
             }
         },
+        // confirmButton 为必填槽位：本对话框只有取消动作，留空占位
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
