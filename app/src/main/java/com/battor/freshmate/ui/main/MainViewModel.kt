@@ -89,6 +89,13 @@ class MainViewModel(
         val isAddForm: Boolean get() = editing != null && editing.editingItemId == null
 
         /**
+         * 正在编辑的目标条目（表单上方展示的卡片）；新增表单/无表单时为 null。
+         * 计算属性而非 withDerived 派生态：startEdit/backToMethodSelection 不经 withDerived，存储态会陈旧。
+         */
+        val editingTarget: FoodItem?
+            get() = editing?.editingItemId?.let { id -> items.firstOrNull { it.id == id } }
+
+        /**
          * 表单是否已有内容：新增表单 = 任一字段非空；编辑表单 = 与原条目有差异。
          * 驱动 ✓ 按钮显隐。
          */

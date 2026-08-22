@@ -421,4 +421,19 @@ class MainViewModelTest {
         vm.refreshNow()
         assertEquals(now, vm.uiState.value.now)
     }
+
+    @Test fun `编辑时editingTarget指向目标条目`() = runTest(dispatcher) {
+        saveNew()
+        val item = repo.items.value[0]
+        vm.startEdit(item)
+        assertEquals(item.id, vm.uiState.value.editingTarget?.id)
+        // 放弃表单即清空
+        vm.backToMethodSelection()
+        assertNull(vm.uiState.value.editingTarget)
+    }
+
+    @Test fun `新增表单无editingTarget`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        assertNull(vm.uiState.value.editingTarget)
+    }
 }
