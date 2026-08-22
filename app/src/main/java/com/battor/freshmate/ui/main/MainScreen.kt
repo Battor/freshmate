@@ -1,6 +1,7 @@
 package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
@@ -29,7 +31,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -52,11 +53,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -74,11 +81,11 @@ import java.time.LocalDateTime
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** 桶头进度条宽度 = 组头文字宽度 × 1.5（需求-5 用户指定）。 */
-private const val BUCKET_BAR_WIDTH_SCALE = 1.5f
+/** 桶头进度条宽度 = 组头文字宽度 × 2（需求-5 走查反馈：1.5 基础上再加宽）。 */
+private const val BUCKET_BAR_WIDTH_SCALE = 2f
 
-/** 桶头进度条轨道透明度（on 色 20% 淡轨道）。 */
-private const val BUCKET_BAR_TRACK_ALPHA = 0.2f
+/** 桶头进度条轨道与条纹底色的透明度（同色淡底）。 */
+private const val BUCKET_BAR_TRACK_ALPHA = 0.3f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -336,6 +343,45 @@ fun MainScreen(
 }
 
 /**
+ * 桶头进度条（需求-5 走查反馈第 4 轮）：药丸形轨道 + 状态容器色斜条纹填充段。
+ * LinearProgressIndicator 不支持条纹，自绘 Canvas；无语义节点（避免 TalkBack 朗读
+ * 对「窗口刻度」无意义的百分比，组头语义由右侧文字承载）。
+ */
+@Composable
+private fun BucketProgressBar(
+    progress: Float,
+    fillColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier.height(6.dp)) {
+        val corner = CornerRadius(size.height / 2f)
+        drawRoundRect(color = fillColor.copy(alpha = BUCKET_BAR_TRACK_ALPHA), cornerRadius = corner)
+        val fillWidth = size.width * progress.coerceIn(0f, 1f)
+        if (fillWidth <= 0f) return@Canvas
+        // 填充段 = 同色淡底 + 45° 实色斜纹：同色两调，深浅主题都成立
+        clipPath(
+            Path().apply {
+                addRoundRect(RoundRect(rect = Rect(0f, 0f, fillWidth, size.height), cornerRadius = corner))
+            },
+        ) {
+            drawRect(fillColor.copy(alpha = BUCKET_BAR_TRACK_ALPHA))
+            val stripeWidth = 3.5.dp.toPx()
+            val period = 7.dp.toPx()
+            var x = -size.height
+            while (x < fillWidth + size.height) {
+                drawLine(
+                    color = fillColor,
+                    start = Offset(x, size.height),
+                    end = Offset(x + size.height, 0f),
+                    strokeWidth = stripeWidth,
+                )
+                x += period
+            }
+        }
+    }
+}
+
+/**
  * 桶容器（需求-3）：浅边框 + 状态色桶头 + 子条目卡片。
  * status = null 表示「本次添加」置顶区（主色 2dp 边框、组头用主色文本）。
  * 点卡片 = 编辑；组头与组空白不可点击（桶按过期时间聚合，无组级交互）。
@@ -370,28 +416,20 @@ private fun BucketBox(
         ) {
             if (status != null) {
                 val statusColors = LocalStatusColors.current.of(status)
-                // 进度条宽度 = 组头文字实际宽度 × 1.5（需求-5 用户指定，精确测量非估算）
+                // 进度条宽度 = 组头文字实际宽度 × 2（需求-5 走查反馈，精确测量非估算）
                 val textMeasurer = rememberTextMeasurer()
                 val textStyle = MaterialTheme.typography.labelLarge
                 val textWidth = remember(header, textStyle) {
                     textMeasurer.measure(header, textStyle).size.width
                 }
                 val barWidth = with(LocalDensity.current) { textWidth.toDp() * BUCKET_BAR_WIDTH_SCALE }
-                // 合并为单焦点：进度条静默，语义由右侧文字承载
-                //（避免 TalkBack 朗读对「窗口刻度」无意义的百分比）
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.semantics(mergeDescendants = true) {},
-                ) {
-                    // 桶级紧急度：填充段=状态深色调 on（粉彩容器色叠浅色 surface 几乎不可见，
-                    // 用同族深色才压得住底）；EXPIRED 例外取饱和深红容器色 → 整条红实心
-                    LinearProgressIndicator(
-                        progress = { status.windowProgress },
-                        modifier = Modifier.width(barWidth).clearAndSetSemantics { },
-                        color = if (status == ExpiryStatus.EXPIRED) statusColors.container else statusColors.on,
-                        trackColor = statusColors.on.copy(alpha = BUCKET_BAR_TRACK_ALPHA),
-                        gapSize = 0.dp,
-                        drawStopIndicator = {},
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // 桶级紧急度：填充段 = 状态容器色（与组内卡片同色）斜条纹；
+                    // 条纹纹理的明暗差弥补粉彩容器色叠浅底的低对比（无需再借深色 on）
+                    BucketProgressBar(
+                        progress = status.windowProgress,
+                        fillColor = statusColors.container,
+                        modifier = Modifier.width(barWidth),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(header, style = textStyle, color = statusColors.on)
