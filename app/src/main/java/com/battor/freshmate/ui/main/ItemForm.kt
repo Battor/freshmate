@@ -139,11 +139,10 @@ fun ItemForm(
             OutlinedTextField(
                 value = state.shelfLifeValue,
                 onValueChange = { text ->
+                    val filtered = text.filter { it in '0'..'9' }.take(4)
                     onStateChange(
-                        state.copy(
-                            shelfLifeValue = text.filter { it in '0'..'9' }.take(4),
-                            shelfLifeError = false,
-                        ),
+                        state.copy(shelfLifeValue = filtered, shelfLifeError = false)
+                            .withAutoProductionDate(filtered),
                     )
                 },
                 label = { Text(stringResource(R.string.field_shelf_life)) },
@@ -180,7 +179,7 @@ fun ItemForm(
                                     shelfLifeValue = quick.value.toString(),
                                     shelfLifeUnit = quick.unit,
                                     shelfLifeError = false,
-                                ),
+                                ).withAutoProductionDate(quick.value.toString()),
                             )
                         },
                         label = { Text(stringResource(quick.labelRes, quick.value)) },
@@ -284,6 +283,20 @@ private fun ProductionDateField(
         ) { DatePicker(state = pickerState) }
     }
 }
+
+/**
+ * 需求-5：新增表单里保质期一旦有效而生产日期为空，自动填今天。
+ * 编辑表单不适用：旧条目起算点是当时的录入时刻（createdAt），自动填今天会大幅改变到期语义。
+ */
+private fun EditingState.withAutoProductionDate(shelfLifeText: String): EditingState =
+    if (editingItemId == null &&
+        productionDate == null &&
+        shelfLifeText.toIntOrNull()?.let { it > 0 } == true
+    ) {
+        copy(productionDate = LocalDate.now())
+    } else {
+        this
+    }
 
 /** 语音/图片的附加操作占位（设计文档 §5.3，v1 不接识别）。 */
 @Composable
