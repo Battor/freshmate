@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -12,8 +13,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -40,8 +43,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.annotation.StringRes
 import com.battor.freshmate.R
 import com.battor.freshmate.data.Category
+import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.inputmethod.InputMethods
 import com.battor.freshmate.ui.main.MainViewModel.EditingState
@@ -99,6 +112,8 @@ fun ItemForm(
     state: EditingState,
     onStateChange: (EditingState) -> Unit,
     onPlaceholderHint: (String) -> Unit,
+    editingTarget: FoodItem?,
+    now: LocalDateTime,
 ) {
     val inputMethod = InputMethods.byId(state.inputMethod)
 
@@ -113,6 +128,8 @@ fun ItemForm(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            editingTarget?.let { EditingTargetCard(it, now) }
+
             inputMethod.extraAction?.let { extra ->
                 ExtraActionRow(state.inputMethod, extra.icon, extra.labelRes, onPlaceholderHint)
             }
@@ -212,6 +229,57 @@ fun ItemForm(
 
             ExpiryPreview(state)
         }
+    }
+}
+
+/** 表单内的「当前操作项目」指示（需求-5 走查反馈）：表单同底色 + 虚线边框，与已保存卡片区分。 */
+@Composable
+private fun EditingTargetCard(item: FoodItem, now: LocalDateTime) {
+    val onColor = MaterialTheme.colorScheme.onPrimaryContainer
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .drawBehind {
+                // Compose 无内建虚线边框：Stroke + dashPathEffect 手绘圆角矩形
+                val stroke = 1.5.dp.toPx()
+                val inset = stroke / 2
+                // shapes.large = 16dp 圆角，与 clip 对齐
+                drawRoundRect(
+                    brush = SolidColor(onColor),
+                    topLeft = Offset(inset, inset),
+                    size = Size(size.width - stroke, size.height - stroke),
+                    cornerRadius = CornerRadius(16.dp.toPx()),
+                    style = Stroke(
+                        width = stroke,
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(6.dp.toPx(), 6.dp.toPx()),
+                        ),
+                    ),
+                )
+            }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            categoryIcon(item.category),
+            contentDescription = null,
+            tint = onColor,
+            modifier = Modifier.size(28.dp),
+        )
+        Column(Modifier.weight(1f)) {
+            Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
+            item.quantity?.let {
+                Text(
+                    stringResource(R.string.quantity_label, it),
+                    color = onColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

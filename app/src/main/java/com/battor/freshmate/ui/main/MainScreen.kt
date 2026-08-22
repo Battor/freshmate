@@ -2,7 +2,6 @@ package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -204,21 +202,14 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    state.editingTarget?.let { target ->
-                        FoodItemCard(
-                            item = target,
-                            now = state.now,
-                            onClick = {},
-                            onDelete = {},
-                            enabled = false, // 纯展示：正在编辑的条目指示，不可交互
-                        )
-                    }
                     ItemForm(
                         state = editing,
                         onStateChange = { newState -> viewModel.updateEditing { newState } },
                         onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
+                        // 当前操作项目融入表单（需求-5 走查反馈）：表单内虚线框同底色块
+                        editingTarget = state.editingTarget,
+                        now = state.now,
                     )
                 }
             }
@@ -267,6 +258,7 @@ fun MainScreen(
                                     },
                                     onStartEdit = { viewModel.startEdit(it) },
                                     onDeleteItem = onDeleteItem,
+                                    dimmed = state.editing != null,
                                 )
                             }
                         }
@@ -281,6 +273,7 @@ fun MainScreen(
                                     cardsEnabled = state.editing == null,
                                     onStartEdit = { viewModel.startEdit(it) },
                                     onDeleteItem = onDeleteItem,
+                                    dimmed = state.editing != null,
                                 )
                             }
                         }
@@ -295,23 +288,6 @@ fun MainScreen(
                             }
                         }
                     }
-                }
-                // 编辑期间遮罩：列表压暗 + 吸收指针防误触——消费全部指针事件（含拖动），
-                // 列表滚动与下拉刷新手势一并拦住；顶栏与 FAB 不盖，浮动「← 返回」更突出。
-                // scrim 为黑：深色主题下 onSurface 是浅色，浅色蒙层会「发白」而非「变暗」
-                if (state.editing != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = EDITING_SCRIM_ALPHA))
-                            .pointerInput(Unit) {
-                                awaitEachGesture {
-                                    while (true) {
-                                        awaitPointerEvent().changes.forEach { it.consume() }
-                                    }
-                                }
-                            },
-                    )
                 }
             }
         }
@@ -356,6 +332,7 @@ private fun BucketBox(
     onHeaderAction: (() -> Unit)? = null,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
+    dimmed: Boolean = false,
 ) {
     val border = if (status == null) {
         BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
@@ -364,72 +341,85 @@ private fun BucketBox(
     }
     // semantics 块非 Composable 上下文，提前解析
     val disperseLabel = stringResource(R.string.disperse_into_buckets)
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        border = border,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            border = border,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            if (status != null) {
-                val statusColors = LocalStatusColors.current.of(status)
-                // 进度条宽度 = 组头文字实际宽度 × 1.5（需求-5 用户指定，精确测量非估算）
-                val textMeasurer = rememberTextMeasurer()
-                val textStyle = MaterialTheme.typography.labelLarge
-                val textWidth = remember(header, textStyle) {
-                    textMeasurer.measure(header, textStyle).size.width
-                }
-                val barWidth = with(LocalDensity.current) { textWidth.toDp() * BUCKET_BAR_WIDTH_SCALE }
-                // 合并为单焦点：进度条静默，语义由右侧文字承载
-                //（避免 TalkBack 朗读对「窗口刻度」无意义的百分比）
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.semantics(mergeDescendants = true) {},
-                ) {
-                    // 桶级紧急度：填充段=状态深色调 on（粉彩容器色叠浅色 surface 几乎不可见，
-                    // 用同族深色才压得住底）；EXPIRED 例外取饱和深红容器色 → 整条红实心
-                    LinearProgressIndicator(
-                        progress = { status.windowProgress },
-                        modifier = Modifier.width(barWidth).clearAndSetSemantics { },
-                        color = if (status == ExpiryStatus.EXPIRED) statusColors.container else statusColors.on,
-                        trackColor = statusColors.on.copy(alpha = BUCKET_BAR_TRACK_ALPHA),
-                        gapSize = 0.dp,
-                        drawStopIndicator = {},
+            Column(
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (status != null) {
+                    val statusColors = LocalStatusColors.current.of(status)
+                    // 进度条宽度 = 组头文字实际宽度 × 1.5（需求-5 用户指定，精确测量非估算）
+                    val textMeasurer = rememberTextMeasurer()
+                    val textStyle = MaterialTheme.typography.labelLarge
+                    val textWidth = remember(header, textStyle) {
+                        textMeasurer.measure(header, textStyle).size.width
+                    }
+                    val barWidth = with(LocalDensity.current) { textWidth.toDp() * BUCKET_BAR_WIDTH_SCALE }
+                    // 合并为单焦点：进度条静默，语义由右侧文字承载
+                    //（避免 TalkBack 朗读对「窗口刻度」无意义的百分比）
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.semantics(mergeDescendants = true) {},
+                    ) {
+                        // 桶级紧急度：填充段=状态深色调 on（粉彩容器色叠浅色 surface 几乎不可见，
+                        // 用同族深色才压得住底）；EXPIRED 例外取饱和深红容器色 → 整条红实心
+                        LinearProgressIndicator(
+                            progress = { status.windowProgress },
+                            modifier = Modifier.width(barWidth).clearAndSetSemantics { },
+                            color = if (status == ExpiryStatus.EXPIRED) statusColors.container else statusColors.on,
+                            trackColor = statusColors.on.copy(alpha = BUCKET_BAR_TRACK_ALPHA),
+                            gapSize = 0.dp,
+                            drawStopIndicator = {},
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(header, style = textStyle, color = statusColors.on)
+                    }
+                } else {
+                    // 「本次添加」组头：浅主色背景 chip 让散入动作可发现；TalkBack 提供自定义动作
+                    Text(
+                        header,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .semantics {
+                                onHeaderAction?.let {
+                                    customActions = listOf(
+                                        CustomAccessibilityAction(disperseLabel) { it(); true },
+                                    )
+                                }
+                            },
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(header, style = textStyle, color = statusColors.on)
                 }
-            } else {
-                // 「本次添加」组头：浅主色背景 chip 让散入动作可发现；TalkBack 提供自定义动作
-                Text(
-                    header,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.extraSmall)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                        .semantics {
-                            onHeaderAction?.let {
-                                customActions = listOf(
-                                    CustomAccessibilityAction(disperseLabel) { it(); true },
-                                )
-                            }
-                        },
-                )
+                items.forEach { item ->
+                    FoodItemCard(
+                        item = item,
+                        now = now,
+                        onClick = { onStartEdit(item) },
+                        onDelete = { onDeleteItem(item) },
+                        enabled = cardsEnabled,
+                    )
+                }
             }
-            items.forEach { item ->
-                FoodItemCard(
-                    item = item,
-                    now = now,
-                    onClick = { onStartEdit(item) },
-                    onDelete = { onDeleteItem(item) },
-                    enabled = cardsEnabled,
-                )
-            }
+        }
+        if (dimmed) {
+            // 组级遮罩（需求-5 走查反馈：替代整片列表遮罩）：组自身圆角内压暗。
+            // 只承担视觉，交互已由 cardsEnabled/onHeaderAction/onRefresh 门禁。
+            // scrim 为黑：深色主题下 onSurface 是浅色，浅色蒙层会「发白」而非「变暗」
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = EDITING_SCRIM_ALPHA)),
+            )
         }
     }
 }

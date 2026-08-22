@@ -25,7 +25,7 @@
 
 - `MainViewModel.withDerived` 新增派生态 `editingTarget: FoodItem?`：`editing?.editingItemId?.let { id -> items.firstOrNull { it.id == id } }`。
 - 列表渲染（「本次添加」置顶区与六个桶）过滤掉 `editing.editingItemId` 对应条目——编辑期间列表里不再出现 A。
-- `MainScreen` 在表单上方渲染 `editingTarget` 的 `FoodItemCard`：纯展示（不可点、不可滑删），沿用状态色与到期文案，作为「正在编辑」的指示。
+- `MainScreen` 将 `editingTarget` 传入 `ItemForm`，在表单 Card 内部首行渲染「当前操作项目」块：表单同底色（`primaryContainer`）+ 虚线边框（与已保存卡片区分），展示分类图标/名称/数量/到期文案，纯展示不可交互。（2026-08-22 走查反馈修订：原为表单上方独立 FoodItemCard，与表单视觉割裂。）
 
 ## 4. 桶头进度条（桶级紧急度指示）
 
@@ -43,7 +43,7 @@
 表单打开期间（新增与编辑同一套行为）：
 
 - 「编辑目标卡片（仅编辑时）+ ItemForm」固定钉在内容区顶部，不随列表滚动；键盘弹出由该区域自行 `imePadding`。
-- 其下的列表区覆盖半透明 scrim（`onSurface` 低透明度，随主题深浅适配）：scrim 吸收点击（防误触，不可点穿），下拉刷新随 scrim 禁用。
+- 其下的列表区不再整片遮罩：每个组（「本次添加」置顶区 + 各桶）单独覆盖一层半透明 scrim（组自身圆角内、黑色 32% 对齐 M3 模态令牌），组间隙不暗。防误触由既有门禁承担：卡片 `cardsEnabled`、组头无障碍动作置 null、`onRefresh` 编辑期直接返回。（2026-08-22 走查反馈修订：原为整片列表 scrim + 指针消费。）
 - 顶栏与 FAB 不盖——浮动「← 返回」按钮在变暗的列表上更突出。
 - 删除原「表单打开滚到顶部 / 关闭恢复位置」的 LaunchedEffect（钉顶后不再需要）。
 - 卡片 `cardsEnabled = editing == null` 门禁保留（scrim 已吸收点击，双保险）。
