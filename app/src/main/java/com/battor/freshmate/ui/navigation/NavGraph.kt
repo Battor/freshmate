@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.battor.freshmate.data.DataStoreSettingsRepository
 import com.battor.freshmate.data.FoodItemDatabase
 import com.battor.freshmate.data.FoodItemRepository
 import com.battor.freshmate.notification.ReminderScheduler
@@ -23,6 +24,7 @@ import com.battor.freshmate.ui.main.MainScreen
 import com.battor.freshmate.ui.main.MainViewModel
 import com.battor.freshmate.ui.settings.AboutScreen
 import com.battor.freshmate.ui.settings.SettingsScreen
+import com.battor.freshmate.ui.settings.SettingsViewModel
 import com.battor.freshmate.update.UpdateViewModel
 import java.io.File
 
@@ -61,9 +63,16 @@ fun FreshMateNavGraph() {
             HistoryScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
+            val context = LocalContext.current.applicationContext
+            val settingsViewModel: SettingsViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { SettingsViewModel(DataStoreSettingsRepository(context)) }
+                },
+            )
             val updateViewModel = sharedUpdateViewModel()
             val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
             SettingsScreen(
+                viewModel = settingsViewModel,
                 onBack = { navController.popBackStack() },
                 onOpenLogs = { navController.navigate(Routes.LOG_VIEWER) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },

@@ -12,7 +12,19 @@
         android:label="@string/app_name"
         android:icon="@android:drawable/sym_def_app_icon"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
-        android:allowBackup="true">
+        android:allowBackup="true"
+        android:localeConfig="@xml/locales_config">
+
+        <!-- API < 33 per-app 语言自动持久化（AppLanguage.apply 依赖） -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
 
         <activity
             android:name=".MainActivity"
