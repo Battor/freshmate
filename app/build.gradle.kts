@@ -44,6 +44,12 @@ android {
     sourceSets {
         getByName("androidTest").assets.srcDirs(files("$projectDir/schemas"))
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 ksp {
@@ -76,6 +82,8 @@ dependencies {
     // Local tests
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation("androidx.test:core:1.6.1")
 
     // Instrumented tests
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
@@ -88,6 +96,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     implementation("androidx.navigation:navigation-compose:2.8.1")
     implementation("androidx.core:core:1.13.1")
+
+    // 需求-4：设置（DataStore）/ per-app 语言（appcompat）
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
 
     // Tooling / test manifest
     debugImplementation("androidx.compose.ui:ui-tooling")
