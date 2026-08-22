@@ -39,7 +39,7 @@
     <string name="expiry_preview_remaining">Expires in %1$s</string>
     <string name="expiry_preview_expired">Expired %1$s ago; no reminders after saving</string>
     <string name="quick_shelf_days">%1$dd</string>
-    <string name="quick_shelf_months">%1$dm</string>
+    <string name="quick_shelf_months">%1$d mo</string>
     <string name="quick_shelf_years">%1$dy</string>
     <string name="unit_day">d</string>
     <string name="unit_week">wk</string>

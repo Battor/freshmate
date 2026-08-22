@@ -12,10 +12,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+// Robolectric 默认 locale 是 en-US，会解析 values-en；钉 zh-CN 回落到 values/（简体中文）
+@Config(sdk = [34], qualifiers = "zh-rCN")
 class ExpiryStatusTest {
     private val now = LocalDateTime.of(2026, 8, 20, 10, 0)
-    // Robolectric 默认资源 = values/（简体中文）
     private val res: Resources = ApplicationProvider.getApplicationContext<Context>().resources
 
     @Test fun `过期即EXPIRED`() {

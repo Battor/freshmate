@@ -276,7 +276,7 @@ fun MainScreen(
                         R.string.near_expiry_text,
                         pending.editing.name,
                         pending.skippedReminders,
-                                                pending.remainingReminders,
+                        pending.remainingReminders,
                     ),
                 )
             },

@@ -52,15 +52,15 @@ fun LogViewerScreen(logsDir: File, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(com.battor.freshmate.R.string.log_title, selected ?: "")) },
+                title = { Text(stringResource(R.string.log_title, selected ?: "")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(com.battor.freshmate.R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Filled.DateRange, contentDescription = stringResource(com.battor.freshmate.R.string.pick_date))
+                        Icon(Icons.Filled.DateRange, contentDescription = stringResource(R.string.pick_date))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         dates.forEach { date ->
@@ -77,7 +77,7 @@ fun LogViewerScreen(logsDir: File, onBack: () -> Unit) {
         if (lines.isEmpty()) {
             // 复用 Scaffold 的 padding：空态居中
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(stringResource(com.battor.freshmate.R.string.empty_logs), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.empty_logs), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(

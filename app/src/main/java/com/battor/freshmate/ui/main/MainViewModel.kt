@@ -8,6 +8,7 @@ import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.notification.scheduleOrCancel
+import com.battor.freshmate.R
 import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.util.ExpiryStatus
 import com.battor.freshmate.util.ShelfLifeUnit
@@ -238,7 +239,7 @@ class MainViewModel(
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
-                _errorEvent.value = UiText(com.battor.freshmate.R.string.error_delete_failed)
+                _errorEvent.value = UiText(R.string.error_delete_failed)
             }
         }
     }
@@ -252,7 +253,7 @@ class MainViewModel(
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
-                _errorEvent.value = UiText(com.battor.freshmate.R.string.error_recover_failed)
+                _errorEvent.value = UiText(R.string.error_recover_failed)
             }
         }
     }
@@ -287,7 +288,7 @@ class MainViewModel(
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
-                _errorEvent.value = UiText(com.battor.freshmate.R.string.error_save_failed)
+                _errorEvent.value = UiText(R.string.error_save_failed)
                 return@launch // 编辑表单保留，等待用户重试
             } finally {
                 saving = false

@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.battor.freshmate.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -79,14 +80,14 @@ fun PermissionBanners() {
     val exactOff = blockState.exactAlarmOff
 
     if (notificationsOff) {
-        Banner(text = stringResource(com.battor.freshmate.R.string.banner_notifications_off)) {
+        Banner(text = stringResource(R.string.banner_notifications_off)) {
             context.startActivity(
                 Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                     .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
             )
         }
     } else if (exactOff) {
-        Banner(text = stringResource(com.battor.freshmate.R.string.banner_exact_alarm_off)) {
+        Banner(text = stringResource(R.string.banner_exact_alarm_off)) {
             context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
         }
     }
@@ -107,7 +108,7 @@ private fun Banner(text: String, onAction: () -> Unit) {
                 modifier = Modifier.weight(1f).padding(vertical = 8.dp),
                 style = MaterialTheme.typography.bodySmall,
             )
-            Button(onClick = onAction) { Text(stringResource(com.battor.freshmate.R.string.banner_action_go)) }
+            Button(onClick = onAction) { Text(stringResource(R.string.banner_action_go)) }
         }
     }
 }
