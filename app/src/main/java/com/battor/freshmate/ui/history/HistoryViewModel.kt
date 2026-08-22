@@ -6,6 +6,7 @@ import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.notification.scheduleOrCancel
+import com.battor.freshmate.ui.common.UiText
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,8 +36,8 @@ class HistoryViewModel(
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     /** 一次性提示（Snackbar），展示后 UI 调 clearMessage()。 */
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message.asStateFlow()
+    private val _message = MutableStateFlow<UiText?>(null)
+    val message: StateFlow<UiText?> = _message.asStateFlow()
 
     fun clearMessage() { _message.value = null }
 
@@ -72,11 +73,11 @@ class HistoryViewModel(
             try {
                 repository.restore(item)
                 scheduler.scheduleOrCancel(item, nowProvider())
-                _message.value = "已还原「${item.name}」"
+                _message.value = UiText(com.battor.freshmate.R.string.restored_snackbar, listOf(item.name))
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
-                _message.value = "还原失败，请重试"
+                _message.value = UiText(com.battor.freshmate.R.string.error_restore_failed)
             }
         }
     }

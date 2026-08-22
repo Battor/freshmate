@@ -1,5 +1,7 @@
 package com.battor.freshmate.ui.history
 
+import com.battor.freshmate.R
+import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.FakeRepository
 import com.battor.freshmate.FakeScheduler
 import com.battor.freshmate.data.Category
@@ -89,7 +91,7 @@ class HistoryViewModelTest {
         assertEquals(1, repo.getAll().size)
         assertTrue(scheduler.scheduled.any { it.id == a.id })
         assertNull(vm.uiState.value.restoring)
-        assertEquals("已还原「牛奶」", vm.message.value)
+        assertEquals(UiText(R.string.restored_snackbar, listOf("牛奶")), vm.message.value)
     }
 
     @Test fun `已过期条目还原不排提醒只取消`() = runTest(dispatcher) {

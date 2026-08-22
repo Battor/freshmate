@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.battor.freshmate.R
 import com.battor.freshmate.data.ThemeMode
+import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.update.UpdateViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,8 +64,9 @@ fun SettingsScreen(
     onDismissUpdate: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val noticeText = updateState.notice?.asString()
     LaunchedEffect(updateState.notice) {
-        updateState.notice?.let {
+        noticeText?.let {
             snackbarHostState.showSnackbar(it)
             onDismissNotice()
         }
@@ -133,7 +135,7 @@ fun SettingsScreen(
         AlertDialog(
             // 下载中禁止点外部/返回关闭：对话框是下载进度与安装入口的唯一载体
             onDismissRequest = { if (!updateState.downloading) onDismissUpdate() },
-            title = { Text("发现新版本 ${m.versionName}") },
+            title = { Text(stringResource(R.string.update_found_title, m.versionName)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     m.notes?.let { Text(it) }
@@ -155,15 +157,21 @@ fun SettingsScreen(
                 when {
                     updateState.downloading -> TextButton(onClick = {}) {
                         val p = updateState.progress
-                        Text(if (p != null) "下载中 ${(p * 100).toInt()}%" else "下载中…")
+                        Text(
+                            if (p != null) {
+                                stringResource(R.string.update_downloading_percent, (p * 100).toInt())
+                            } else {
+                                stringResource(R.string.update_downloading)
+                            },
+                        )
                     }
-                    updateState.apkReady -> TextButton(onClick = onInstall) { Text("安装") }
-                    else -> TextButton(onClick = onDownload) { Text("下载更新") }
+                    updateState.apkReady -> TextButton(onClick = onInstall) { Text(stringResource(R.string.update_install)) }
+                    else -> TextButton(onClick = onDownload) { Text(stringResource(R.string.update_download)) }
                 }
             },
             dismissButton = {
                 if (!updateState.downloading) {
-                    TextButton(onClick = onDismissUpdate) { Text("取消") }
+                    TextButton(onClick = onDismissUpdate) { Text(stringResource(R.string.cancel)) }
                 }
             },
         )

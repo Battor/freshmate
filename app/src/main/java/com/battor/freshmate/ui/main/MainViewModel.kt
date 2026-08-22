@@ -8,6 +8,7 @@ import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.notification.scheduleOrCancel
+import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.util.ExpiryStatus
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.computeReminderTimes
@@ -111,8 +112,8 @@ class MainViewModel(
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     /** 一次性错误提示（Snackbar），展示后由 UI 调用 onErrorShown() 清空。 */
-    private val _errorEvent = MutableStateFlow<String?>(null)
-    val errorEvent: StateFlow<String?> = _errorEvent.asStateFlow()
+    private val _errorEvent = MutableStateFlow<UiText?>(null)
+    val errorEvent: StateFlow<UiText?> = _errorEvent.asStateFlow()
 
     fun onErrorShown() {
         _errorEvent.value = null
@@ -237,7 +238,7 @@ class MainViewModel(
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
-                _errorEvent.value = "删除失败，请重试"
+                _errorEvent.value = UiText(com.battor.freshmate.R.string.error_delete_failed)
             }
         }
     }
@@ -251,7 +252,7 @@ class MainViewModel(
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
-                _errorEvent.value = "恢复失败，请重试"
+                _errorEvent.value = UiText(com.battor.freshmate.R.string.error_recover_failed)
             }
         }
     }
@@ -286,7 +287,7 @@ class MainViewModel(
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {
-                _errorEvent.value = "保存失败，请重试"
+                _errorEvent.value = UiText(com.battor.freshmate.R.string.error_save_failed)
                 return@launch // 编辑表单保留，等待用户重试
             } finally {
                 saving = false

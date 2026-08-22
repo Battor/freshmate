@@ -7,9 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.KeyboardVoice
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -25,8 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.battor.freshmate.R
 import com.battor.freshmate.inputmethod.InputMethodId
+import com.battor.freshmate.inputmethod.InputMethods
 
 /**
  * 两态 FAB：
@@ -52,7 +52,7 @@ fun FabMenu(
                 modifier = Modifier
                     .padding(end = 12.dp)
                     .minimumInteractiveComponentSize(),
-            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "放弃返回") }
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.discard_back)) }
             if (showSave) {
                 SmallFloatingActionButton(
                     onClick = onSave,
@@ -60,7 +60,9 @@ fun FabMenu(
                 ) {
                     Icon(
                         Icons.Filled.Check,
-                        contentDescription = if (isAddForm) "暂存并继续" else "保存",
+                        contentDescription = stringResource(
+                            if (isAddForm) R.string.stash_and_continue else R.string.save,
+                        ),
                     )
                 }
             }
@@ -69,24 +71,16 @@ fun FabMenu(
         var expanded by remember { mutableStateOf(false) }
         Box(modifier = modifier) {
             FloatingActionButton(onClick = { expanded = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "添加")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add))
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                DropdownMenuItem(
-                    text = { Text("手动输入") },
-                    leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                    onClick = { expanded = false; onStartInput(InputMethodId.MANUAL) },
-                )
-                DropdownMenuItem(
-                    text = { Text("语音输入") },
-                    leadingIcon = { Icon(Icons.Filled.KeyboardVoice, contentDescription = null) },
-                    onClick = { expanded = false; onStartInput(InputMethodId.VOICE) },
-                )
-                DropdownMenuItem(
-                    text = { Text("图片输入") },
-                    leadingIcon = { Icon(Icons.Filled.Image, contentDescription = null) },
-                    onClick = { expanded = false; onStartInput(InputMethodId.IMAGE) },
-                )
+                InputMethods.all.forEach { method ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(method.menuLabelRes)) },
+                        leadingIcon = { Icon(method.menuIcon, contentDescription = null) },
+                        onClick = { expanded = false; onStartInput(method.id) },
+                    )
+                }
             }
         }
     }

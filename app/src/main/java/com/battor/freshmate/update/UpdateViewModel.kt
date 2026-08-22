@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.battor.freshmate.BuildConfig
+import com.battor.freshmate.R
+import com.battor.freshmate.ui.common.UiText
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +30,7 @@ class UpdateViewModel(
         val progress: Float? = null,
         val apkReady: Boolean = false,
         /** 一次性结果提示（null = 不展示）。 */
-        val notice: String? = null,
+        val notice: UiText? = null,
     ) {
         val busy: Boolean get() = checking || downloading
     }
@@ -72,13 +74,13 @@ class UpdateViewModel(
                         }
                     } else {
                         _uiState.update {
-                            it.copy(checking = false, notice = if (manual) "已是最新版本" else null)
+                            it.copy(checking = false, notice = if (manual) UiText(R.string.update_already_latest) else null)
                         }
                     }
                 },
                 onFailure = {
                     _uiState.update {
-                        it.copy(checking = false, notice = if (manual) "检查更新失败，请稍后重试" else null)
+                        it.copy(checking = false, notice = if (manual) UiText(R.string.update_check_failed) else null)
                     }
                 },
             )
@@ -103,7 +105,7 @@ class UpdateViewModel(
                     if (!actual.equals(expected, ignoreCase = true)) {
                         Timber.i("UPDATE 校验失败 expected=%s actual=%s", expected, actual)
                         apkFile.delete()
-                        _uiState.update { it.copy(downloading = false, notice = "安装包校验失败") }
+                        _uiState.update { it.copy(downloading = false, notice = UiText(R.string.update_checksum_failed)) }
                         return@launch
                     }
                 } else {
@@ -115,7 +117,7 @@ class UpdateViewModel(
             } catch (e: Exception) {
                 Timber.i(e, "UPDATE 下载失败")
                 apkFile.delete()
-                _uiState.update { it.copy(downloading = false, notice = "下载失败：${e.message}") }
+                _uiState.update { it.copy(downloading = false, notice = UiText(R.string.update_download_failed, listOf(e.message ?: ""))) }
             }
         }
     }

@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -58,6 +59,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.ui.common.UiText
+import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.util.ExpiryStatus
 import java.time.LocalDateTime
 import kotlinx.coroutines.delay
@@ -69,18 +72,22 @@ fun MainScreen(
     viewModel: MainViewModel,
     onOpenHistory: () -> Unit,
     onOpenSettings: () -> Unit,
-    updateHint: String? = null,
+    updateHint: UiText? = null,
     onUpdateHintShown: () -> Unit = {},
     onOpenUpdate: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val errorEvent by viewModel.errorEvent.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
+    val hintText = updateHint?.asString()
+    val viewLabel = stringResource(R.string.view)
+    val errorText = errorEvent?.asString()
     LaunchedEffect(errorEvent) {
-        errorEvent?.let {
+        errorText?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.onErrorShown()
         }
@@ -88,9 +95,9 @@ fun MainScreen(
 
     // 启动静默检查发现新版：Snackbar 一条 + 「查看」跳设置页（一次性，展示即清）
     LaunchedEffect(updateHint) {
-        if (updateHint == null) return@LaunchedEffect
+        if (hintText == null) return@LaunchedEffect
         try {
-            val result = snackbarHostState.showSnackbar(updateHint, actionLabel = "查看")
+            val result = snackbarHostState.showSnackbar(hintText, actionLabel = viewLabel)
             onUpdateHintShown()
             if (result == SnackbarResult.ActionPerformed) onOpenUpdate()
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -127,13 +134,13 @@ fun MainScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("食刻 FreshMate") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = onOpenHistory) {
-                        Icon(Icons.Filled.History, contentDescription = "历史")
+                        Icon(Icons.Filled.History, contentDescription = stringResource(R.string.history))
                     }
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = "设置")
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
                     }
                 },
             )
@@ -206,8 +213,8 @@ fun MainScreen(
                                     viewModel.delete(item)
                                     scope.launch {
                                         val result = snackbarHostState.showSnackbar(
-                                            "已删除「${item.name}」",
-                                            actionLabel = "撤销",
+                                            context.getString(R.string.deleted_snackbar, item.name),
+                                            actionLabel = context.getString(R.string.undo),
                                             duration = SnackbarDuration.Short,
                                         )
                                         if (result == SnackbarResult.ActionPerformed) {
@@ -232,8 +239,8 @@ fun MainScreen(
                                     viewModel.delete(item)
                                     scope.launch {
                                         val result = snackbarHostState.showSnackbar(
-                                            "已删除「${item.name}」",
-                                            actionLabel = "撤销",
+                                            context.getString(R.string.deleted_snackbar, item.name),
+                                            actionLabel = context.getString(R.string.undo),
                                             duration = SnackbarDuration.Short,
                                         )
                                         if (result == SnackbarResult.ActionPerformed) {
@@ -250,7 +257,7 @@ fun MainScreen(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text("暂无食品，点 + 添加", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.empty_list), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -262,18 +269,22 @@ fun MainScreen(
     state.pendingSave?.let { pending ->
         AlertDialog(
             onDismissRequest = { viewModel.cancelPendingSave() },
-            title = { Text("该食品临近过期") },
+            title = { Text(stringResource(R.string.near_expiry_title)) },
             text = {
                 Text(
-                    "「${pending.editing.name}」已有 ${pending.skippedReminders} 个提醒时点过去，" +
-                        "剩余提醒时点 ${pending.remainingReminders} 个。确认保存吗？",
+                    stringResource(
+                        R.string.near_expiry_text,
+                        pending.editing.name,
+                        pending.skippedReminders,
+                                                pending.remainingReminders,
+                    ),
                 )
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmPendingSave() }) { Text("保存") }
+                TextButton(onClick = { viewModel.confirmPendingSave() }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.cancelPendingSave() }) { Text("取消") }
+                TextButton(onClick = { viewModel.cancelPendingSave() }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

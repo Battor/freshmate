@@ -1,5 +1,7 @@
 package com.battor.freshmate.ui.main
 
+import com.battor.freshmate.R
+import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.FakeRepository
 import com.battor.freshmate.FakeScheduler
 import com.battor.freshmate.data.Category
@@ -236,7 +238,7 @@ class MainViewModelTest {
         vm.updateEditing { it.copy(name = "牛奶", shelfLifeValue = "7") }
         vm.save()
         advanceUntilIdle()
-        assertEquals("保存失败，请重试", vm.errorEvent.value)
+        assertEquals(UiText(R.string.error_save_failed), vm.errorEvent.value)
         assertNotNull(vm.uiState.value.editing) // 表单保留
         assertTrue(repo.items.value.isEmpty())
         vm.onErrorShown()

@@ -26,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.battor.freshmate.R
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,15 +52,15 @@ fun LogViewerScreen(logsDir: File, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("日志 ${selected ?: ""}") },
+                title = { Text(stringResource(com.battor.freshmate.R.string.log_title, selected ?: "")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(com.battor.freshmate.R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Filled.DateRange, contentDescription = "选择日期")
+                        Icon(Icons.Filled.DateRange, contentDescription = stringResource(com.battor.freshmate.R.string.pick_date))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         dates.forEach { date ->
@@ -75,7 +77,7 @@ fun LogViewerScreen(logsDir: File, onBack: () -> Unit) {
         if (lines.isEmpty()) {
             // 复用 Scaffold 的 padding：空态居中
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("暂无日志", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(com.battor.freshmate.R.string.empty_logs), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(

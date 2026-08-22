@@ -13,10 +13,12 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.battor.freshmate.R
 import com.battor.freshmate.data.DataStoreSettingsRepository
 import com.battor.freshmate.data.FoodItemDatabase
 import com.battor.freshmate.data.FoodItemRepository
 import com.battor.freshmate.notification.ReminderScheduler
+import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.ui.history.HistoryScreen
 import com.battor.freshmate.ui.history.HistoryViewModel
 import com.battor.freshmate.ui.logviewer.LogViewerScreen
@@ -52,7 +54,7 @@ fun FreshMateNavGraph() {
                 viewModel = viewModel,
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
-                updateHint = updateState.silentFound?.let { "发现新版本 ${it.versionName}" },
+                updateHint = updateState.silentFound?.let { UiText(R.string.update_hint, listOf(it.versionName)) },
                 onUpdateHintShown = updateViewModel::clearSilentFound,
                 onOpenUpdate = { navController.navigate(Routes.SETTINGS) },
             )
