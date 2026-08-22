@@ -84,8 +84,8 @@ import kotlinx.coroutines.launch
 /** 桶头进度条宽度 = 组头文字宽度 × 2（需求-5 走查反馈：1.5 基础上再加宽）。 */
 private const val BUCKET_BAR_WIDTH_SCALE = 2f
 
-/** 桶头进度条轨道与条纹底色的透明度（同色淡底）。 */
-private const val BUCKET_BAR_TRACK_ALPHA = 0.3f
+/** 桶头进度条深色底（scrim 黑 45%：深浅主题下都是深底，压住亮色条纹，走查反馈）。 */
+private const val BUCKET_BAR_TRACK_SCRIM_ALPHA = 0.45f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -351,20 +351,21 @@ fun MainScreen(
 private fun BucketProgressBar(
     progress: Float,
     fillColor: Color,
+    trackColor: Color,
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier.height(6.dp)) {
         val corner = CornerRadius(size.height / 2f)
-        drawRoundRect(color = fillColor.copy(alpha = BUCKET_BAR_TRACK_ALPHA), cornerRadius = corner)
+        drawRoundRect(color = trackColor, cornerRadius = corner)
         val fillWidth = size.width * progress.coerceIn(0f, 1f)
         if (fillWidth <= 0f) return@Canvas
-        // 填充段 = 同色淡底 + 45° 实色斜纹：同色两调，深浅主题都成立
+        // 填充段 = 深色底 + 45° 实色斜纹
         clipPath(
             Path().apply {
                 addRoundRect(RoundRect(rect = Rect(0f, 0f, fillWidth, size.height), cornerRadius = corner))
             },
         ) {
-            drawRect(fillColor.copy(alpha = BUCKET_BAR_TRACK_ALPHA))
+            drawRect(trackColor)
             val stripeWidth = 3.5.dp.toPx()
             val period = 7.dp.toPx()
             var x = -size.height
@@ -429,6 +430,7 @@ private fun BucketBox(
                     BucketProgressBar(
                         progress = status.windowProgress,
                         fillColor = statusColors.container,
+                        trackColor = MaterialTheme.colorScheme.scrim.copy(alpha = BUCKET_BAR_TRACK_SCRIM_ALPHA),
                         modifier = Modifier.width(barWidth),
                     )
                     Spacer(Modifier.width(8.dp))
