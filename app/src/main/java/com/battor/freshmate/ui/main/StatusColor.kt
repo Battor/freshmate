@@ -20,8 +20,12 @@ val ExpiredRed = Color(0xFFC62828)
 /** 历史页右滑还原背景（镜像主列表删除的 ExpiredRed）。 */
 val RestoreGreen = Color(0xFF3EB04A)
 
-/** 一档状态色：(容器色, 前景色)。 */
-data class StatusColors(val container: Color, val on: Color)
+/** 一档状态色：(容器色, 前景色)。accent：中性底上的强调色（默认取 on；EXPIRED 档 on 是白色需覆盖）。 */
+data class StatusColors(
+    val container: Color,
+    val on: Color,
+    val accent: Color = on,
+)
 
 /** 六档色板（红→绿），浅色用粉彩容器色，深色用低饱和容器 + 浅前景。 */
 data class StatusPalette(
@@ -43,7 +47,8 @@ data class StatusPalette(
 }
 
 val LightStatusPalette = StatusPalette(
-    expired = StatusColors(ExpiredRed, Color(0xFFFFFFFF)),
+    // accent：容器深红——浅色中性底上白色 on 不可见（需求-6 走查点子：图标染状态色）
+    expired = StatusColors(ExpiredRed, Color(0xFFFFFFFF), ExpiredRed),
     due1d = StatusColors(Color(0xFFFFCDD2), Color(0xFF8E1418)),
     due3d = StatusColors(Color(0xFFFFE0B2), Color(0xFF8C4A00)),
     due7d = StatusColors(Color(0xFFFFF3BF), Color(0xFF6B5A00)),
@@ -52,7 +57,8 @@ val LightStatusPalette = StatusPalette(
 )
 
 val DarkStatusPalette = StatusPalette(
-    expired = StatusColors(Color(0xFFB71C1C), Color(0xFFFFFFFF)),
+    // accent：浅红——深灰中性底上白色无色彩信号、深红容器对比不足
+    expired = StatusColors(Color(0xFFB71C1C), Color(0xFFFFFFFF), Color(0xFFEF9A9A)),
     due1d = StatusColors(Color(0xFF5D2A30), Color(0xFFF6C4C8)),
     due3d = StatusColors(Color(0xFF54462E), Color(0xFFFCD9A6)),
     due7d = StatusColors(Color(0xFF565030), Color(0xFFF0E8A0)),

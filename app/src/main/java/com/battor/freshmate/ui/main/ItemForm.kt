@@ -71,6 +71,7 @@ import com.battor.freshmate.inputmethod.InputMethods
 import com.battor.freshmate.ui.main.MainViewModel.EditingState
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
+import com.battor.freshmate.util.expiryStatus
 import com.battor.freshmate.util.formatExpired
 import com.battor.freshmate.util.formatRemaining
 import com.battor.freshmate.util.shelfLifeToDays
@@ -261,6 +262,8 @@ private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDa
         ?.takeIf { it > 0 }
         ?.let { expiryDateTime(state.productionDate, state.createdAt, shelfLifeToDays(it, state.shelfLifeUnit)) }
         ?: expiryDateTime(saved.productionDate, saved.createdAt, saved.shelfLifeDays)
+    // 需求-6 走查点子：图标按到期状态染色——中性编辑区里留一点紧急度信号，色阶与列表桶一致
+    val statusAccent = LocalStatusColors.current.of(expiryStatus(liveExpiry, now)).accent
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -291,7 +294,7 @@ private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDa
         Icon(
             categoryIcon(state.category),
             contentDescription = null,
-            tint = onColor,
+            tint = statusAccent,
             modifier = Modifier.size(28.dp),
         )
         Column(Modifier.weight(1f)) {
