@@ -7,6 +7,8 @@
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="delete">Delete</string>
+    <string name="delete_confirm_title">Delete item</string>
+    <string name="delete_confirm_text">Delete “%1$s”? You can restore it later from History.</string>
     <string name="restore">Restore</string>
     <string name="undo">Undo</string>
     <string name="history">History</string>

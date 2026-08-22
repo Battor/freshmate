@@ -140,20 +140,9 @@ fun MainScreen(
         }
     }
 
-    // 置顶区与各桶共用的删除+撤销流程
-    val onDeleteItem: (FoodItem) -> Unit = { item ->
-        viewModel.delete(item)
-        scope.launch {
-            val result = snackbarHostState.showSnackbar(
-                context.getString(R.string.deleted_snackbar, item.name),
-                actionLabel = context.getString(R.string.undo),
-                duration = SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.undoDelete(item)
-            }
-        }
-    }
+    // 删除确认（需求-5 走查反馈）：软删除虽可撤销，仍先弹框防误触
+    var pendingDelete by remember { mutableStateOf<FoodItem?>(null) }
+    val onDeleteItem: (FoodItem) -> Unit = { item -> pendingDelete = item }
 
     Scaffold(
         topBar = {
@@ -337,6 +326,35 @@ fun MainScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.cancelPendingSave() }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+
+    pendingDelete?.let { item ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(stringResource(R.string.delete_confirm_title)) },
+            text = { Text(stringResource(R.string.delete_confirm_text, item.name)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
+                        viewModel.delete(item)
+                        scope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                context.getString(R.string.deleted_snackbar, item.name),
+                                actionLabel = context.getString(R.string.undo),
+                                duration = SnackbarDuration.Short,
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.undoDelete(item)
+                            }
+                        }
+                    },
+                ) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

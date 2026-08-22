@@ -7,6 +7,8 @@
     <string name="cancel">取消</string>
     <string name="save">保存</string>
     <string name="delete">删除</string>
+    <string name="delete_confirm_title">删除确认</string>
+    <string name="delete_confirm_text">确定要删除「%1$s」吗？删除后可在历史页还原。</string>
     <string name="restore">还原</string>
     <string name="undo">撤销</string>
     <string name="history">历史</string>

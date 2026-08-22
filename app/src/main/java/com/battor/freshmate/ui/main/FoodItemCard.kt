@@ -49,13 +49,12 @@ fun FoodItemCard(
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            // 表单打开期间禁用滑动删除，避免与表单状态竞争
+            // 滑到位只触发确认弹框（需求-5 走查反馈），卡片回弹；
+            // 真正的删除在用户确认后发生。表单打开期间同样不触发。
             if (enabled && value == SwipeToDismissBoxValue.EndToStart) {
                 onDelete()
-                true
-            } else {
-                false
             }
+            false
         },
     )
 
