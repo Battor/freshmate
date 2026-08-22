@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 通用 -->
+    <string name="app_name">食刻 FreshMate</string>
+    <string name="back">返回</string>
+    <string name="ok">確定</string>
+    <string name="cancel">取消</string>
+    <string name="save">儲存</string>
+    <string name="delete">刪除</string>
+    <string name="restore">還原</string>
+    <string name="undo">撤銷</string>
+    <string name="history">歷史</string>
+    <string name="settings">設定</string>
+    <string name="add">新增</string>
+    <string name="about">關於</string>
+    <string name="view">查看</string>
+    <string name="view_logs">查看日誌</string>
+    <string name="check_update">檢查更新</string>
+
+    <!-- 主列表 -->
+    <string name="empty_list">暫無食品，點 + 新增</string>
+    <string name="pinned_header">本次新增</string>
+    <string name="disperse_into_buckets">散入各桶</string>
+    <string name="deleted_snackbar">已刪除「%1$s」</string>
+    <string name="near_expiry_title">此食品即將過期</string>
+    <string name="near_expiry_text">「%1$s」已有 %2$d 個提醒時點過去，剩餘提醒時點 %3$d 個。確認儲存嗎？</string>
+    <string name="quantity_label">數量：%1$s</string>
+
+    <!-- 表單 -->
+    <string name="field_name">食品名稱 *</string>
+    <string name="error_name_required">請輸入名稱</string>
+    <string name="label_category">分類</string>
+    <string name="field_production_date">生產日期</string>
+    <string name="hint_production_date">不填則按輸入日起算</string>
+    <string name="clear_production_date">清除生產日期</string>
+    <string name="field_shelf_life">保存期限 *</string>
+    <string name="error_shelf_life">請輸入大於 0 的數字</string>
+    <string name="field_quantity">數量（可選，如 2 / 500g）</string>
+    <string name="expiry_preview_remaining">還有 %1$s 到期</string>
+    <string name="expiry_preview_expired">已過期 %1$s，儲存後將不再提醒</string>
+    <string name="quick_shelf_days">%1$d天</string>
+    <string name="quick_shelf_months">%1$d個月</string>
+    <string name="quick_shelf_years">%1$d年</string>
+    <string name="unit_day">天</string>
+    <string name="unit_week">週</string>
+    <string name="unit_month">月</string>
+    <string name="unit_year">年</string>
+    <string name="placeholder_voice">語音辨識即將上線</string>
+    <string name="placeholder_image">圖片辨識即將上線</string>
+    <string name="recording">錄音中…（佔位，再按一次結束）</string>
+    <string name="extra_voice_hint">長按說話</string>
+    <string name="extra_image_hint">選擇圖片</string>
+    <string name="extra_with_long_press">%1$s（長按）</string>
+    <string name="input_manual">手動輸入</string>
+    <string name="input_voice">語音輸入</string>
+    <string name="input_image">圖片輸入</string>
+    <string name="discard_back">放棄返回</string>
+    <string name="stash_and_continue">暫存並繼續</string>
+
+    <!-- 時長與狀態 -->
+    <string name="duration_days">%1$d 天</string>
+    <string name="duration_hours">%1$d 小時</string>
+    <string name="duration_half_hour">30 分鐘</string>
+    <string name="duration_under_half_hour">不足 30 分鐘</string>
+    <string name="status_expired">已過期</string>
+    <string name="status_due_1d">1 天內到期</string>
+    <string name="status_due_3d">3 天內到期</string>
+    <string name="status_due_7d">7 天內到期</string>
+    <string name="status_due_14d">14 天內到期</string>
+    <string name="status_safe">更久到期</string>
+
+    <!-- 分類 -->
+    <string name="category_fruits_veg">果蔬</string>
+    <string name="category_meat_egg">肉蛋</string>
+    <string name="category_dairy">乳品</string>
+    <string name="category_drink">飲料</string>
+    <string name="category_snack">零食</string>
+    <string name="category_staple">主食</string>
+    <string name="category_frozen">冷凍</string>
+    <string name="category_condiment">調味</string>
+
+    <!-- 歷史 -->
+    <string name="empty_history">暫無已刪除條目</string>
+    <string name="restore_title">還原條目</string>
+    <string name="restore_confirm">把「%1$s」還原嗎？還原後將回到主列表對應的過期時間桶。</string>
+    <string name="deleted_at">刪除於 %1$s</string>
+    <string name="restored_snackbar">已還原「%1$s」</string>
+
+    <!-- 錯誤 -->
+    <string name="error_delete_failed">刪除失敗，請重試</string>
+    <string name="error_restore_failed">還原失敗，請重試</string>
+    <string name="error_recover_failed">恢復失敗，請重試</string>
+    <string name="error_save_failed">儲存失敗，請重試</string>
+
+    <!-- 權限橫幅 -->
+    <string name="banner_notifications_off">通知未開啟，將收不到過期提醒</string>
+    <string name="banner_exact_alarm_off">精確提醒未開啟，提醒時間可能偏差</string>
+    <string name="banner_action_go">去開啟</string>
+
+    <!-- 日誌 -->
+    <string name="log_title">日誌 %1$s</string>
+    <string name="pick_date">選擇日期</string>
+    <string name="empty_logs">暫無日誌</string>
+
+    <!-- 設定 -->
+    <string name="settings_theme">主題</string>
+    <string name="settings_theme_light">淺色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_language">語言</string>
+    <string name="language_follow_system">跟隨系統</string>
+    <string name="language_name_zh_cn">简体中文</string>
+    <string name="language_name_zh_tw">繁體中文</string>
+    <string name="language_name_en">English</string>
+
+    <!-- 關於 -->
+    <string name="version">版本 %1$s (%2$d)</string>
+    <string name="about_tagline">記錄食品保存期限，臨期提醒不浪費。</string>
+
+    <!-- 更新 -->
+    <string name="update_hint">發現新版本 %1$s</string>
+    <string name="update_found_title">發現新版本 %1$s</string>
+    <string name="update_download">下載更新</string>
+    <string name="update_downloading">下載中…</string>
+    <string name="update_downloading_percent">下載中 %1$d%%</string>
+    <string name="update_install">安裝</string>
+    <string name="update_already_latest">已是最新版本</string>
+    <string name="update_check_failed">檢查更新失敗，請稍後重試</string>
+    <string name="update_checksum_failed">安裝包校驗失敗</string>
+    <string name="update_download_failed">下載失敗：%1$s</string>
+
+    <!-- 通知 -->
+    <string name="notification_channel">過期提醒</string>
+    <string name="notification_title">食刻 FreshMate</string>
+    <string name="notification_body">「%1$s」還有 %2$s 到期</string>
+</resources>
