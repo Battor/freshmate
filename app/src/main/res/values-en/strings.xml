@@ -36,6 +36,8 @@
     <string name="field_shelf_life">Shelf life *</string>
     <string name="error_shelf_life">Enter a number greater than 0</string>
     <string name="field_quantity">Quantity (optional, e.g. 2 / 500g)</string>
+    <string name="card_status_expired">Expired %1$s ago</string>
+    <string name="card_status_remaining">Expires in %1$s</string>
     <string name="expiry_preview_remaining">Expires in %1$s</string>
     <string name="expiry_preview_expired">Expired %1$s ago; no reminders after saving</string>
     <string name="quick_shelf_days">%1$dd</string>

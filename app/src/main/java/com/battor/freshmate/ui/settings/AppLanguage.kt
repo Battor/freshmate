@@ -29,7 +29,7 @@ enum class AppLanguage(val tag: String?) {
             }
         }
 
-        fun apply(language: AppLanguage) {
+        fun applyToApp(language: AppLanguage) {
             val locales = language.tag?.let(LocaleListCompat::forLanguageTags)
                 ?: LocaleListCompat.getEmptyLocaleList()
             AppCompatDelegate.setApplicationLocales(locales)

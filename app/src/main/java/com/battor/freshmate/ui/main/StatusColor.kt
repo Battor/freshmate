@@ -75,8 +75,8 @@ fun expiryText(item: FoodItem, now: LocalDateTime): String {
         formatRemaining(LocalContext.current.resources, remaining)
     }
     return if (expired) {
-        "${stringResource(R.string.status_expired)} $duration"
+        stringResource(R.string.card_status_expired, duration)
     } else {
-        stringResource(R.string.expiry_preview_remaining, duration)
+        stringResource(R.string.card_status_remaining, duration)
     }
 }

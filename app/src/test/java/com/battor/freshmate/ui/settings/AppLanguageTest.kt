@@ -6,12 +6,12 @@ import org.junit.Test
 
 class AppLanguageTest {
     @Test
-    fun 空列表映射为跟随系统() {
+    fun `空列表映射为跟随系统`() {
         assertEquals(AppLanguage.SYSTEM, AppLanguage.fromLocales(LocaleListCompat.getEmptyLocaleList()))
     }
 
     @Test
-    fun 语言标签映射() {
+    fun `语言标签映射`() {
         assertEquals(
             AppLanguage.SIMPLIFIED_CHINESE,
             AppLanguage.fromLocales(LocaleListCompat.forLanguageTags("zh-CN")),
@@ -26,7 +26,7 @@ class AppLanguageTest {
     }
 
     @Test
-    fun 不认识的语言映射为跟随系统() {
+    fun `不认识的语言映射为跟随系统`() {
         assertEquals(AppLanguage.SYSTEM, AppLanguage.fromLocales(LocaleListCompat.forLanguageTags("ja")))
     }
 }

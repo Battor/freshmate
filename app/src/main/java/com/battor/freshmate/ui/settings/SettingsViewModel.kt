@@ -25,6 +25,6 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun currentLanguage(): AppLanguage = AppLanguage.fromLocales(AppCompatDelegate.getApplicationLocales())
 
     fun setLanguage(language: AppLanguage) {
-        AppLanguage.apply(language)
+        AppLanguage.applyToApp(language)
     }
 }

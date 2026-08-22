@@ -29,13 +29,13 @@ class SettingsViewModelTest {
     @After fun tearDown() { Dispatchers.resetMain() }
 
     @Test
-    fun 主题初值来自仓库() {
+    fun `主题初值来自仓库`() {
         val vm = SettingsViewModel(FakeRepo(ThemeMode.DARK))
         assertEquals(ThemeMode.DARK, vm.themeMode.value)
     }
 
     @Test
-    fun 设置主题写入仓库() = runTest(dispatcher) {
+    fun `设置主题写入仓库`() = runTest(dispatcher) {
         val repo = FakeRepo(ThemeMode.SYSTEM)
         val vm = SettingsViewModel(repo)
         vm.setThemeMode(ThemeMode.LIGHT)

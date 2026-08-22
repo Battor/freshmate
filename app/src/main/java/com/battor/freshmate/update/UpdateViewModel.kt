@@ -117,7 +117,7 @@ class UpdateViewModel(
             } catch (e: Exception) {
                 Timber.i(e, "UPDATE 下载失败")
                 apkFile.delete()
-                _uiState.update { it.copy(downloading = false, notice = UiText(R.string.update_download_failed, listOf(e.message ?: ""))) }
+                _uiState.update { it.copy(downloading = false, notice = UiText(R.string.update_download_failed, listOf(e.message ?: e.javaClass.simpleName))) }
             }
         }
     }

@@ -36,6 +36,8 @@
     <string name="field_shelf_life">保存期限 *</string>
     <string name="error_shelf_life">請輸入大於 0 的數字</string>
     <string name="field_quantity">數量（可選，如 2 / 500g）</string>
+    <string name="card_status_expired">已過期 %1$s</string>
+    <string name="card_status_remaining">還有 %1$s 到期</string>
     <string name="expiry_preview_remaining">還有 %1$s 到期</string>
     <string name="expiry_preview_expired">已過期 %1$s，儲存後將不再提醒</string>
     <string name="quick_shelf_days">%1$d天</string>

@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -194,7 +195,12 @@ private fun ThemeSettingItem(viewModel: SettingsViewModel) {
     ListItem(
         headlineContent = { Text(stringResource(R.string.settings_theme)) },
         leadingContent = { Icon(Icons.Filled.DarkMode, contentDescription = null) },
-        trailingContent = { Text(if (isDark) darkLabel else lightLabel) },
+        trailingContent = {
+            Text(
+                if (isDark) darkLabel else lightLabel,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
         modifier = Modifier.clickable { showDialog = true },
     )
     if (showDialog) {
@@ -273,11 +279,15 @@ private fun <T> SingleChoiceDialog(
                                 selected = value == selected,
                                 role = Role.RadioButton,
                                 onClick = { onSelect(value) },
-                            ),
+                            )
+                            .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(selected = value == selected, onClick = null)
-                        Text(label, modifier = Modifier.padding(start = 12.dp))
+                        Text(
+                            label,
+                            modifier = Modifier.weight(1f).padding(start = 12.dp),
+                        )
                     }
                 }
             }
