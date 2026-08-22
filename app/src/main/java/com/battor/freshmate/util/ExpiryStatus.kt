@@ -9,14 +9,15 @@ import java.time.LocalDateTime
 /**
  * 条目紧急度（需求-3 改为绝对时间六档，与主列表分桶同阈值），值越靠后越宽松。
  * 红(EXPIRED) → DUE_1D → DUE_3D → DUE_7D → DUE_14D → 绿(SAFE)。
+ * progressWindowDays：桶头进度条刻度（14 天满；EXPIRED 整条红、SAFE 已超窗，都取满）。
  */
-enum class ExpiryStatus(@StringRes val labelRes: Int) {
-    EXPIRED(R.string.status_expired),
-    DUE_1D(R.string.status_due_1d),
-    DUE_3D(R.string.status_due_3d),
-    DUE_7D(R.string.status_due_7d),
-    DUE_14D(R.string.status_due_14d),
-    SAFE(R.string.status_safe),
+enum class ExpiryStatus(@StringRes val labelRes: Int, val progressWindowDays: Int) {
+    EXPIRED(R.string.status_expired, 14),
+    DUE_1D(R.string.status_due_1d, 1),
+    DUE_3D(R.string.status_due_3d, 3),
+    DUE_7D(R.string.status_due_7d, 7),
+    DUE_14D(R.string.status_due_14d, 14),
+    SAFE(R.string.status_safe, 14),
 }
 
 fun expiryStatus(expiry: LocalDateTime, now: LocalDateTime): ExpiryStatus {
