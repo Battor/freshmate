@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.exclude
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -27,6 +30,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -51,10 +55,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -359,15 +365,23 @@ private fun BucketBox(
         ) {
             val statusColors = status?.let { LocalStatusColors.current.of(it) }
             if (statusColors != null) {
-                Text(
-                    header,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = statusColors.on,
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.extraSmall)
-                        .background(statusColors.container)
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                )
+                // 进度条宽度 = 组头文字实际宽度 × 1.5（需求-5 用户指定，精确测量非估算）
+                val textMeasurer = rememberTextMeasurer()
+                val textStyle = MaterialTheme.typography.labelLarge
+                val textWidth = textMeasurer.measure(header, textStyle).size.width
+                val barWidth = with(LocalDensity.current) { textWidth.toDp() * 1.5f }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // 桶级紧急度：剩余段=状态容器色（与子项卡片同色），轨道=同色 30% 透明；
+                    // EXPIRED 窗口取满 → 整条深红实心
+                    LinearProgressIndicator(
+                        progress = { status!!.progressWindowDays / 14f },
+                        modifier = Modifier.width(barWidth),
+                        color = statusColors.container,
+                        trackColor = statusColors.container.copy(alpha = 0.3f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(header, style = textStyle, color = statusColors.on)
+                }
             } else {
                 // 「本次添加」组头：浅主色背景 chip 让散入动作可发现；TalkBack 提供自定义动作
                 Text(
