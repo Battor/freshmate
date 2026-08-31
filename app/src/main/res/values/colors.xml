@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 启动器图标背景：取自图标源图（resources 外的生成图）的均匀深绿底 -->
+    <color name="ic_launcher_background">#146031</color>
+</resources>
