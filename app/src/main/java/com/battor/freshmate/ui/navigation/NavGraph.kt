@@ -43,7 +43,16 @@ private object Routes {
     const val SETTINGS = "settings"
     const val LOG_VIEWER = "logviewer"
     const val ABOUT = "about"
+
+    /** 目的地模式串（带占位符），只用于 composable() 注册。 */
     const val GUIDE = "guide?first={first}"
+
+    /**
+     * 实际导航用：把布尔填进 query。
+     * 不能直接插值 GUIDE——会拼成 "guide?first={first}?first=true"，
+     * first 永远解析失败回落 false，完成标记从此不落盘、引导每次退出都被自动拉起。
+     */
+    fun guide(first: Boolean) = "guide?first=$first"
 }
 
 @Composable
@@ -70,7 +79,7 @@ fun FreshMateNavGraph() {
                 // currentDestination 检查防重入：返回 main 瞬间若旧值 false 尚未刷新，
                 // 不至于把刚退出的引导再拉起来
                 if (!onboardingDone && navController.currentDestination?.route != Routes.GUIDE) {
-                    navController.navigate("${Routes.GUIDE}?first=true")
+                    navController.navigate(Routes.guide(first = true))
                 }
             }
             MainScreen(
@@ -118,7 +127,7 @@ fun FreshMateNavGraph() {
                 onBack = { navController.popBackStack() },
                 onOpenLogs = { navController.navigate(Routes.LOG_VIEWER) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
-                onOpenGuide = { navController.navigate("${Routes.GUIDE}?first=false") },
+                onOpenGuide = { navController.navigate(Routes.guide(first = false)) },
                 updateState = updateState,
                 onCheckUpdate = { updateViewModel.check(manual = true) },
                 onDownload = updateViewModel::download,
