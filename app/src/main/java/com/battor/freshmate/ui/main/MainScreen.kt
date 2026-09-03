@@ -1,5 +1,13 @@
 package com.battor.freshmate.ui.main
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -46,6 +54,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -188,115 +197,131 @@ fun MainScreen(
             PermissionBanners()
             // 400ms 短暂亮灯给「散入各桶」一个可见反馈，不做假加载
             var refreshing by remember { mutableStateOf(false) }
-            val editing = state.editing
-            if (editing != null) {
-                // 表单打开：整页一块滚动（需求-5 走查反馈）——表单 + 列表内容直接铺开，
-                // 滚过表单即见列表。列表用非 lazy 直铺：个人食材规模，
-                // 且 LazyColumn 嵌 verticalScroll 会因无限高约束崩溃。
-                // 编辑期间隐藏正在编辑的条目（已是表单内虚线框）；空桶/空置顶区整体不渲染
-                val editingId = editing.editingItemId
-                val visiblePinned = state.pinnedItems.filterNot { it.id == editingId }
-                val visibleBuckets = state.buckets
-                    .map { it.copy(items = it.items.filterNot { item -> item.id == editingId }) }
-                    .filter { it.items.isNotEmpty() }
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    ItemForm(
-                        state = editing,
-                        onStateChange = { newState -> viewModel.updateEditing { newState } },
-                        onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
-                        // 当前操作项目融入表单（需求-5 走查反馈）：表单内虚线框同底色块
-                        editingTarget = state.editingTarget,
-                        now = state.now,
-                    )
-                    // 本次添加置顶区（编辑期间卡片禁交互、无散入动作）
-                    if (visiblePinned.isNotEmpty()) {
-                        BucketBox(
-                            header = stringResource(R.string.pinned_header),
-                            status = null,
-                            items = visiblePinned,
-                            now = state.now,
-                            cardsEnabled = false,
-                            onHeaderAction = null,
-                            onStartEdit = { viewModel.startEdit(it) },
-                            onDeleteItem = onDeleteItem,
-                        )
-                    }
-                    // 六个过期时间桶，空桶不渲染
-                    visibleBuckets.forEach { bucket ->
-                        BucketBox(
-                            header = stringResource(bucket.status.labelRes),
-                            status = bucket.status,
-                            items = bucket.items,
-                            now = state.now,
-                            cardsEnabled = false,
-                            onStartEdit = { viewModel.startEdit(it) },
-                            onDeleteItem = onDeleteItem,
-                        )
-                    }
-                }
-            } else {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    PullToRefreshBox(
-                        isRefreshing = refreshing,
-                        onRefresh = {
-                            refreshing = true
-                            viewModel.disperseSession()
-                            scope.launch {
-                                delay(400)
-                                refreshing = false
-                            }
-                        },
-                        state = rememberPullToRefreshState(),
-                        modifier = Modifier.fillMaxSize(),
+            // 表单开合淡入淡出 + 高度过渡（走查反馈：两态切换生硬）。
+            // target 只能取「是否编辑中」布尔：editing 状态对象每次键入都是新实例，
+            // 拿它当 target 会每次键入触发一次转场、TextField 重建丢焦点（走查修复）。
+            // 退场中的表单读 lastEditing 快照，不因 state.editing 已置空而中途消失
+            var lastEditing by remember { mutableStateOf(state.editing) }
+            state.editing?.let { lastEditing = it }
+            AnimatedContent(
+                targetState = state.isEditing,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(160))
+                },
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                label = "form_vs_list",
+            ) { isEditing ->
+                val editing = if (isEditing) lastEditing else null
+                if (editing != null) {
+                    // 表单打开：整页一块滚动（需求-5 走查反馈）——表单 + 列表内容直接铺开，
+                    // 滚过表单即见列表。列表用非 lazy 直铺：个人食材规模，
+                    // 且 LazyColumn 嵌 verticalScroll 会因无限高约束崩溃。
+                    // 编辑期间隐藏正在编辑的条目（已是表单内虚线框）；空桶/空置顶区整体不渲染
+                    val editingId = editing.editingItemId
+                    val visiblePinned = state.pinnedItems.filterNot { it.id == editingId }
+                    val visibleBuckets = state.buckets
+                        .map { it.copy(items = it.items.filterNot { item -> item.id == editingId }) }
+                        .filter { it.items.isNotEmpty() }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        LazyColumn(
+                        ItemForm(
+                            state = editing,
+                            onStateChange = { newState -> viewModel.updateEditing { newState } },
+                            onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
+                            // 当前操作项目融入表单（需求-5 走查反馈）：表单内虚线框同底色块
+                            editingTarget = state.editingTarget,
+                            now = state.now,
+                        )
+                        // 本次添加置顶区（编辑期间卡片禁交互、无散入动作）
+                        if (visiblePinned.isNotEmpty()) {
+                            BucketBox(
+                                header = stringResource(R.string.pinned_header),
+                                status = null,
+                                items = visiblePinned,
+                                now = state.now,
+                                cardsEnabled = false,
+                                onHeaderAction = null,
+                                onStartEdit = { viewModel.startEdit(it) },
+                                onDeleteItem = onDeleteItem,
+                            )
+                        }
+                        // 六个过期时间桶，空桶不渲染
+                        visibleBuckets.forEach { bucket ->
+                            BucketBox(
+                                header = stringResource(bucket.status.labelRes),
+                                status = bucket.status,
+                                items = bucket.items,
+                                now = state.now,
+                                cardsEnabled = false,
+                                onStartEdit = { viewModel.startEdit(it) },
+                                onDeleteItem = onDeleteItem,
+                            )
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        PullToRefreshBox(
+                            isRefreshing = refreshing,
+                            onRefresh = {
+                                refreshing = true
+                                viewModel.disperseSession()
+                                scope.launch {
+                                    delay(400)
+                                    refreshing = false
+                                }
+                            },
+                            state = rememberPullToRefreshState(),
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            // 本次添加置顶区（会话内存态；下拉刷新/冷启动散入各桶）
-                            if (state.pinnedItems.isNotEmpty()) {
-                                item(key = "pinned") {
-                                    BucketBox(
-                                        header = stringResource(R.string.pinned_header),
-                                        status = null,
-                                        items = state.pinnedItems,
-                                        now = state.now,
-                                        cardsEnabled = true,
-                                        onHeaderAction = { viewModel.disperseSession() },
-                                        onStartEdit = { viewModel.startEdit(it) },
-                                        onDeleteItem = onDeleteItem,
-                                    )
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                // 本次添加置顶区（会话内存态；下拉刷新/冷启动散入各桶）
+                                if (state.pinnedItems.isNotEmpty()) {
+                                    item(key = "pinned") {
+                                        BucketBox(
+                                            modifier = Modifier.animateItem(),
+                                            header = stringResource(R.string.pinned_header),
+                                            status = null,
+                                            items = state.pinnedItems,
+                                            now = state.now,
+                                            cardsEnabled = true,
+                                            onHeaderAction = { viewModel.disperseSession() },
+                                            onStartEdit = { viewModel.startEdit(it) },
+                                            onDeleteItem = onDeleteItem,
+                                        )
+                                    }
                                 }
-                            }
-                            // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
-                            state.buckets.forEach { bucket ->
-                                item(key = "bucket_${bucket.status}") {
-                                    BucketBox(
-                                        header = stringResource(bucket.status.labelRes),
-                                        status = bucket.status,
-                                        items = bucket.items,
-                                        now = state.now,
-                                        cardsEnabled = true,
-                                        onStartEdit = { viewModel.startEdit(it) },
-                                        onDeleteItem = onDeleteItem,
-                                    )
+                                // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
+                                state.buckets.forEach { bucket ->
+                                    item(key = "bucket_${bucket.status}") {
+                                        BucketBox(
+                                            modifier = Modifier.animateItem(),
+                                            header = stringResource(bucket.status.labelRes),
+                                            status = bucket.status,
+                                            items = bucket.items,
+                                            now = state.now,
+                                            cardsEnabled = true,
+                                            onStartEdit = { viewModel.startEdit(it) },
+                                            onDeleteItem = onDeleteItem,
+                                        )
+                                    }
                                 }
-                            }
-                            if (state.items.isEmpty()) {
-                                item(key = "empty") {
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(stringResource(R.string.empty_list), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (state.items.isEmpty()) {
+                                    item(key = "empty") {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(stringResource(R.string.empty_list), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
                                 }
                             }
@@ -403,9 +428,12 @@ private fun BucketProgressBar(
  * 桶容器（需求-3）：浅边框 + 状态色桶头 + 子条目卡片。
  * status = null 表示「本次添加」置顶区（主色 2dp 边框、组头用主色文本）。
  * 点卡片 = 编辑；组头与组空白不可点击（桶按过期时间聚合，无组级交互）。
+ * animateContentSize：卡片增删时桶高度平滑伸缩（走查反馈），配合 LazyColumn 的
+ * animateItem 让后续桶跟随滑动。
  */
 @Composable
 private fun BucketBox(
+    modifier: Modifier = Modifier,
     header: String,
     status: ExpiryStatus?,
     items: List<FoodItem>,
@@ -426,7 +454,7 @@ private fun BucketBox(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = border,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().animateContentSize(),
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -476,13 +504,25 @@ private fun BucketBox(
                 )
             }
             items.forEach { item ->
-                FoodItemCard(
-                    item = item,
-                    now = now,
-                    onClick = { onStartEdit(item) },
-                    onDelete = { onDeleteItem(item) },
-                    enabled = cardsEnabled,
-                )
+                // 卡片入场淡入（走查反馈）：跨桶迁移/散入各桶/撤销删除时新位置柔和不突兀。
+                // key 按 item.id 圈住 remember 槽位，重排时复用入场状态——否则相邻卡
+                // 会因槽位换主而重新播放入场动画。移除的收缩由桶 animateContentSize 承接
+                key(item.id) {
+                    AnimatedVisibility(
+                        visibleState = remember {
+                            MutableTransitionState(false).apply { targetState = true }
+                        },
+                        enter = fadeIn(tween(200)),
+                    ) {
+                        FoodItemCard(
+                            item = item,
+                            now = now,
+                            onClick = { onStartEdit(item) },
+                            onDelete = { onDeleteItem(item) },
+                            enabled = cardsEnabled,
+                        )
+                    }
+                }
             }
         }
     }
