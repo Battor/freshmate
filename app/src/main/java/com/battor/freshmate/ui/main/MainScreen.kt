@@ -83,6 +83,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.util.ExpiryStatus
@@ -96,7 +97,6 @@ private const val BUCKET_BAR_WIDTH_SCALE = 2f
 /** 桶头进度条轨道与条纹底色的透明度（同色淡底）。 */
 private const val BUCKET_BAR_TRACK_ALPHA = 0.3f
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
@@ -108,6 +108,59 @@ fun MainScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val errorEvent by viewModel.errorEvent.collectAsStateWithLifecycle()
+    MainContent(
+        state = state,
+        errorEvent = errorEvent,
+        updateHint = updateHint,
+        onUpdateHintShown = onUpdateHintShown,
+        onOpenUpdate = onOpenUpdate,
+        onOpenHistory = onOpenHistory,
+        onOpenSettings = onOpenSettings,
+        onStartEdit = viewModel::startEdit,
+        onDelete = viewModel::delete,
+        onUndoDelete = viewModel::undoDelete,
+        onDisperse = viewModel::disperseSession,
+        onStartNew = viewModel::startNew,
+        onSave = viewModel::save,
+        onBackToMethodSelection = viewModel::backToMethodSelection,
+        onUpdateEditing = { transform -> viewModel.updateEditing(transform) },
+        onPermissionRequested = viewModel::onPermissionRequested,
+        onErrorShown = viewModel::onErrorShown,
+        onRefreshNow = viewModel::refreshNow,
+        onConfirmPendingSave = viewModel::confirmPendingSave,
+        onCancelPendingSave = viewModel::cancelPendingSave,
+    )
+}
+
+/**
+ * 主页完整界面（Scaffold + 列表/表单 + 全部对话框）。
+ * 从 MainScreen 抽出的纯展示层：不依赖 MainViewModel，全部交互走回调——
+ * 引导页（ui/guide）用 no-op 回调 + mock state 复用同一套界面。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun MainContent(
+    state: MainViewModel.UiState,
+    errorEvent: UiText?,
+    updateHint: UiText?,
+    onUpdateHintShown: () -> Unit,
+    onOpenUpdate: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onStartEdit: (FoodItem) -> Unit,
+    onDelete: (FoodItem) -> Unit,
+    onUndoDelete: (FoodItem) -> Unit,
+    onDisperse: () -> Unit,
+    onStartNew: (InputMethodId) -> Unit,
+    onSave: () -> Unit,
+    onBackToMethodSelection: () -> Unit,
+    onUpdateEditing: ((MainViewModel.EditingState) -> MainViewModel.EditingState) -> Unit,
+    onPermissionRequested: () -> Unit,
+    onErrorShown: () -> Unit,
+    onRefreshNow: () -> Unit,
+    onConfirmPendingSave: () -> Unit,
+    onCancelPendingSave: () -> Unit,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -118,7 +171,7 @@ fun MainScreen(
     LaunchedEffect(errorEvent) {
         errorText?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.onErrorShown()
+            onErrorShown()
         }
     }
 
@@ -138,14 +191,14 @@ fun MainScreen(
 
     NotificationPermissionEffect(
         request = state.requestNotificationPermission,
-        onHandled = { viewModel.onPermissionRequested() },
+        onHandled = onPermissionRequested,
     )
 
     // 回到前台刷新页面时刻：条目跨档（如滑入"已过期"）后桶及时迁移
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            viewModel.refreshNow()
+            onRefreshNow()
         }
     }
 
@@ -178,9 +231,9 @@ fun MainScreen(
                 formOpen = state.isEditing,
                 isAddForm = state.isAddForm,
                 showSave = state.hasFormContent,
-                onStartInput = { viewModel.startNew(it) },
-                onSave = { viewModel.save() },
-                onBack = { viewModel.backToMethodSelection() },
+                onStartInput = onStartNew,
+                onSave = onSave,
+                onBack = onBackToMethodSelection,
                 // edge-to-edge 下键盘弹出时 FAB 随 IME 抬升，不被遮挡；
                 // exclude navigationBars：Scaffold 已消费的导航栏 inset 不重复计入
                 modifier = Modifier.windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
@@ -231,7 +284,7 @@ fun MainScreen(
                     ) {
                         ItemForm(
                             state = editing,
-                            onStateChange = { newState -> viewModel.updateEditing { newState } },
+                            onStateChange = { newState -> onUpdateEditing { newState } },
                             onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
                             // 当前操作项目融入表单（需求-5 走查反馈）：表单内虚线框同底色块
                             editingTarget = state.editingTarget,
@@ -246,7 +299,7 @@ fun MainScreen(
                                 now = state.now,
                                 cardsEnabled = false,
                                 onHeaderAction = null,
-                                onStartEdit = { viewModel.startEdit(it) },
+                                onStartEdit = onStartEdit,
                                 onDeleteItem = onDeleteItem,
                             )
                         }
@@ -258,7 +311,7 @@ fun MainScreen(
                                 items = bucket.items,
                                 now = state.now,
                                 cardsEnabled = false,
-                                onStartEdit = { viewModel.startEdit(it) },
+                                onStartEdit = onStartEdit,
                                 onDeleteItem = onDeleteItem,
                             )
                         }
@@ -269,7 +322,7 @@ fun MainScreen(
                             isRefreshing = refreshing,
                             onRefresh = {
                                 refreshing = true
-                                viewModel.disperseSession()
+                                onDisperse()
                                 scope.launch {
                                     delay(400)
                                     refreshing = false
@@ -293,8 +346,8 @@ fun MainScreen(
                                             items = state.pinnedItems,
                                             now = state.now,
                                             cardsEnabled = true,
-                                            onHeaderAction = { viewModel.disperseSession() },
-                                            onStartEdit = { viewModel.startEdit(it) },
+                                            onHeaderAction = onDisperse,
+                                            onStartEdit = onStartEdit,
                                             onDeleteItem = onDeleteItem,
                                         )
                                     }
@@ -309,7 +362,7 @@ fun MainScreen(
                                             items = bucket.items,
                                             now = state.now,
                                             cardsEnabled = true,
-                                            onStartEdit = { viewModel.startEdit(it) },
+                                            onStartEdit = onStartEdit,
                                             onDeleteItem = onDeleteItem,
                                         )
                                     }
@@ -334,7 +387,7 @@ fun MainScreen(
 
     state.pendingSave?.let { pending ->
         AlertDialog(
-            onDismissRequest = { viewModel.cancelPendingSave() },
+            onDismissRequest = onCancelPendingSave,
             title = { Text(stringResource(R.string.near_expiry_title)) },
             text = {
                 Text(
@@ -347,10 +400,10 @@ fun MainScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmPendingSave() }) { Text(stringResource(R.string.save)) }
+                TextButton(onClick = onConfirmPendingSave) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.cancelPendingSave() }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = onCancelPendingSave) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -364,7 +417,7 @@ fun MainScreen(
                 TextButton(
                     onClick = {
                         pendingDelete = null
-                        viewModel.delete(item)
+                        onDelete(item)
                         scope.launch {
                             val result = snackbarHostState.showSnackbar(
                                 context.getString(R.string.deleted_snackbar, item.name),
@@ -372,7 +425,7 @@ fun MainScreen(
                                 duration = SnackbarDuration.Short,
                             )
                             if (result == SnackbarResult.ActionPerformed) {
-                                viewModel.undoDelete(item)
+                                onUndoDelete(item)
                             }
                         }
                     },
