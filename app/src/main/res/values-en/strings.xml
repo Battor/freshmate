@@ -136,4 +136,22 @@
     <string name="notification_channel">Expiry reminders</string>
     <string name="notification_title">食刻 FreshMate</string>
     <string name="notification_body">“%1$s” expires in %2$s</string>
+
+    <!-- Onboarding tour (5 coach-mark steps + settings entry) -->
+    <string name="settings_onboarding">Getting-started tour</string>
+    <string name="guide_skip">Skip tour</string>
+    <string name="guide_next">Next</string>
+    <string name="guide_done">Done</string>
+    <string name="guide_step_indicator">Step %1$d of %2$d</string>
+    <string name="guide_welcome_title">Welcome to FreshMate</string>
+    <string name="guide_welcome_body">Track shelf life and get reminded before food expires. Take half a minute to see how it works.</string>
+    <string name="guide_fab_title">Add an item</string>
+    <string name="guide_fab_body">Tap “＋” in the corner and enter its shelf life — that’s all.</string>
+    <string name="guide_card_title">Swipe to remove</string>
+    <string name="guide_card_body">Swipe a card left to delete (a confirmation pops up first). Deleted items can be restored from History.</string>
+    <string name="guide_buckets_title">Expiry buckets</string>
+    <string name="guide_buckets_body">Items are grouped by remaining time. Pull down to scatter newly added items into their buckets.</string>
+    <string name="guide_permission_note">Allow notifications so expiry reminders can reach you.</string>
+    <string name="guide_topbar_title">History &amp; Settings</string>
+    <string name="guide_topbar_body">Top-right opens History (swipe right to restore) and Settings (theme, language, or replay this tour).</string>
 </resources>

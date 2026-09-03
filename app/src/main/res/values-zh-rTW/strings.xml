@@ -136,4 +136,22 @@
     <string name="notification_channel">過期提醒</string>
     <string name="notification_title">食刻 FreshMate</string>
     <string name="notification_body">「%1$s」還有 %2$s 到期</string>
+
+    <!-- 新手引導（教練標記五步 + 設定入口） -->
+    <string name="settings_onboarding">新手引導</string>
+    <string name="guide_skip">跳過引導</string>
+    <string name="guide_next">下一步</string>
+    <string name="guide_done">完成</string>
+    <string name="guide_step_indicator">第 %1$d 步，共 %2$d 步</string>
+    <string name="guide_welcome_title">歡迎使用食刻</string>
+    <string name="guide_welcome_body">記下保質期，到期前提醒你。先花半分鐘認識幾個關鍵操作。</string>
+    <string name="guide_fab_title">新增食品</string>
+    <string name="guide_fab_body">點右下角「＋」，手動輸入，填上保質期就行。</string>
+    <string name="guide_card_title">滑動刪除</string>
+    <string name="guide_card_body">在卡片上向左滑刪除（會先彈確認）。刪錯了也不怕，「歷史」裡可以還原。</string>
+    <string name="guide_buckets_title">到期分桶</string>
+    <string name="guide_buckets_body">列表按剩餘時間自動分桶；下拉重新整理可把「本次新增」散入各桶。</string>
+    <string name="guide_permission_note">允許通知後，到期提醒才會送達。</string>
+    <string name="guide_topbar_title">歷史 與 設定</string>
+    <string name="guide_topbar_body">右上角可開啟歷史（右滑還原）和設定（主題/語言，或重看本引導）。</string>
 </resources>
