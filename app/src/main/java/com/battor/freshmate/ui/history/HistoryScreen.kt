@@ -35,7 +35,9 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -139,7 +141,13 @@ private fun DeletedGroupBox(
                 )
             }
             group.items.forEach { item ->
-                HistoryItemCard(item, now, onRequestRestore)
+                // key 按 item.id 圈定槽位（走查 bug 修复）：还原后组内列表收缩，
+                // 无 key 时相邻卡继承旧槽位的 SwipeToDismissBoxState——其
+                // confirmValueChange 闭包捕获旧 item，第二次滑动会还原成对
+                // 已还原条目的 no-op（提示成功但不生效）
+                key(item.id) {
+                    HistoryItemCard(item, now, onRequestRestore)
+                }
             }
         }
     }
@@ -160,10 +168,13 @@ private fun HistoryItemCard(
     val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
 
     val restoreLabel = stringResource(R.string.restore)
+    // 防御：rememberSwipeToDismissBoxState 只在状态对象首建时捕获 confirmValueChange
+    // 闭包（无 key 复用状态时新闭包被忽略），经 rememberUpdatedState 取最新 item
+    val currentItem by rememberUpdatedState(item)
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.StartToEnd) {
-                onRequestRestore(item)
+                onRequestRestore(currentItem)
             }
             false
         },

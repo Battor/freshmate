@@ -20,7 +20,10 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,12 +50,16 @@ fun FoodItemCard(
     val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
     val deleteLabel = stringResource(R.string.delete)
 
+    // 防御：rememberSwipeToDismissBoxState 只在状态对象首建时捕获 confirmValueChange
+    // 闭包（与历史页同款坑，见 HistoryScreen），经 rememberUpdatedState 取最新回调与门禁
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    val currentEnabled by rememberUpdatedState(enabled)
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             // 滑到位只触发确认弹框（需求-5 走查反馈），卡片回弹；
             // 真正的删除在用户确认后发生。表单打开期间同样不触发。
-            if (enabled && value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
+            if (currentEnabled && value == SwipeToDismissBoxValue.EndToStart) {
+                currentOnDelete()
             }
             false
         },
