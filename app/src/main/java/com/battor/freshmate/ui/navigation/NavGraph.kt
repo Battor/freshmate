@@ -67,7 +67,11 @@ fun FreshMateNavGraph() {
             val onboardingDone by settingsRepo.onboardingCompleted
                 .collectAsStateWithLifecycle(initialValue = true)
             LaunchedEffect(onboardingDone) {
-                if (!onboardingDone) navController.navigate("${Routes.GUIDE}?first=true")
+                // currentDestination 检查防重入：返回 main 瞬间若旧值 false 尚未刷新，
+                // 不至于把刚退出的引导再拉起来
+                if (!onboardingDone && navController.currentDestination?.route != Routes.GUIDE) {
+                    navController.navigate("${Routes.GUIDE}?first=true")
+                }
             }
             MainScreen(
                 viewModel = viewModel,

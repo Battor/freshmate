@@ -3,12 +3,14 @@ package com.battor.freshmate.ui.guide
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -141,6 +143,7 @@ fun GuideOverlay(
                 step = step,
                 stepIndex = stepIndex,
                 showPermissionNote = showPermissionNote,
+                onSkip = onSkip,
                 onNext = onNext,
                 modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
             )
@@ -156,6 +159,7 @@ fun GuideOverlay(
                 step = step,
                 stepIndex = stepIndex,
                 showPermissionNote = showPermissionNote,
+                onSkip = onSkip,
                 onNext = onNext,
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -164,25 +168,16 @@ fun GuideOverlay(
                     .onSizeChanged { cardHeightPx = it.height },
             )
         }
-
-        TextButton(
-            onClick = onSkip,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(end = 8.dp, top = 4.dp),
-        ) {
-            Text(stringResource(R.string.guide_skip), color = Color.White)
-        }
     }
 }
 
-/** 说明卡：步数指示 + 标题 + 正文（第 4 步按条件追加权限提示）+ 下一步/完成。 */
+/** 说明卡：步数指示 + 标题 + 正文（第 4 步按条件追加权限提示）+ 跳过 + 下一步/完成。 */
 @Composable
 private fun GuideCard(
     step: GuideStep,
     stepIndex: Int,
     showPermissionNote: Boolean,
+    onSkip: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -214,15 +209,22 @@ private fun GuideCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
-            Button(
-                onClick = onNext,
-                modifier = Modifier.align(Alignment.End).padding(top = 12.dp),
+            // 跳过在左、主操作在右：独立浮层会被第 4 步的全列表镂空说明卡压住（走查反馈）
+            Row(
+                Modifier.fillMaxWidth().padding(top = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    stringResource(
-                        if (stepIndex == GuideSteps.lastIndex) R.string.guide_done else R.string.guide_next,
-                    ),
-                )
+                TextButton(onClick = onSkip) {
+                    Text(stringResource(R.string.guide_skip))
+                }
+                Button(onClick = onNext) {
+                    Text(
+                        stringResource(
+                            if (stepIndex == GuideSteps.lastIndex) R.string.guide_done else R.string.guide_next,
+                        ),
+                    )
+                }
             }
         }
     }
