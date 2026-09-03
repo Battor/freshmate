@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,6 +58,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenLogs: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenGuide: () -> Unit,
     updateState: UpdateViewModel.UiState,
     onCheckUpdate: () -> Unit,
     onDownload: () -> Unit,
@@ -89,6 +91,16 @@ fun SettingsScreen(
         LazyColumn(Modifier.fillMaxWidth().padding(padding)) {
             item { ThemeSettingItem(viewModel) }
             item { LanguageSettingItem(viewModel) }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_onboarding)) },
+                    leadingContent = { Icon(Icons.Filled.School, contentDescription = null) },
+                    trailingContent = {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                    },
+                    modifier = Modifier.clickable(onClick = onOpenGuide),
+                )
+            }
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.view_logs)) },
