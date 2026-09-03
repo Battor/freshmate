@@ -85,6 +85,7 @@ import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.ui.common.UiText
+import com.battor.freshmate.ui.guide.guideTarget
 import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.util.ExpiryStatus
 import java.time.LocalDateTime
@@ -160,6 +161,8 @@ internal fun MainContent(
     onRefreshNow: () -> Unit,
     onConfirmPendingSave: () -> Unit,
     onCancelPendingSave: () -> Unit,
+    /** 引导模式聚光「第一张卡片」：透传给列表分支第一个桶，主流程为 null 零影响 */
+    guideFirstCardKey: String? = null,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -211,11 +214,14 @@ internal fun MainContent(
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
-                    IconButton(onClick = onOpenHistory) {
-                        Icon(Icons.Filled.History, contentDescription = stringResource(R.string.history))
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
+                    // 引导第 5 步聚光顶栏动作区（主流程 holder 为 null，guideTarget 原样返回）
+                    Row(Modifier.guideTarget("topbar")) {
+                        IconButton(onClick = onOpenHistory) {
+                            Icon(Icons.Filled.History, contentDescription = stringResource(R.string.history))
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
+                        }
                     }
                 },
             )
@@ -236,7 +242,8 @@ internal fun MainContent(
                 onBack = onBackToMethodSelection,
                 // edge-to-edge 下键盘弹出时 FAB 随 IME 抬升，不被遮挡；
                 // exclude navigationBars：Scaffold 已消费的导航栏 inset 不重复计入
-                modifier = Modifier.windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
+                modifier = Modifier.windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
+                    .guideTarget("fab"),
             )
         },
     ) { padding ->
@@ -332,7 +339,7 @@ internal fun MainContent(
                             modifier = Modifier.fillMaxSize(),
                         ) {
                             LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillMaxSize().guideTarget("bucket_area"),
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
@@ -353,7 +360,7 @@ internal fun MainContent(
                                     }
                                 }
                                 // 六个过期时间桶，空桶不渲染；桶头/组空白不可点击
-                                state.buckets.forEach { bucket ->
+                                state.buckets.forEachIndexed { bucketIndex, bucket ->
                                     item(key = "bucket_${bucket.status}") {
                                         BucketBox(
                                             modifier = Modifier.animateItem(),
@@ -364,6 +371,8 @@ internal fun MainContent(
                                             cardsEnabled = true,
                                             onStartEdit = onStartEdit,
                                             onDeleteItem = onDeleteItem,
+                                            // 引导第 3 步聚光首桶第一张卡片
+                                            guideFirstCardKey = if (bucketIndex == 0) guideFirstCardKey else null,
                                         )
                                     }
                                 }
@@ -495,6 +504,8 @@ private fun BucketBox(
     onHeaderAction: (() -> Unit)? = null,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
+    /** 非空时把首张卡片注册为引导聚光目标 */
+    guideFirstCardKey: String? = null,
 ) {
     val border = if (status == null) {
         BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
@@ -556,7 +567,7 @@ private fun BucketBox(
                         },
                 )
             }
-            items.forEach { item ->
+            items.forEachIndexed { cardIndex, item ->
                 // 卡片入场淡入（走查反馈）：跨桶迁移/散入各桶/撤销删除时新位置柔和不突兀。
                 // key 按 item.id 圈住 remember 槽位，重排时复用入场状态——否则相邻卡
                 // 会因槽位换主而重新播放入场动画。移除的收缩由桶 animateContentSize 承接
@@ -567,13 +578,21 @@ private fun BucketBox(
                         },
                         enter = fadeIn(tween(200)),
                     ) {
-                        FoodItemCard(
-                            item = item,
-                            now = now,
-                            onClick = { onStartEdit(item) },
-                            onDelete = { onDeleteItem(item) },
-                            enabled = cardsEnabled,
-                        )
+                        Box(
+                            modifier = if (cardIndex == 0 && guideFirstCardKey != null) {
+                                Modifier.guideTarget(guideFirstCardKey)
+                            } else {
+                                Modifier
+                            },
+                        ) {
+                            FoodItemCard(
+                                item = item,
+                                now = now,
+                                onClick = { onStartEdit(item) },
+                                onDelete = { onDeleteItem(item) },
+                                enabled = cardsEnabled,
+                            )
+                        }
                     }
                 }
             }
