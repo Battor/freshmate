@@ -91,11 +91,12 @@ fun FreshMateNavGraph() {
             GuideScreen(
                 markCompletedOnExit = first,
                 onExit = {
-                    // 完成/跳过都落盘：仅首启路径写标记（设置重看不写，行为无差别但按 spec 区分）
-                    if (first) {
-                        scope.launch { settingsRepo.setOnboardingCompleted() }
+                    // 完成/跳过都落盘：仅首启路径写标记（设置重看不写，行为无差别但按 spec 区分）。
+                    // 须先写完再返回：若先 pop，MAIN 重读标记仍为 false 会再次自动导航（弹两次）
+                    scope.launch {
+                        if (first) settingsRepo.setOnboardingCompleted()
+                        navController.popBackStack()
                     }
-                    navController.popBackStack()
                 },
             )
         }
