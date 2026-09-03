@@ -20,8 +20,12 @@ class SettingsViewModelTest {
 
     private class FakeRepo(initial: ThemeMode) : SettingsRepository {
         override val themeMode = MutableStateFlow(initial)
+        override val onboardingCompleted = MutableStateFlow(true)
         override suspend fun setThemeMode(mode: ThemeMode) {
             themeMode.value = mode
+        }
+        override suspend fun setOnboardingCompleted() {
+            onboardingCompleted.value = true
         }
     }
 

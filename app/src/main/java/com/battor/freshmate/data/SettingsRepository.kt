@@ -1,6 +1,7 @@
 package com.battor.freshmate.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -27,6 +28,10 @@ enum class ThemeMode {
 interface SettingsRepository {
     val themeMode: Flow<ThemeMode>
     suspend fun setThemeMode(mode: ThemeMode)
+
+    /** 新手引导是否已完成/跳过（首启自动弹一次的闸门）。 */
+    val onboardingCompleted: Flow<Boolean>
+    suspend fun setOnboardingCompleted()
 }
 
 class DataStoreSettingsRepository(private val context: Context) : SettingsRepository {
@@ -38,7 +43,15 @@ class DataStoreSettingsRepository(private val context: Context) : SettingsReposi
         context.settingsDataStore.edit { it[Key] = mode.name }
     }
 
+    override val onboardingCompleted: Flow<Boolean> = context.settingsDataStore.data
+        .map { prefs -> prefs[OnboardingKey] ?: false }
+
+    override suspend fun setOnboardingCompleted() {
+        context.settingsDataStore.edit { it[OnboardingKey] = true }
+    }
+
     private companion object {
         val Key = stringPreferencesKey("theme_mode")
+        val OnboardingKey = booleanPreferencesKey("onboarding_completed")
     }
 }
