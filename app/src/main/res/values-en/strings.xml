@@ -154,4 +154,8 @@
     <string name="guide_permission_note">Allow notifications so expiry reminders can reach you.</string>
     <string name="guide_topbar_title">History &amp; Settings</string>
     <string name="guide_topbar_body">Top-right opens History (swipe right to restore) and Settings (theme, language, or replay this tour).</string>
+
+    <string name="guide_mock_milk">Milk</string>
+    <string name="guide_mock_yogurt">Yogurt</string>
+    <string name="guide_mock_vegetable">Vegetables</string>
 </resources>

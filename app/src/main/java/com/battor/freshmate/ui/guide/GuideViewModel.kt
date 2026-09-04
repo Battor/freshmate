@@ -11,8 +11,14 @@ import java.time.LocalDateTime
  * 不持有 Repository、不写 Room、不碰提醒调度——用户真实数据全程不被触及，
  * 「引导结束还原原数据」因此自动成立。
  * id 取负数：与任何真实条目 id 空间隔离，排查日志一眼可辨。
+ * 名称由调用方经 stringResource 按当前语言解析后传入（VM 层拿不到资源）。
  */
-class GuideViewModel(now: LocalDateTime = LocalDateTime.now()) {
+class GuideViewModel(
+    milkName: String,
+    yogurtName: String,
+    vegetableName: String,
+    now: LocalDateTime = LocalDateTime.now(),
+) {
 
     val uiState: MainViewModel.UiState = run {
         // expiry = createdAt + shelfLifeDays（productionDate = null 时），倒推 createdAt 落桶
@@ -28,9 +34,9 @@ class GuideViewModel(now: LocalDateTime = LocalDateTime.now()) {
             )
 
         val items = listOf(
-            mock(1, "牛奶", Category.DAIRY, shelfLifeDays = 10, createdAt = now.minusDays(13)), // 到期 now-3d
-            mock(2, "酸奶", Category.DAIRY, shelfLifeDays = 7, createdAt = now.plusHours(11).minusDays(7)), // 到期 now+11h
-            mock(3, "蔬菜", Category.FRUITS_VEG, shelfLifeDays = 7, createdAt = now.minusDays(2)), // 到期 now+5d
+            mock(1, milkName, Category.DAIRY, shelfLifeDays = 10, createdAt = now.minusDays(13)), // 到期 now-3d
+            mock(2, yogurtName, Category.DAIRY, shelfLifeDays = 7, createdAt = now.plusHours(11).minusDays(7)), // 到期 now+11h
+            mock(3, vegetableName, Category.FRUITS_VEG, shelfLifeDays = 7, createdAt = now.minusDays(2)), // 到期 now+5d
         )
         MainViewModel.UiState(items = items, now = now, buckets = bucketItems(items, now))
     }

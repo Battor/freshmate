@@ -8,7 +8,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.NotificationManagerCompat
+import com.battor.freshmate.R
 import com.battor.freshmate.ui.main.MainContent
 
 /**
@@ -21,7 +23,13 @@ fun GuideScreen(
     markCompletedOnExit: Boolean,
     onExit: (Boolean) -> Unit,
 ) {
-    val guideViewModel = remember { GuideViewModel() }
+    // mock 名称按当前语言解析（语言切换重建 Activity，remember 键随之重算）
+    val milkName = stringResource(R.string.guide_mock_milk)
+    val yogurtName = stringResource(R.string.guide_mock_yogurt)
+    val vegetableName = stringResource(R.string.guide_mock_vegetable)
+    val guideViewModel = remember(milkName, yogurtName, vegetableName) {
+        GuideViewModel(milkName, yogurtName, vegetableName)
+    }
     val holder = remember { GuideStateHolder() }
     val machine = remember { GuideStateMachine(GuideSteps.size) }
     val context = LocalContext.current

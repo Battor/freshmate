@@ -154,4 +154,8 @@
     <string name="guide_permission_note">允許通知後，到期提醒才會送達。</string>
     <string name="guide_topbar_title">歷史 與 設定</string>
     <string name="guide_topbar_body">右上角可開啟歷史（右滑還原）和設定（主題/語言，或重看本引導）。</string>
+
+    <string name="guide_mock_milk">牛奶</string>
+    <string name="guide_mock_yogurt">優格</string>
+    <string name="guide_mock_vegetable">蔬菜</string>
 </resources>

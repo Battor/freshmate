@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -24,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +101,8 @@ fun GuideOverlay(
     onSkip: () -> Unit,
 ) {
     val step = GuideSteps[stepIndex]
+    // pointerInput(Unit) 只捕获首个 lambda 闭包：经 rememberUpdatedState 取最新回调（滑动同款坑）
+    val currentOnNext by rememberUpdatedState(onNext)
     var overlayOffset by remember { mutableStateOf(Offset.Zero) }
     var overlaySize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -108,8 +113,8 @@ fun GuideOverlay(
                 overlayOffset = it.boundsInRoot().topLeft
                 overlaySize = it.size
             }
-            // 消费一切触摸：down 在本层被拦截，滚动/滑动不会落入下层界面（「只看不摸」）
-            .pointerInput(Unit) { detectTapGestures { } },
+            // 全屏拦截触摸（「只看不摸」，滚动不会落入下层）；点遮罩/说明卡空白 = 下一步/结束
+            .pointerInput(Unit) { detectTapGestures { currentOnNext() } },
     ) {
         val targetRect = step.targetKey?.let { holder.targets[it] }
 
@@ -210,15 +215,16 @@ private fun GuideCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
-            // 跳过在左、主操作在右：独立浮层会被第 4 步的全列表镂空说明卡压住（走查反馈）
+            // skip 紧贴主操作左侧（成组右对齐，走查反馈：不要拆到两端）
             Row(
                 Modifier.fillMaxWidth().padding(top = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onSkip) {
                     Text(stringResource(R.string.guide_skip))
                 }
+                Spacer(Modifier.width(8.dp))
                 Button(onClick = onNext) {
                     Text(
                         stringResource(
