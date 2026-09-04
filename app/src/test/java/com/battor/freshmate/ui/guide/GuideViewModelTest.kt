@@ -12,7 +12,7 @@ class GuideViewModelTest {
 
     @Test
     fun `mock 条目落在三个预期桶`() {
-        val state = GuideViewModel(now).uiState
+        val state = GuideViewModel("牛奶", "酸奶", "蔬菜", now).uiState
         fun names(status: ExpiryStatus) =
             state.buckets.firstOrNull { it.status == status }?.items?.map { it.name }
         assertEquals(listOf("牛奶"), names(ExpiryStatus.EXPIRED))
@@ -23,7 +23,7 @@ class GuideViewModelTest {
 
     @Test
     fun `无置顶区无表单`() {
-        val state = GuideViewModel(now).uiState
+        val state = GuideViewModel("牛奶", "酸奶", "蔬菜", now).uiState
         assertTrue(state.pinnedItems.isEmpty())
         assertNull(state.editing)
         assertTrue(state.buckets.all { bucket -> bucket.items.all { it.id < 0 } })
