@@ -57,6 +57,7 @@ fun GuideScreen(
                 onConfirmPendingSave = {},
                 onCancelPendingSave = {},
                 guideFirstCardKey = "first_card",
+                guideFirstBucketKey = "bucket_area",
             )
         }
         GuideOverlay(

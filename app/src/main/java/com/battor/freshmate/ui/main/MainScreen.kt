@@ -161,8 +161,9 @@ internal fun MainContent(
     onRefreshNow: () -> Unit,
     onConfirmPendingSave: () -> Unit,
     onCancelPendingSave: () -> Unit,
-    /** 引导模式聚光「第一张卡片」：透传给列表分支第一个桶，主流程为 null 零影响 */
+    /** 引导模式聚光「第一张卡片」「第一个桶」：透传给列表分支第一个桶，主流程为 null 零影响 */
     guideFirstCardKey: String? = null,
+    guideFirstBucketKey: String? = null,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -339,7 +340,7 @@ internal fun MainContent(
                             modifier = Modifier.fillMaxSize(),
                         ) {
                             LazyColumn(
-                                modifier = Modifier.fillMaxSize().guideTarget("bucket_area"),
+                                modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
@@ -371,8 +372,10 @@ internal fun MainContent(
                                             cardsEnabled = true,
                                             onStartEdit = onStartEdit,
                                             onDeleteItem = onDeleteItem,
-                                            // 引导第 3 步聚光首桶第一张卡片
+                                            // 引导第 3 步聚光首卡、第 4 步聚光首桶（含桶头讲分桶概念；
+                                            // 整列表做镂空会几乎盖满全屏，遮罩形同虚设——走查反馈）
                                             guideFirstCardKey = if (bucketIndex == 0) guideFirstCardKey else null,
+                                            guideBucketKey = if (bucketIndex == 0) guideFirstBucketKey else null,
                                         )
                                     }
                                 }
@@ -504,8 +507,9 @@ private fun BucketBox(
     onHeaderAction: (() -> Unit)? = null,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
-    /** 非空时把首张卡片注册为引导聚光目标 */
+    /** 非空时把首张卡片/整个桶注册为引导聚光目标 */
     guideFirstCardKey: String? = null,
+    guideBucketKey: String? = null,
 ) {
     val border = if (status == null) {
         BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
@@ -514,11 +518,12 @@ private fun BucketBox(
     }
     // semantics 块非 Composable 上下文，提前解析
     val disperseLabel = stringResource(R.string.disperse_into_buckets)
+    val bucketTarget = if (guideBucketKey != null) Modifier.guideTarget(guideBucketKey) else Modifier
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = border,
-        modifier = modifier.fillMaxWidth().animateContentSize(),
+        modifier = modifier.then(bucketTarget).fillMaxWidth().animateContentSize(),
     ) {
         Column(
             modifier = Modifier.padding(10.dp),

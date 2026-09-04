@@ -150,11 +150,12 @@ fun GuideOverlay(
         } else {
             val gapPx = with(LocalDensity.current) { 24.dp.toPx() }
             val local = targetRect.translate(-overlayOffset)
-            val cardY = if (local.center.y < overlaySize.height / 2f) {
+            // 钳制在屏内：目标特大（如整屏列表）时上方/下方都可能放不下，宁贴边不裁切
+            val cardY = (if (local.center.y < overlaySize.height / 2f) {
                 (local.bottom + gapPx).roundToInt()
             } else {
                 (local.top - gapPx - cardHeightPx).roundToInt()
-            }
+            }).coerceIn(0, (overlaySize.height - cardHeightPx).coerceAtLeast(0))
             GuideCard(
                 step = step,
                 stepIndex = stepIndex,
