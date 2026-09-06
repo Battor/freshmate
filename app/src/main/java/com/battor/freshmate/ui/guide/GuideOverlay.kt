@@ -1,6 +1,9 @@
 package com.battor.freshmate.ui.guide
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -21,9 +24,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -44,48 +46,48 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.battor.freshmate.R
+import com.battor.freshmate.ui.common.GuideKeys
+import com.battor.freshmate.ui.common.GuideStateHolder
 import kotlin.math.roundToInt
-
-/**
- * 聚光目标注册：目标控件挂 [guideTarget]，把自身 bounds（root 坐标）报进来。
- * 挂在 CompositionLocal 上——主流程里 LocalGuideState 为 null，guideTarget 原样返回，零开销。
- */
-class GuideStateHolder {
-    val targets = mutableStateMapOf<String, Rect>()
-}
-
-val LocalGuideState = compositionLocalOf<GuideStateHolder?> { null }
 
 /** 引导步骤定义：targetKey = null 表示无聚光（居中欢迎卡）。 */
 data class GuideStep(
     @StringRes val titleRes: Int,
     @StringRes val bodyRes: Int,
     val targetKey: String?,
+    /** 本步追加通知权限提示（声明式标记，不耦合 targetKey 字符串）。 */
+    val appendPermissionNote: Boolean = false,
 )
 
 internal val GuideSteps = listOf(
-    GuideStep(R.string.guide_welcome_title, R.string.guide_welcome_body, null),
-    GuideStep(R.string.guide_fab_title, R.string.guide_fab_body, "fab"),
-    GuideStep(R.string.guide_card_title, R.string.guide_card_body, "first_card"),
-    GuideStep(R.string.guide_buckets_title, R.string.guide_buckets_body, "bucket_area"),
-    GuideStep(R.string.guide_topbar_title, R.string.guide_topbar_body, "topbar"),
+    GuideStep(R.string.guide_welcome_title, R.string.guide_welcome_body, targetKey = null),
+    GuideStep(R.string.guide_fab_title, R.string.guide_fab_body, GuideKeys.FAB),
+    GuideStep(R.string.guide_card_title, R.string.guide_card_body, GuideKeys.FIRST_CARD),
+    GuideStep(R.string.guide_buckets_title, R.string.guide_buckets_body, GuideKeys.BUCKET_AREA, appendPermissionNote = true),
+    GuideStep(R.string.guide_topbar_title, R.string.guide_topbar_body, GuideKeys.TOPBAR),
 )
 
-/**
- * @Composable 修饰符工厂：引导态把 bounds 报到 holder，主流程（holder 为 null）原样返回。
- * 必须是 @Composable 才能读 CompositionLocal，避免 composed{} 的性能与限制问题。
- */
-@Composable
-fun Modifier.guideTarget(key: String): Modifier {
-    val holder = LocalGuideState.current ?: return this
-    return onGloballyPositioned { holder.targets[key] = it.boundsInRoot() }
-}
-
 private val ScrimColor = Color.Black.copy(alpha = 0.55f)
+
+/**
+ * 说明卡纵向落点（纯函数，边界单测护住）：目标在屏上半 → 卡贴镂空下方；否则贴上方。
+ * 两头钳制在屏内：目标特大时上方/下方都可能放不下，宁贴边不裁切。
+ */
+internal fun cardOffsetY(hole: Rect, overlayHeight: Int, cardHeight: Int, gapPx: Float): Int {
+    val raw = if (hole.center.y < overlayHeight / 2f) {
+        hole.bottom + gapPx
+    } else {
+        hole.top - gapPx - cardHeight
+    }
+    return raw.roundToInt().coerceIn(0, (overlayHeight - cardHeight).coerceAtLeast(0))
+}
 
 /**
  * 自绘引导层（spec 2026-09-03）：全屏遮罩 + 圆角镂空聚光 + 说明卡。
@@ -101,10 +103,15 @@ fun GuideOverlay(
     onSkip: () -> Unit,
 ) {
     val step = GuideSteps[stepIndex]
+    val isLast = stepIndex == GuideSteps.lastIndex
     // pointerInput(Unit) 只捕获首个 lambda 闭包：经 rememberUpdatedState 取最新回调（滑动同款坑）
     val currentOnNext by rememberUpdatedState(onNext)
+    val currentOnSkip by rememberUpdatedState(onSkip)
     var overlayOffset by remember { mutableStateOf(Offset.Zero) }
     var overlaySize by remember { mutableStateOf(IntSize.Zero) }
+    val holePaddingPx = with(LocalDensity.current) { 8.dp.toPx() }
+    val nextLabel = stringResource(if (isLast) R.string.guide_done else R.string.guide_next)
+    val skipLabel = stringResource(R.string.guide_skip)
 
     Box(
         Modifier
@@ -114,13 +121,36 @@ fun GuideOverlay(
                 overlaySize = it.size
             }
             // 全屏拦截触摸（「只看不摸」，滚动不会落入下层）；点遮罩/说明卡空白 = 下一步/结束
-            .pointerInput(Unit) { detectTapGestures { currentOnNext() } },
+            .pointerInput(Unit) { detectTapGestures { currentOnNext() } }
+            // TalkBack：遮罩点按推进对手势用户不可达，提供等价自定义动作
+            .semantics {
+                customActions = listOf(
+                    CustomAccessibilityAction(nextLabel) { currentOnNext(); true },
+                    CustomAccessibilityAction(skipLabel) { currentOnSkip(); true },
+                )
+            },
     ) {
-        val targetRect = step.targetKey?.let { holder.targets[it] }
+        val targetHole = step.targetKey
+            ?.let { holder.targets[it] }
+            ?.translate(-overlayOffset)
+            ?.inflate(holePaddingPx)
+
+        // 镂空平滑滑向新目标；首个聚光步（null→rect）与布局首帧（尺寸未测得）直接落位不动画
+        var animatedHole by remember { mutableStateOf<Rect?>(null) }
+        LaunchedEffect(targetHole, overlaySize) {
+            if (targetHole == null || overlaySize == IntSize.Zero) return@LaunchedEffect
+            val from = animatedHole
+            if (from == null || from == targetHole) {
+                animatedHole = targetHole
+            } else {
+                val anim = Animatable(from, Rect.VectorConverter)
+                anim.animateTo(targetHole, tween(280)) { animatedHole = value }
+            }
+        }
+        val hole = animatedHole ?: targetHole
 
         Canvas(Modifier.fillMaxSize()) {
             val corner = CornerRadius(14.dp.toPx())
-            val hole = targetRect?.translate(-overlayOffset)?.inflate(8.dp.toPx())
             // EvenOdd 填充：整屏矩形 XOR 镂空圆角矩形 = 带洞遮罩
             val path = Path().apply {
                 fillType = PathFillType.EvenOdd
@@ -139,10 +169,9 @@ fun GuideOverlay(
             }
         }
 
-        // 说明卡纵向定位：目标在屏上半 → 卡贴镂空下方；否则贴上方。
-        // 首帧卡高未测得按 0 估，onSizeChanged 回填后下一帧自然校正。
+        // 说明卡纵向定位。首帧卡高未测得按 0 估，onSizeChanged 回填后下一帧自然校正
         var cardHeightPx by remember { mutableStateOf(0) }
-        if (targetRect == null) {
+        if (hole == null) {
             // 无聚光（欢迎步）：卡片居中
             GuideCard(
                 step = step,
@@ -154,13 +183,7 @@ fun GuideOverlay(
             )
         } else {
             val gapPx = with(LocalDensity.current) { 24.dp.toPx() }
-            val local = targetRect.translate(-overlayOffset)
-            // 钳制在屏内：目标特大（如整屏列表）时上方/下方都可能放不下，宁贴边不裁切
-            val cardY = (if (local.center.y < overlaySize.height / 2f) {
-                (local.bottom + gapPx).roundToInt()
-            } else {
-                (local.top - gapPx - cardHeightPx).roundToInt()
-            }).coerceIn(0, (overlaySize.height - cardHeightPx).coerceAtLeast(0))
+            val cardY = cardOffsetY(hole, overlaySize.height, cardHeightPx, gapPx)
             GuideCard(
                 step = step,
                 stepIndex = stepIndex,
@@ -177,7 +200,7 @@ fun GuideOverlay(
     }
 }
 
-/** 说明卡：步数指示 + 标题 + 正文（第 4 步按条件追加权限提示）+ 跳过 + 下一步/完成。 */
+/** 说明卡：步数指示 + 标题 + 正文（按步骤声明追加权限提示）+ 跳过 + 下一步/完成。 */
 @Composable
 private fun GuideCard(
     step: GuideStep,
@@ -206,7 +229,7 @@ private fun GuideCard(
             Text(
                 buildString {
                     append(stringResource(step.bodyRes))
-                    if (showPermissionNote && step.targetKey == "bucket_area") {
+                    if (showPermissionNote && step.appendPermissionNote) {
                         append("\n\n")
                         append(stringResource(R.string.guide_permission_note))
                     }

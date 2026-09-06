@@ -11,11 +11,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.app.NotificationManagerCompat
 import com.battor.freshmate.R
+import com.battor.freshmate.ui.common.GuideKeys
+import com.battor.freshmate.ui.common.GuideStateHolder
+import com.battor.freshmate.ui.common.LocalGuideState
 import com.battor.freshmate.ui.main.MainContent
+import com.battor.freshmate.ui.main.NoopMainActions
 
 /**
  * 引导页：mock 数据渲染完整主页界面 + 全屏引导层。
- * 所有交互回调 no-op：引导层已拦截触摸，回调是第二道保险。
+ * 交互回调全走 NoopMainActions：引导层已拦截触摸，空实现是第二道保险。
  * 完成/跳过/返回键都走 onExit(markCompletedOnExit)。
  */
 @Composable
@@ -27,8 +31,8 @@ fun GuideScreen(
     val milkName = stringResource(R.string.guide_mock_milk)
     val yogurtName = stringResource(R.string.guide_mock_yogurt)
     val vegetableName = stringResource(R.string.guide_mock_vegetable)
-    val guideViewModel = remember(milkName, yogurtName, vegetableName) {
-        GuideViewModel(milkName, yogurtName, vegetableName)
+    val mock = remember(milkName, yogurtName, vegetableName) {
+        GuideMockContent(milkName, yogurtName, vegetableName)
     }
     val holder = remember { GuideStateHolder() }
     val machine = remember { GuideStateMachine(GuideSteps.size) }
@@ -44,28 +48,12 @@ fun GuideScreen(
     Box(Modifier.fillMaxSize()) {
         CompositionLocalProvider(LocalGuideState provides holder) {
             MainContent(
-                state = guideViewModel.uiState,
+                state = mock.uiState,
                 errorEvent = null,
                 updateHint = null,
-                onUpdateHintShown = {},
-                onOpenUpdate = {},
-                onOpenHistory = {},
-                onOpenSettings = {},
-                onStartEdit = {},
-                onDelete = {},
-                onUndoDelete = {},
-                onDisperse = {},
-                onStartNew = {},
-                onSave = {},
-                onBackToMethodSelection = {},
-                onUpdateEditing = {},
-                onPermissionRequested = {},
-                onErrorShown = {},
-                onRefreshNow = {},
-                onConfirmPendingSave = {},
-                onCancelPendingSave = {},
-                guideFirstCardKey = "first_card",
-                guideFirstBucketKey = "bucket_area",
+                actions = NoopMainActions,
+                guideFirstCardKey = GuideKeys.FIRST_CARD,
+                guideFirstBucketKey = GuideKeys.BUCKET_AREA,
             )
         }
         GuideOverlay(

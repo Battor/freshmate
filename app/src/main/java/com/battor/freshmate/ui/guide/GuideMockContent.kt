@@ -10,10 +10,11 @@ import java.time.LocalDateTime
  * 引导模式数据源：纯内存 mock 三件条目（覆盖已过期/1 天内/7 天内三个色档），
  * 不持有 Repository、不写 Room、不碰提醒调度——用户真实数据全程不被触及，
  * 「引导结束还原原数据」因此自动成立。
+ * 非 ViewModel（无生命周期、无状态流），故不叫 ViewModel：一次构建、uiState 只读。
  * id 取负数：与任何真实条目 id 空间隔离，排查日志一眼可辨。
- * 名称由调用方经 stringResource 按当前语言解析后传入（VM 层拿不到资源）。
+ * 名称由调用方经 stringResource 按当前语言解析后传入（本层拿不到资源）。
  */
-class GuideViewModel(
+class GuideMockContent(
     milkName: String,
     yogurtName: String,
     vegetableName: String,
