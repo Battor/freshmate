@@ -40,7 +40,6 @@
     <string name="field_quantity">數量（可選，如 2 / 500g）</string>
     <string name="card_status_expired">已過期 %1$s</string>
     <string name="card_status_remaining">還有 %1$s 到期</string>
-    <string name="expiry_preview_remaining">還有 %1$s 到期</string>
     <string name="expiry_preview_expired">已過期 %1$s，儲存後將不再提醒</string>
     <string name="quick_shelf_days">%1$d天</string>
     <string name="quick_shelf_months">%1$d個月</string>
@@ -131,6 +130,7 @@
     <string name="update_check_failed">檢查更新失敗，請稍後重試</string>
     <string name="update_checksum_failed">安裝包校驗失敗</string>
     <string name="update_download_failed">下載失敗：%1$s</string>
+    <string name="update_apk_missing">安裝包已被系統清理，請重新下載</string>
 
     <!-- 通知 -->
     <string name="notification_channel">過期提醒</string>

@@ -52,6 +52,7 @@ import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.ui.main.RestoreGreen
 import com.battor.freshmate.ui.main.categoryIcon
 import com.battor.freshmate.ui.main.expiryText
+import com.battor.freshmate.ui.common.OneShotSnackbar
 import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.ui.main.LocalStatusColors
 import com.battor.freshmate.util.expiryDateTime
@@ -67,15 +68,11 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // asString 需 Composable 上下文，先解析再进 effect
-    val messageText = message?.asString()
-    LaunchedEffect(message) {
-        messageText?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearMessage()
-        }
-    }
+    OneShotSnackbar(
+        message = message,
+        snackbarHostState = snackbarHostState,
+        onShown = viewModel::clearMessage,
+    )
 
     Scaffold(
         topBar = {

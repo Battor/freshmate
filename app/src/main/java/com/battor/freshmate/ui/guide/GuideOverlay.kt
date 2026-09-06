@@ -138,7 +138,13 @@ fun GuideOverlay(
         // 镂空平滑滑向新目标；首个聚光步（null→rect）与布局首帧（尺寸未测得）直接落位不动画
         var animatedHole by remember { mutableStateOf<Rect?>(null) }
         LaunchedEffect(targetHole, overlaySize) {
-            if (targetHole == null || overlaySize == IntSize.Zero) return@LaunchedEffect
+            if (targetHole == null) {
+                // 目标已消失（onDispose 摘除注册）：清陈旧镂空，退回无聚光布局，
+                // 否则聚光灯悬在幽灵位置、说明卡对着不存在的矩形定位
+                animatedHole = null
+                return@LaunchedEffect
+            }
+            if (overlaySize == IntSize.Zero) return@LaunchedEffect
             val from = animatedHole
             if (from == null || from == targetHole) {
                 animatedHole = targetHole

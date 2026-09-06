@@ -8,6 +8,7 @@ import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.notification.ReminderScheduling
 import com.battor.freshmate.notification.scheduleOrCancel
+import com.battor.freshmate.notification.scheduleRestored
 import com.battor.freshmate.R
 import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.util.ExpiryStatus
@@ -251,12 +252,12 @@ class MainViewModel(
         }
     }
 
-    /** 5 秒 Snackbar 撤销 = 立即还原（同一条目同 id，闹钟重排）。 */
+    /** 5 秒 Snackbar 撤销 = 立即还原（同一条目同 id，闹钟重排；快照已流逝则重算）。 */
     fun undoDelete(item: FoodItem) {
         viewModelScope.launch {
             try {
                 repository.restore(item)
-                scheduler.scheduleOrCancel(item, nowProvider())
+                scheduler.scheduleRestored(item, nowProvider())
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理
             } catch (e: Exception) {

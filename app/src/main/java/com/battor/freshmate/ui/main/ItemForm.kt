@@ -73,7 +73,6 @@ import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
 import com.battor.freshmate.util.formatExpired
-import com.battor.freshmate.util.formatRemaining
 import com.battor.freshmate.util.shelfLifeToDays
 import java.time.Duration
 import java.time.Instant
@@ -244,7 +243,7 @@ fun ItemForm(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            ExpiryPreview(state)
+            ExpiryPreview(state, now)
         }
     }
 }
@@ -317,14 +316,13 @@ private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDa
 }
 
 @Composable
-private fun ExpiryPreview(state: EditingState) {
+private fun ExpiryPreview(state: EditingState, now: LocalDateTime) {
     // 数值必须乘上单位（1 + 年 = 365 天），与 save() 的换算保持一致
     val days = state.shelfLifeValue.toIntOrNull()
         ?.takeIf { it > 0 }
         ?.let { shelfLifeToDays(it, state.shelfLifeUnit) }
         ?: return
     val expiry = expiryDateTime(state.productionDate, state.createdAt, days)
-    val now = remember { LocalDateTime.now() }
     val remaining = Duration.between(now, expiry)
     val text = if (remaining.isNegative || remaining.isZero) {
         stringResource(
@@ -332,10 +330,9 @@ private fun ExpiryPreview(state: EditingState) {
             formatExpired(LocalContext.current.resources, remaining.negated()),
         )
     } else {
-        stringResource(
-            R.string.expiry_preview_remaining,
-            formatRemaining(LocalContext.current.resources, remaining),
-        )
+        // 未过期分支与卡片状态文案同源（评审修复：原先手抄且自建 remember{now()} 时间源，
+        // 跨天返回后与表单内 EditingTargetCard 显示矛盾）
+        expiryText(expiry, now)
     }
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

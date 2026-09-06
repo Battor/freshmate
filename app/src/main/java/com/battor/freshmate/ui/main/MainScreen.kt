@@ -85,6 +85,7 @@ import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.ui.common.GuideKeys
+import com.battor.freshmate.ui.common.OneShotSnackbar
 import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.ui.common.guideTarget
@@ -100,32 +101,50 @@ private const val BUCKET_BAR_WIDTH_SCALE = 2f
 private const val BUCKET_BAR_TRACK_ALPHA = 0.3f
 
 /**
- * MainContent 全部交互回调（方法全带默认空实现）：
- * 主流程用匿名对象适配 ViewModel 与导航；引导页直接用 [NoopMainActions]。
+ * MainContent 全部交互回调：主流程用匿名对象适配 ViewModel 与导航（编译器强制覆写全量，
+ * 漏接即编译错误）；引导页用 [NoopMainActions]。
  * 方法名不带 on 前缀——避免与 MainScreen 的同名 lambda 参数在适配对象里递归遮蔽。
  */
 interface MainActions {
-    fun updateHintShown() {}
-    fun openUpdate() {}
-    fun openHistory() {}
-    fun openSettings() {}
-    fun startEdit(item: FoodItem) {}
-    fun delete(item: FoodItem) {}
-    fun undoDelete(item: FoodItem) {}
-    fun disperse() {}
-    fun startNew(method: InputMethodId) {}
-    fun save() {}
-    fun backToMethodSelection() {}
-    fun updateEditing(transform: (MainViewModel.EditingState) -> MainViewModel.EditingState) {}
-    fun permissionRequested() {}
-    fun errorShown() {}
-    fun refreshNow() {}
-    fun confirmPendingSave() {}
-    fun cancelPendingSave() {}
+    fun updateHintShown()
+    fun openUpdate()
+    fun openHistory()
+    fun openSettings()
+    fun startEdit(item: FoodItem)
+    fun delete(item: FoodItem)
+    fun undoDelete(item: FoodItem)
+    fun disperse()
+    fun startNew(method: InputMethodId)
+    fun save()
+    fun backToMethodSelection()
+    fun updateEditing(transform: (MainViewModel.EditingState) -> MainViewModel.EditingState)
+    fun permissionRequested()
+    fun errorShown()
+    fun refreshNow()
+    fun confirmPendingSave()
+    fun cancelPendingSave()
 }
 
-/** 引导页用：纯展示「只看不摸」，全部回调空实现。 */
-object NoopMainActions : MainActions
+/** 引导页用：纯展示「只看不摸」，空实现显式写全——换来主流程适配器漏接时的编译错误。 */
+object NoopMainActions : MainActions {
+    override fun updateHintShown() {}
+    override fun openUpdate() {}
+    override fun openHistory() {}
+    override fun openSettings() {}
+    override fun startEdit(item: FoodItem) {}
+    override fun delete(item: FoodItem) {}
+    override fun undoDelete(item: FoodItem) {}
+    override fun disperse() {}
+    override fun startNew(method: InputMethodId) {}
+    override fun save() {}
+    override fun backToMethodSelection() {}
+    override fun updateEditing(transform: (MainViewModel.EditingState) -> MainViewModel.EditingState) {}
+    override fun permissionRequested() {}
+    override fun errorShown() {}
+    override fun refreshNow() {}
+    override fun confirmPendingSave() {}
+    override fun cancelPendingSave() {}
+}
 
 @Composable
 fun MainScreen(
@@ -185,29 +204,19 @@ internal fun MainContent(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val hintText = updateHint?.asString()
-    val viewLabel = stringResource(R.string.view)
-    val errorText = errorEvent?.asString()
-    LaunchedEffect(errorEvent) {
-        errorText?.let {
-            snackbarHostState.showSnackbar(it)
-            actions.errorShown()
-        }
-    }
-
+    OneShotSnackbar(
+        message = errorEvent,
+        snackbarHostState = snackbarHostState,
+        onShown = actions::errorShown,
+    )
     // 启动静默检查发现新版：Snackbar 一条 + 「查看」跳设置页（一次性，展示即清）
-    LaunchedEffect(updateHint) {
-        if (hintText == null) return@LaunchedEffect
-        try {
-            val result = snackbarHostState.showSnackbar(hintText, actionLabel = viewLabel)
-            actions.updateHintShown()
-            if (result == SnackbarResult.ActionPerformed) actions.openUpdate()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            // 展示中途离开本页（Snackbar 协程被取消）：也清掉一次性提示，防回来重复弹
-            actions.updateHintShown()
-            throw e
-        }
-    }
+    OneShotSnackbar(
+        message = updateHint,
+        snackbarHostState = snackbarHostState,
+        onShown = actions::updateHintShown,
+        actionLabel = stringResource(R.string.view),
+        onAction = actions::openUpdate,
+    )
 
     NotificationPermissionEffect(
         request = state.requestNotificationPermission,
@@ -295,10 +304,16 @@ internal fun MainContent(
                     // 且 LazyColumn 嵌 verticalScroll 会因无限高约束崩溃。
                     // 编辑期间隐藏正在编辑的条目（已是表单内虚线框）；空桶/空置顶区整体不渲染
                     val editingId = editing.editingItemId
-                    val visiblePinned = state.pinnedItems.filterNot { it.id == editingId }
-                    val visibleBuckets = state.buckets
-                        .map { it.copy(items = it.items.filterNot { item -> item.id == editingId }) }
-                        .filter { it.items.isNotEmpty() }
+                    // 记忆化保列表身份稳定：updateEditing 只 copy editing，buckets/pinned 引用
+                    // 击键间不变——若每次重组新建列表（不稳定 List 身份），全部桶与卡片逐字符重组
+                    val visiblePinned = remember(state.pinnedItems, editingId) {
+                        state.pinnedItems.filterNot { it.id == editingId }
+                    }
+                    val visibleBuckets = remember(state.buckets, editingId) {
+                        state.buckets
+                            .map { it.copy(items = it.items.filterNot { item -> item.id == editingId }) }
+                            .filter { it.items.isNotEmpty() }
+                    }
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

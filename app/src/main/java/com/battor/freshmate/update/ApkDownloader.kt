@@ -53,7 +53,8 @@ class ApkDownloader(client: OkHttpClient? = null) {
         Timber.i("UPDATE 下载完成 %s (%d bytes)", dest.name, dest.length())
     }
 
-    fun sha256(file: File): String {
+    /** 整文件哈希是重 IO：必须挂 IO 调度器，调用方（viewModelScope=Main）直调会冻结 UI。 */
+    suspend fun sha256(file: File): String = withContext(Dispatchers.IO) {
         val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->
             val buf = ByteArray(64 * 1024)
@@ -63,7 +64,7 @@ class ApkDownloader(client: OkHttpClient? = null) {
                 digest.update(buf, 0, n)
             }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
+        digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     companion object {

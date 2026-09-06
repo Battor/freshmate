@@ -40,7 +40,6 @@
     <string name="field_quantity">Quantity (optional, e.g. 2 / 500g)</string>
     <string name="card_status_expired">Expired %1$s ago</string>
     <string name="card_status_remaining">Expires in %1$s</string>
-    <string name="expiry_preview_remaining">Expires in %1$s</string>
     <string name="expiry_preview_expired">Expired %1$s ago; no reminders after saving</string>
     <string name="quick_shelf_days">%1$dd</string>
     <string name="quick_shelf_months">%1$d mo</string>
@@ -131,6 +130,7 @@
     <string name="update_check_failed">Update check failed, please try later</string>
     <string name="update_checksum_failed">APK checksum failed</string>
     <string name="update_download_failed">Download failed: %1$s</string>
+    <string name="update_apk_missing">The downloaded APK was cleared by the system. Please download it again.</string>
 
     <!-- Notifications -->
     <string name="notification_channel">Expiry reminders</string>

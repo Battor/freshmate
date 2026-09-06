@@ -34,6 +34,8 @@ import com.battor.freshmate.ui.settings.SettingsScreen
 import com.battor.freshmate.ui.settings.SettingsViewModel
 import com.battor.freshmate.update.UpdateViewModel
 import java.io.File
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /** 路由常量：拼错导航名只在编译期发现，不在运行期静默失败。 */
@@ -106,10 +108,19 @@ fun FreshMateNavGraph() {
                 onExit = {
                     // 完成/跳过都落盘：仅首启路径写标记（设置重看不写，行为无差别但按 spec 区分）。
                     // 须先写完再返回：若先 pop，MAIN 重读标记仍为 false 会再次自动导航（弹两次）。
-                    // runCatching：写盘 IOException 不挡退出（顶多下次再看一遍），别让协程崩溃；
+                    // 只吞 IOException（写盘失败不挡退出，顶多下次再看一遍）——
+                    // runCatching 会连 CancellationException 一起吞掉，破坏结构化并发；
                     // pop 前校验当前目的地：Done 连点会两次进入协程，盲 pop 会把 SETTINGS 也弹掉
                     scope.launch {
-                        if (first) runCatching { settingsRepo.setOnboardingCompleted() }
+                        if (first) {
+                            try {
+                                settingsRepo.setOnboardingCompleted()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: IOException) {
+                                // 写盘失败照常退出，下次启动重看引导
+                            }
+                        }
                         if (navController.currentDestination?.route == Routes.GUIDE) {
                             navController.popBackStack()
                         }

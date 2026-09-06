@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.battor.freshmate.R
 import com.battor.freshmate.data.ThemeMode
+import com.battor.freshmate.ui.common.OneShotSnackbar
 import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.update.UpdateViewModel
 
@@ -67,13 +68,11 @@ fun SettingsScreen(
     onDismissUpdate: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val noticeText = updateState.notice?.asString()
-    LaunchedEffect(updateState.notice) {
-        noticeText?.let {
-            snackbarHostState.showSnackbar(it)
-            onDismissNotice()
-        }
-    }
+    OneShotSnackbar(
+        message = updateState.notice,
+        snackbarHostState = snackbarHostState,
+        onShown = onDismissNotice,
+    )
 
     Scaffold(
         topBar = {

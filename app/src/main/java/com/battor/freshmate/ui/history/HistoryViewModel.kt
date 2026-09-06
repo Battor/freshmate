@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.data.FoodRepository
 import com.battor.freshmate.notification.ReminderScheduling
-import com.battor.freshmate.notification.scheduleOrCancel
+import com.battor.freshmate.notification.scheduleRestored
 import com.battor.freshmate.R
 import com.battor.freshmate.ui.common.UiText
 import java.time.LocalDateTime
@@ -73,7 +73,7 @@ class HistoryViewModel(
         viewModelScope.launch {
             try {
                 repository.restore(item)
-                scheduler.scheduleOrCancel(item, nowProvider())
+                scheduler.scheduleRestored(item, nowProvider())
                 _message.value = UiText(R.string.restored_snackbar, listOf(item.name))
             } catch (e: CancellationException) {
                 throw e // 取消照常上抛，不按失败处理

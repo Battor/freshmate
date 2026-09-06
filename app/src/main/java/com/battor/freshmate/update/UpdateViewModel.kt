@@ -125,6 +125,12 @@ class UpdateViewModel(
     /** 未授权时跳系统授权页；用户授权返回后可再点安装。 */
     fun install() {
         if (!_uiState.value.apkReady) return
+        if (!apkFile.exists()) {
+            // cacheDir 可能被系统在后台清掉（存储压力）：降回未就绪并提示重下，
+            // 否则 FileProvider intent 指向不存在的文件，安装器报解析错误且应用内无提示
+            _uiState.update { it.copy(apkReady = false, notice = UiText(R.string.update_apk_missing)) }
+            return
+        }
         if (!installer.canInstall()) {
             installer.launchPermissionSettings()
             return
