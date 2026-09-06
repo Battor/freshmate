@@ -105,10 +105,14 @@ fun FreshMateNavGraph() {
                 markCompletedOnExit = first,
                 onExit = {
                     // 完成/跳过都落盘：仅首启路径写标记（设置重看不写，行为无差别但按 spec 区分）。
-                    // 须先写完再返回：若先 pop，MAIN 重读标记仍为 false 会再次自动导航（弹两次）
+                    // 须先写完再返回：若先 pop，MAIN 重读标记仍为 false 会再次自动导航（弹两次）。
+                    // runCatching：写盘 IOException 不挡退出（顶多下次再看一遍），别让协程崩溃；
+                    // pop 前校验当前目的地：Done 连点会两次进入协程，盲 pop 会把 SETTINGS 也弹掉
                     scope.launch {
-                        if (first) settingsRepo.setOnboardingCompleted()
-                        navController.popBackStack()
+                        if (first) runCatching { settingsRepo.setOnboardingCompleted() }
+                        if (navController.currentDestination?.route == Routes.GUIDE) {
+                            navController.popBackStack()
+                        }
                     }
                 },
             )
