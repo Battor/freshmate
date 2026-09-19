@@ -12,6 +12,17 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// 更新检查地址：从根目录 update.properties 读取（已 gitignore，服务器路径不入库）。
+// 缺失时 debug/测试回落占位地址仅作开发；release 构建直接失败——占位地址烧进正式包无法挽回。
+val updateProps = Properties().apply {
+    val f = rootProject.file("update.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val manifestUrl: String? = updateProps.getProperty("manifestUrl")?.takeIf { it.isNotBlank() }
+if (manifestUrl == null) {
+    logger.warn("update.properties 缺失或未配置 manifestUrl：本次构建使用占位更新地址（仅限开发，勿发布）")
+}
+
 android {
     namespace = "com.battor.freshmate"
     compileSdk = 36
@@ -23,7 +34,11 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "UPDATE_MANIFEST_URL", "\"https://example.com/freshmate/manifest.json\"")
+        buildConfigField(
+            "String",
+            "UPDATE_MANIFEST_URL",
+            "\"${manifestUrl ?: "https://example.com/freshmate/manifest.json"}\"",
+        )
     }
 
     signingConfigs {
@@ -77,6 +92,25 @@ android {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// release 门禁：更新地址未配置即中止（占位地址烧进正式包后无法挽回），并给出修复指导
+tasks.matching { it.name.contains("Release") }.configureEach {
+    if (manifestUrl == null) {
+        doFirst {
+            throw GradleException(
+                """
+                |
+                |正式构建中止：缺少更新检查地址配置。
+                |请新建文件 ${rootProject.file("update.properties").absolutePath}
+                |内容一行：
+                |    manifestUrl=https://你的域名/freshmate/manifest.json
+                |（该文件已在 .gitignore 中，不会被提交）
+                |
+                """.trimMargin()
+            )
+        }
+    }
 }
 
 dependencies {

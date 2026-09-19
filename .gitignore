@@ -8,3 +8,7 @@ keystore.properties
 .cxx/
 captures/
 .DS_Store
+
+# 发布配置（本地）：更新检查地址、发布产物
+update.properties
+dist/
