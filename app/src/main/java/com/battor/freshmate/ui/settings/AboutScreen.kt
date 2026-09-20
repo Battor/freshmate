@@ -18,15 +18,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,9 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.battor.freshmate.BuildConfig
 import com.battor.freshmate.R
-import com.battor.freshmate.ui.common.OneShotSnackbar
-import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.ui.test.TestEntryCounter
+import android.widget.Toast
 
 /** 开源致谢条目：名称/主页/许可证（名称与 URL 非翻译内容，收在代码里）。 */
 private data class OssEntry(val name: String, val url: String, val license: String)
@@ -54,17 +48,21 @@ private val OssEntries = listOf(
 @Composable
 fun AboutScreen(onBack: () -> Unit, onOpenTest: () -> Unit) {
     val context = LocalContext.current
-    // 隐藏入口：连点 APP 名称 5 次进测试页；第 3 次起 Snackbar 提示剩余次数。
-    // 计数状态随本页 remember——离开页面即重置
-    val snackbarHostState = remember { SnackbarHostState() }
-    var tapHint by remember { mutableStateOf<UiText?>(null) }
+    // 隐藏入口：连点 APP 名称 5 次进测试页；第 3 次起 Toast 提示剩余次数。
+    // 用 Toast 而非 Snackbar：连点提示 1 秒内连发，Snackbar 的取消竞态会吞掉后一条
+    // （平台开发者选项同为 Toast 模式）；计数状态随本页 remember——离开页面即重置
     val entryCounter = remember {
         TestEntryCounter(
-            onHint = { remaining -> tapHint = UiText(R.string.test_tap_hint, listOf(remaining)) },
+            onHint = { remaining ->
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.test_tap_hint, remaining),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            },
             onUnlock = onOpenTest,
         )
     }
-    OneShotSnackbar(message = tapHint, snackbarHostState = snackbarHostState, onShown = { tapHint = null })
     Scaffold(
         topBar = {
             TopAppBar(
@@ -76,7 +74,6 @@ fun AboutScreen(onBack: () -> Unit, onOpenTest: () -> Unit) {
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
