@@ -21,6 +21,7 @@ import com.battor.freshmate.util.shelfLifeToDays
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CancellationException
+import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -286,6 +287,9 @@ class MainViewModel(
                 reminderTimes = computeReminderTimes(expiry, days, nowProvider()),
                 // 编辑保存回到活跃态（编辑入口只对活跃条目开放）
             )
+            // 计算后的通知时点快照（spec §4）：Timber 同出 logcat 与应用内日志文件，
+            // 装机走查无需连电脑即可核对；与 ReminderScheduler 的「实际排几个」日志互补
+            Timber.i("REMINDER 快照 name=%s 时点=%s", item.name, item.reminderTimes)
             val itemId = try {
                 if (editing.editingItemId == null) {
                     repository.insert(item)
