@@ -37,6 +37,9 @@
         <receiver android:name=".notification.ReminderBroadcastReceiver"
             android:exported="false" />
 
+        <receiver android:name=".notification.TestAlarmReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".notification.BootReceiver"
             android:exported="true">
