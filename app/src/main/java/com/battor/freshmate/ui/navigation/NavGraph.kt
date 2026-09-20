@@ -32,6 +32,8 @@ import com.battor.freshmate.ui.main.MainViewModel
 import com.battor.freshmate.ui.settings.AboutScreen
 import com.battor.freshmate.ui.settings.SettingsScreen
 import com.battor.freshmate.ui.settings.SettingsViewModel
+import com.battor.freshmate.ui.test.TestScreen
+import com.battor.freshmate.ui.test.TestViewModel
 import com.battor.freshmate.update.UpdateViewModel
 import java.io.File
 import java.io.IOException
@@ -45,6 +47,7 @@ private object Routes {
     const val SETTINGS = "settings"
     const val LOG_VIEWER = "logviewer"
     const val ABOUT = "about"
+    const val TEST = "test"
 
     /** 目的地模式串（带占位符），只用于 composable() 注册。 */
     const val GUIDE = "guide?first={first}"
@@ -158,7 +161,17 @@ fun FreshMateNavGraph() {
                 onBack = { navController.popBackStack() },
             )
         }
-        composable(Routes.ABOUT) { AboutScreen(onBack = { navController.popBackStack() }) }
+        composable(Routes.ABOUT) {
+            AboutScreen(
+                onBack = { navController.popBackStack() },
+                onOpenTest = { navController.navigate(Routes.TEST) },
+            )
+        }
+        composable(Routes.TEST) {
+            val context = LocalContext.current.applicationContext
+            val viewModel: TestViewModel = viewModel(factory = testFactory(context))
+            TestScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
+        }
     }
 }
 
@@ -192,5 +205,11 @@ private fun historyFactory(context: Context) = viewModelFactory {
             repository = FoodItemRepository(FoodItemDatabase.get(context).foodItemDao()),
             scheduler = ReminderScheduler(context),
         )
+    }
+}
+
+private fun testFactory(context: Context) = viewModelFactory {
+    initializer {
+        TestViewModel(repository = FoodItemRepository(FoodItemDatabase.get(context).foodItemDao()))
     }
 }
