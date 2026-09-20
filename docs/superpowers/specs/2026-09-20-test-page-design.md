@@ -47,7 +47,12 @@
 - `TestScreen` 三个档位按钮（15 秒 / 1 分钟 / 5 分钟）→ `TestAlarmReceiver.schedule(context, atMillis)`：
   - `setExactAndAllowWhileIdle`；精确闹钟不可用回落 `setAndAllowWhileIdle`（与 `ReminderScheduler` 同策略）
   - requestCode 固定 0（独立 component，与 item 的 `itemId*10+index` 编码不冲突）；`FLAG_UPDATE_CURRENT` 使重复点按自然覆盖重排
-  - 排上后 Snackbar `test_scheduled`（「已排，%1$s 后送达」）+ `Timber.i("ALARM test schedule …")`
+  - 排上后测试页**状态区**显示本次测试的生命周期（`TestAlarmTracker` 进程内状态流，无历史、只看本次）：
+    - `已排，HH:mm:ss 触发` → 到点后变 `已送达（HH:mm:ss）`
+    - 通知权限未开：`未送达：通知权限未开（HH:mm:ss）`
+    - 排了闹钟但到点 +10 秒宽限仍未触发：`闹钟未触发（可能被系统省电拦截）`——点档位和触发之间断掉只能出现在这一环
+    - 状态在进程内存活（receiver 与页面同进程）；进程被杀则回落 Idle，属可接受边界
+  - `Timber.i("ALARM test schedule …")` 照记，与状态区互补
 - `onReceive` 构造通知与过期提醒同渠道同外观：`ReminderIds.CHANNEL_ID`、`ic_reminder`、标题 `notification_title`、正文 `test_notification_body`（「测试通知：提醒链路正常」）、`setAutoCancel(true)`、点击打开 app（照抄 `ReminderBroadcastReceiver` 的写法）
 - 到点触发时 `Timber.i("ALARM test fired")`，便于日志页核对链路
 
@@ -73,12 +78,12 @@ Timber.i("REMINDER 快照 name=%s 时点=%s", item.name, item.reminderTimes)
 | `app/src/main/java/com/battor/freshmate/ui/settings/AboutScreen.kt` | 修改——入口 |
 | `app/src/main/java/com/battor/freshmate/ui/navigation/NavGraph.kt` | 修改——TEST 路由 |
 | `app/src/main/java/com/battor/freshmate/ui/main/MainViewModel.kt` | 修改——快照日志 |
-| `app/src/main/res/values{,-zh-rTW,-en}/strings.xml` | 修改——新增 8 条字符串：test_title、test_tap_hint、test_empty、test_scheduled、test_notification_body、test_delay_15s、test_delay_1m、test_delay_5m |
+| `app/src/main/res/values{,-zh-rTW,-en}/strings.xml` | 修改——新增 11 条字符串：test_title、test_tap_hint、test_empty、test_notification_body、test_delay_15s、test_delay_1m、test_delay_5m、test_status_scheduled、test_status_delivered、test_status_failed_perm、test_status_not_fired |
 
 ## 错误处理与边界
 
 - 精确闹钟权限关闭：测试通知回落非精确闹钟（照常排，时间可能小幅偏差）；主功能已有横幅，测试页不重复拦截
-- 通知权限关闭：测试页顶部横幅提醒；点档位仍排闹钟（到点 receiver 里 `areNotificationsEnabled()` 检查，未开则只记日志不发通知，与主链路行为一致）
+- 通知权限关闭：测试页顶部横幅提醒；点档位仍排闹钟（到点 receiver 里 `areNotificationsEnabled()` 检查，未开则记日志、状态区显示失败原因，不发通知，与主链路行为一致）
 - 连点中途离开关于页：计数随状态销毁重置，无残留
 
 ## 测试策略
