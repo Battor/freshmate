@@ -120,6 +120,19 @@
     <string name="about_tagline">記錄食品保存期限，臨期提醒不浪費。</string>
     <string name="about_oss_title">開源項目</string>
 
+    <!-- 功能測試頁（隱藏入口：關於頁連點 APP 名稱 5 次） -->
+    <string name="test_title">測試頁</string>
+    <string name="test_tap_hint">再點 %1$d 次進入測試頁</string>
+    <string name="test_empty">暫無待通知</string>
+    <string name="test_notification_body">測試通知：提醒鏈路正常</string>
+    <string name="test_delay_15s">15 秒</string>
+    <string name="test_delay_1m">1 分鐘</string>
+    <string name="test_delay_5m">5 分鐘</string>
+    <string name="test_status_scheduled">已排，%1$s 觸發</string>
+    <string name="test_status_delivered">已送達（%1$s）</string>
+    <string name="test_status_failed_perm">未送達：通知權限未開（%1$s）</string>
+    <string name="test_status_not_fired">鬧鐘未觸發（可能被系統省電攔截）</string>
+
     <!-- 更新 -->
     <string name="update_hint">發現新版本 %1$s</string>
     <string name="update_found_title">發現新版本 %1$s</string>
