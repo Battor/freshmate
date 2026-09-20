@@ -73,7 +73,7 @@ Timber.i("REMINDER 快照 name=%s 时点=%s", item.name, item.reminderTimes)
 | `app/src/main/java/com/battor/freshmate/ui/settings/AboutScreen.kt` | 修改——入口 |
 | `app/src/main/java/com/battor/freshmate/ui/navigation/NavGraph.kt` | 修改——TEST 路由 |
 | `app/src/main/java/com/battor/freshmate/ui/main/MainViewModel.kt` | 修改——快照日志 |
-| `app/src/main/res/values{,-zh-rTW,-en}/strings.xml` | 修改——新增 6 条字符串（test_title / test_tap_hint / test_empty / test_scheduled / test_notification_body，及档位标签） |
+| `app/src/main/res/values{,-zh-rTW,-en}/strings.xml` | 修改——新增 8 条字符串：test_title、test_tap_hint、test_empty、test_scheduled、test_notification_body、test_delay_15s、test_delay_1m、test_delay_5m |
 
 ## 错误处理与边界
 
