@@ -15,9 +15,16 @@ class ExpiryUtilsTest {
         )
 
     @Test
-    fun `填了生产日期时从当天零点起算`() =
+    fun `填了生产日期时到期日当天结束`() =
         assertEquals(
-            LocalDateTime.of(2026, 8, 15, 0, 0),
+            LocalDateTime.of(2026, 8, 15, 23, 59, 59),
             expiryDateTime(java.time.LocalDate.of(2026, 8, 10), created, 5),
+        )
+
+    @Test
+    fun `生产日期当天的当天到期`() =
+        assertEquals(
+            LocalDateTime.of(2026, 8, 15, 23, 59, 59),
+            expiryDateTime(java.time.LocalDate.of(2026, 8, 15), created, 0),
         )
 }

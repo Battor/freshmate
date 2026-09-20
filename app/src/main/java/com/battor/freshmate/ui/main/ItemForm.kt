@@ -95,18 +95,10 @@ private val QuickShelfLives = listOf(
 )
 
 /**
- * 需求-5：新增表单里保质期一旦有效而生产日期为空，自动填今天。
- * 编辑表单不适用：旧条目起算点是当时的录入时刻（createdAt），自动填今天会大幅改变到期语义。
+ * 需求-5 曾有「保质期一旦有效自动把生产日期填成今天」——已删：
+ * 自动填充会把所有新条目推进生产日期分支（到期锚定当天 00:00 + N 天），
+ * 夜晚录入「1 天保质期」只剩几小时、提醒全落凌晨。留空走 createdAt + N 天（录入时刻起算）。
  */
-private fun EditingState.withAutoProductionDate(shelfLifeText: String): EditingState =
-    if (editingItemId == null &&
-        productionDate == null &&
-        shelfLifeText.toIntOrNull()?.let { it > 0 } == true
-    ) {
-        copy(productionDate = LocalDate.now())
-    } else {
-        this
-    }
 
 /** 需求-6：编辑区中性化——输入框统一 surfaceContainerLowest 填充（浅色近白/深色近黑），不透出卡片底色。 */
 @Composable
@@ -186,8 +178,7 @@ fun ItemForm(
                 onValueChange = { text ->
                     val filtered = text.filter { it in '0'..'9' }.take(4)
                     onStateChange(
-                        state.copy(shelfLifeValue = filtered, shelfLifeError = false)
-                            .withAutoProductionDate(filtered),
+                        state.copy(shelfLifeValue = filtered, shelfLifeError = false),
                     )
                 },
                 label = { Text(stringResource(R.string.field_shelf_life)) },
@@ -226,7 +217,7 @@ fun ItemForm(
                                     shelfLifeValue = text,
                                     shelfLifeUnit = quick.unit,
                                     shelfLifeError = false,
-                                ).withAutoProductionDate(text),
+                                ),
                             )
                         },
                         label = { Text(stringResource(quick.labelRes, quick.value)) },
