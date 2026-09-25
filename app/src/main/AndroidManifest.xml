@@ -40,6 +40,9 @@
         <receiver android:name=".notification.TestAlarmReceiver"
             android:exported="false" />
 
+        <receiver android:name=".notification.DailyDigestReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".notification.BootReceiver"
             android:exported="true">

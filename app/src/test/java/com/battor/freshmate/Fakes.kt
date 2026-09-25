@@ -45,7 +45,9 @@ class FakeRepository : FoodRepository {
 class FakeScheduler : ReminderScheduling {
     val scheduled = mutableListOf<FoodItem>()
     val cancelled = mutableListOf<Long>()
+    var rescheduledAllRestored = false
     override fun schedule(item: FoodItem) { scheduled.add(item) }
     override fun cancel(itemId: Long) { cancelled.add(itemId) }
     override suspend fun rescheduleAll() {}
+    override suspend fun rescheduleAllAsRestored() { rescheduledAllRestored = true }
 }

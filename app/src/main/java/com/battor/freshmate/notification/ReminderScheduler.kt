@@ -17,6 +17,10 @@ interface ReminderScheduling {
     fun schedule(item: FoodItem)
     fun cancel(itemId: Long)
     suspend fun rescheduleAll()
+
+    /** 模式切回逐个专用：还原语义重排——快照时点已全流逝但未过期的条目按当前时刻重算
+     *  （统一模式期间物品闹钟空转流逝的时点不会自动补，切回必须重算才不漏）。 */
+    suspend fun rescheduleAllAsRestored()
 }
 
 class ReminderScheduler(private val context: Context) : ReminderScheduling {
@@ -55,6 +59,13 @@ class ReminderScheduler(private val context: Context) : ReminderScheduling {
         Timber.i("ALARM rescheduleAll ← %d items", items.size)
         val now = LocalDateTime.now()
         items.forEach { scheduleOrCancel(it, now) }
+    }
+
+    override suspend fun rescheduleAllAsRestored() = withContext(Dispatchers.IO) {
+        val items = FoodItemDatabase.get(context).foodItemDao().getAllOnce()
+        Timber.i("ALARM rescheduleAllAsRestored ← %d items", items.size)
+        val now = LocalDateTime.now()
+        items.forEach { scheduleRestored(it, now) }
     }
 
     private fun broadcast(itemId: Long, index: Int): PendingIntent =

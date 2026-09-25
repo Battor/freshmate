@@ -6,13 +6,16 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.battor.freshmate.R
+import com.battor.freshmate.data.DataStoreSettingsRepository
 import com.battor.freshmate.data.FoodItemDatabase
+import com.battor.freshmate.data.PushMode
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.formatRemaining
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -24,6 +27,11 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // 统一推送模式：物品闹钟只触发不发通知（模式判断收敛在此，写路径零改动）
+                if (DataStoreSettingsRepository(context).pushMode.first() == PushMode.DIGEST) {
+                    Timber.i("BCAST 统一模式跳过物品提醒 itemId=%d", itemId)
+                    return@launch
+                }
                 runCatching {
                     // 软删除条目不发通知（闹钟竞态时仍可能收到过期 PendingIntent）
                     val item = FoodItemDatabase.get(context).foodItemDao().getById(itemId)
