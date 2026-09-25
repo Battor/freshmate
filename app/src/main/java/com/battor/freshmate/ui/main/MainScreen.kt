@@ -237,10 +237,16 @@ internal fun MainContent(
     var pendingDelete by remember { mutableStateOf<FoodItem?>(null) }
     val onDeleteItem: (FoodItem) -> Unit = { item -> pendingDelete = item }
 
+    // 编辑态当前吸附段（提升到 Scaffold 外：顶栏与 pager 内容都要读写）。
+    // key(isEditing)：每次进出编辑态回落 FORM，避免上次停留段的旧值在 pager 重建前
+    // 先渲染一帧错误顶栏
+    var editPage by remember(state.isEditing) { mutableStateOf(EditPageKind.FORM) }
+
     Scaffold(
         topBar = {
-            // 需求-7：编辑态顶栏换编辑操作——左上返回、标题按模式、右上保存（逻辑同原 FAB 两按钮）
-            if (state.isEditing) {
+            // 需求-7 走查：编辑态滑到「已添加」段时顶栏回到默认样式（应用名 + 历史/设置），
+            // 本次操作/编辑区两段仍是编辑操作栏
+            if (state.isEditing && editPage != EditPageKind.EXISTING) {
                 TopAppBar(
                     title = {
                         Text(
@@ -272,7 +278,7 @@ internal fun MainContent(
                 )
             } else {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.app_name)) },
+                    title = { Text(stringResource(R.string.app_title)) },
                     actions = {
                         // 引导第 5 步聚光顶栏动作区（主流程 holder 为 null，guideTarget 原样返回）
                         Row(Modifier.guideTarget(GuideKeys.TOPBAR)) {
@@ -305,12 +311,14 @@ internal fun MainContent(
             }
         },
     ) { padding ->
+        // imePadding 不加在这里：键盘弹出会逐帧压缩 pager 视口，pager 反复重算吸附位置
+        // 与输入框 bring-into-view 互相触发——正是「点数量框后页面上下抖动」的走查 BUG。
+        // 改由各分支内部（非编辑 LazyColumn / EditingPager 每页）自行 imePadding。
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .consumeWindowInsets(padding)
-                .imePadding(),
+                .consumeWindowInsets(padding),
         ) {
             PermissionBanners()
             // 400ms 短暂亮灯给「散入各桶」一个可见反馈，不做假加载
@@ -355,9 +363,10 @@ internal fun MainContent(
                         onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
                         onStartEdit = actions::startEdit,
                         onDeleteItem = onDeleteItem,
+                        onPageChanged = { editPage = it },
                     )
                 } else {
-                    Box(modifier = Modifier.fillMaxWidth()) {
+                    Box(modifier = Modifier.fillMaxWidth().imePadding()) {
                         PullToRefreshBox(
                             isRefreshing = refreshing,
                             onRefresh = {

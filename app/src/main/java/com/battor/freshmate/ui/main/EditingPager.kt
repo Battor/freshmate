@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.VerticalPager
@@ -23,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +66,8 @@ fun EditingPager(
     onPlaceholderHint: (String) -> Unit,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
+    /** 当前吸附段变化时上报——MainScreen 据此切换顶栏（已添加段显示默认样式） */
+    onPageChanged: (EditPageKind) -> Unit = {},
 ) {
     val hasExisting = buckets.isNotEmpty()
     val structure = remember(pinned.isNotEmpty(), hasExisting) {
@@ -74,6 +78,12 @@ fun EditingPager(
     key(structure) {
         val pagerState = rememberPagerState(initialPage = structure.defaultIndex) { structure.pages.size }
         val scope = rememberCoroutineScope()
+
+        // 段切换（含 key(structure) 重建回编辑区）都把当前段同步出去；初始也发一次，
+        // 让顶栏状态与 pager 实际页始终一致
+        LaunchedEffect(structure, pagerState.currentPage) {
+            structure.pages.getOrNull(pagerState.currentPage)?.let(onPageChanged)
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             VerticalPager(
@@ -187,6 +197,10 @@ private fun EditScrollColumn(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // 键盘避让收在页内而不是 pager 外层：pager 视口尺寸恒定，IME 弹出不会
+            // 触发 pager resize→重算吸附→bring-into-view 的抖动循环（走查 BUG）。
+            // 键盘弹出期间贴底梯形被 IME 挡住，属预期（收起即恢复）
+            .imePadding()
             .verticalScroll(rememberScrollState())
             // 上下 28dp：为屏幕边缘的梯形色块留位，静止时内容不与梯形重叠（走查反馈）
             .padding(top = 28.dp, bottom = 28.dp, start = 16.dp, end = 16.dp),
@@ -263,7 +277,7 @@ class TrapezoidShape(private val orientation: Orientation) : Shape {
         path.moveTo(corners[0].first.x, corners[0].first.y)
         for (i in 0 until n) {
             val (start, vertex, end) = corners[i]
-            path.quadraticBezierTo(vertex.x, vertex.y, end.x, end.y)
+            path.quadraticTo(vertex.x, vertex.y, end.x, end.y)
             val nextStart = corners[(i + 1) % n].first
             path.lineTo(nextStart.x, nextStart.y)
         }

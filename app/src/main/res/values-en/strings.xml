@@ -2,6 +2,7 @@
 <resources>
     <!-- Common -->
     <string name="app_name">食刻 FreshMate</string>
+    <string name="app_title">FreshMate</string>
     <string name="back">Back</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>

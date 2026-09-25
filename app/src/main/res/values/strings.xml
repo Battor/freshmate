@@ -2,6 +2,8 @@
 <resources>
     <!-- 通用 -->
     <string name="app_name">食刻 FreshMate</string>
+    <!-- 顶栏标题按语言显示短名（走查反馈）；app_name 带双语全名只用于桌面图标 -->
+    <string name="app_title">食刻</string>
     <string name="back">返回</string>
     <string name="ok">确定</string>
     <string name="cancel">取消</string>
