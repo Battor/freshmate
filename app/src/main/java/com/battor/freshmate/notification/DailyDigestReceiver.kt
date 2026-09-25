@@ -38,11 +38,7 @@ class DailyDigestReceiver : BroadcastReceiver() {
                         Timber.i("BCAST digest 逐个模式，跳过且不自续")
                         return@runCatching
                     }
-                    val items = FoodItemDatabase.get(context).foodItemDao().getAllOnce()
-                        .filter { it.deletedAt == null }
-                    val tiers = digestTiers(items, LocalDateTime.now())
-                    postTier(context, slot = 0, items = tiers.dueWithin1d, labelRes = R.string.status_due_1d)
-                    postTier(context, slot = 1, items = tiers.dueWithin3d, labelRes = R.string.status_due_3d)
+                    postDigestNow(context)
                     applyPushConfig(context) // 自续：按设置重装全部时间点
                 }.onFailure { Timber.w(it, "BCAST digest 处理失败") }
             } finally {
@@ -50,21 +46,34 @@ class DailyDigestReceiver : BroadcastReceiver() {
             }
         }
     }
+}
 
-    /** 发一档通知；档为空则清残留旧通知（通知不自动消失，不清会永远陈述过期信息）。 */
-    private fun postTier(
-        context: Context,
-        slot: Int,
-        items: List<FoodItem>,
-        labelRes: Int,
-    ) {
-        // from(context) 内联构造（与 ReminderBroadcastReceiver 同款写法）
-        val nm = NotificationManagerCompat.from(context)
-        val id = DigestIds.notificationId(slot)
-        if (items.isEmpty()) {
-            nm.cancel(id) // 档清空则清残留旧通知（通知不自动消失）
-            return
-        }
+/**
+ * 立即查库分桶发两档摘要（不判模式、不自续闹钟）——接收器与测试页「立即推送」共用。
+ * 挂起因为查库；调用方自管线程。
+ */
+internal suspend fun postDigestNow(context: Context) {
+    val items = FoodItemDatabase.get(context).foodItemDao().getAllOnce()
+        .filter { it.deletedAt == null }
+    val tiers = digestTiers(items, LocalDateTime.now())
+    postTier(context, slot = 0, items = tiers.dueWithin1d, labelRes = R.string.status_due_1d)
+    postTier(context, slot = 1, items = tiers.dueWithin3d, labelRes = R.string.status_due_3d)
+}
+
+/** 发一档通知；档为空则清残留旧通知（通知不自动消失，不清会永远陈述过期信息）。 */
+private fun postTier(
+    context: Context,
+    slot: Int,
+    items: List<FoodItem>,
+    labelRes: Int,
+) {
+    // from(context) 内联构造（与 ReminderBroadcastReceiver 同款写法）
+    val nm = NotificationManagerCompat.from(context)
+    val id = DigestIds.notificationId(slot)
+    if (items.isEmpty()) {
+        nm.cancel(id) // 档清空则清残留旧通知（通知不自动消失）
+        return
+    }
         val builder = NotificationCompat.Builder(context, ReminderIds.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_reminder)
             .setContentTitle(
@@ -108,4 +117,3 @@ class DailyDigestReceiver : BroadcastReceiver() {
             Timber.i("NOTIFY digest 档位%d %d 项", slot, items.size)
         }
     }
-}

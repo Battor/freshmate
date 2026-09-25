@@ -217,6 +217,9 @@ private fun historyFactory(context: Context) = viewModelFactory {
 
 private fun testFactory(context: Context) = viewModelFactory {
     initializer {
-        TestViewModel(repository = FoodItemRepository(FoodItemDatabase.get(context).foodItemDao()))
+        TestViewModel(
+            repository = FoodItemRepository(FoodItemDatabase.get(context).foodItemDao()),
+            settings = DataStoreSettingsRepository(context),
+        )
     }
 }

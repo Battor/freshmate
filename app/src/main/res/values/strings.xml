@@ -153,6 +153,8 @@
     <string name="test_tap_hint">再点 %1$d 次进入测试页</string>
     <string name="test_empty">暂无待通知</string>
     <string name="test_notification_body">测试通知：提醒链路正常</string>
+    <string name="test_push_mode_line">推送方式：%1$s</string>
+    <string name="test_digest_fire">立即推送测试摘要</string>
     <string name="test_delay_15s">15 秒</string>
     <string name="test_delay_1m">1 分钟</string>
     <string name="test_delay_5m">5 分钟</string>

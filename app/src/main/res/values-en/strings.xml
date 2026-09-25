@@ -150,6 +150,8 @@
     <string name="test_tap_hint">Tap %1$d more times to open the test page</string>
     <string name="test_empty">No pending reminders</string>
     <string name="test_notification_body">Test notification: reminder pipeline works</string>
+    <string name="test_push_mode_line">Push mode: %1$s</string>
+    <string name="test_digest_fire">Send digest now</string>
     <string name="test_delay_15s">15 s</string>
     <string name="test_delay_1m">1 min</string>
     <string name="test_delay_5m">5 min</string>

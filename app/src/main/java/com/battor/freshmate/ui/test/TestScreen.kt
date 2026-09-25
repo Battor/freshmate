@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,22 +25,30 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.battor.freshmate.R
+import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.data.PushMode
 import com.battor.freshmate.notification.TestAlarmReceiver
 import com.battor.freshmate.notification.TestAlarmState
 import com.battor.freshmate.notification.TestAlarmTracker
 import com.battor.freshmate.notification.formatTestTime
+import com.battor.freshmate.notification.postDigestNow
 import com.battor.freshmate.ui.main.PermissionBanners
+import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.formatRemaining
 import java.time.Duration
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val TimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
@@ -52,6 +61,7 @@ fun TestScreen(viewModel: TestViewModel, onBack: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val alarmState by TestAlarmTracker.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     // 「到点未触发」需要一次未来的重组：到点+宽限期后戳一下 nowTick
     var nowTick by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(alarmState) {
@@ -82,6 +92,20 @@ fun TestScreen(viewModel: TestViewModel, onBack: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(padding)) {
             // 复用主页横幅：通知/精确闹钟被关时提示，免得测了半天误判链路坏了
             PermissionBanners()
+            // 推送方式与摘要时间（对应设置页；统一模式的列表区换实时摘要预览）
+            val separator = stringResource(R.string.digest_name_separator)
+            val modeLine = if (state.pushMode == PushMode.DIGEST) {
+                stringResource(R.string.push_mode_digest) + " · " +
+                    state.digestTimes.joinToString(separator) { it.toString() }
+            } else {
+                stringResource(R.string.push_mode_individual)
+            }
+            Text(
+                stringResource(R.string.test_push_mode_line, modeLine),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -94,32 +118,82 @@ fun TestScreen(viewModel: TestViewModel, onBack: () -> Unit) {
                     ) { Text(label) }
                 }
             }
+            if (state.pushMode == PushMode.DIGEST) {
+                // 立即走真实 DailyDigestReceiver 推送链路，走查摘要不用等到设定时刻
+                OutlinedButton(
+                    onClick = { scope.launch { postDigestNow(context) } },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) { Text(stringResource(R.string.test_digest_fire)) }
+            }
             TestStatusLine(alarmState, nowTick)
-            if (state.pending.isEmpty()) {
-                Text(
-                    stringResource(R.string.test_empty),
-                    modifier = Modifier.padding(24.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (state.pushMode == PushMode.DIGEST) {
+                if (state.digestPreview.dueWithin1d.isEmpty() && state.digestPreview.dueWithin3d.isEmpty()) {
+                    TestEmptyHint()
+                } else {
+                    LazyColumn {
+                        digestPreviewSection(state.digestPreview.dueWithin1d, R.string.status_due_1d, state.now)
+                        digestPreviewSection(state.digestPreview.dueWithin3d, R.string.status_due_3d, state.now)
+                    }
+                }
             } else {
-                LazyColumn {
-                    items(state.pending) { reminder ->
-                        ListItem(
-                            headlineContent = { Text(reminder.time.format(TimeFormatter)) },
-                            supportingContent = {
-                                Text(
-                                    reminder.itemName + " · " + formatRemaining(
-                                        context.resources,
-                                        Duration.between(state.now, reminder.time),
-                                    ),
-                                )
-                            },
-                        )
+                if (state.pending.isEmpty()) {
+                    TestEmptyHint()
+                } else {
+                    LazyColumn {
+                        items(state.pending) { reminder ->
+                            ListItem(
+                                headlineContent = { Text(reminder.time.format(TimeFormatter)) },
+                                supportingContent = {
+                                    Text(
+                                        reminder.itemName + " · " + formatRemaining(
+                                            context.resources,
+                                            Duration.between(state.now, reminder.time),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/** 列表区空态。 */
+@Composable
+private fun TestEmptyHint() {
+    Text(
+        stringResource(R.string.test_empty),
+        modifier = Modifier.padding(24.dp),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/** 摘要预览的一档：档头（档位名 + 条数）+ 条目行（名称 + 剩余时长）。 */
+private fun LazyListScope.digestPreviewSection(
+    items: List<FoodItem>,
+    @StringRes labelRes: Int,
+    now: LocalDateTime,
+) {
+    if (items.isEmpty()) return
+    item(key = "digest_header_$labelRes") {
+        Text(
+            stringResource(R.string.digest_title, stringResource(labelRes), items.size),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+    items(items, key = { "digest_${labelRes}_${it.id}" }) { item ->
+        val context = LocalContext.current
+        val expiry = expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays)
+        ListItem(
+            headlineContent = { Text(item.name) },
+            supportingContent = {
+                Text(formatRemaining(context.resources, Duration.between(now, expiry)))
+            },
+        )
     }
 }
 
