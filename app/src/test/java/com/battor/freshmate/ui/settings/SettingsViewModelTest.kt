@@ -1,7 +1,10 @@
 package com.battor.freshmate.ui.settings
 
+import com.battor.freshmate.data.DEFAULT_DIGEST_TIMES
+import com.battor.freshmate.data.PushMode
 import com.battor.freshmate.data.SettingsRepository
 import com.battor.freshmate.data.ThemeMode
+import java.time.LocalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,9 +23,17 @@ class SettingsViewModelTest {
 
     private class FakeRepo(initial: ThemeMode) : SettingsRepository {
         override val themeMode = MutableStateFlow(initial)
+        override val pushMode = MutableStateFlow(PushMode.DIGEST)
+        override val digestTimes = MutableStateFlow(DEFAULT_DIGEST_TIMES)
         override val onboardingCompleted = MutableStateFlow(true)
         override suspend fun setThemeMode(mode: ThemeMode) {
             themeMode.value = mode
+        }
+        override suspend fun setPushMode(mode: PushMode) {
+            pushMode.value = mode
+        }
+        override suspend fun setDigestTimes(times: List<LocalTime>) {
+            digestTimes.value = times
         }
         override suspend fun setOnboardingCompleted() {
             onboardingCompleted.value = true
