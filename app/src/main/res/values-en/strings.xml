@@ -61,6 +61,12 @@
     <string name="discard_back">Discard and go back</string>
     <string name="stash_and_continue">Save and continue</string>
 
+    <string name="unsaved_title">Unsaved changes</string>
+    <string name="unsaved_text">Save your changes before leaving?</string>
+    <string name="save_and_exit">Save and exit</string>
+    <string name="discard_exit">Discard</string>
+    <string name="press_back_again">Press back again to exit</string>
+
     <!-- Editing three-pane (req-7): top bar titles + trapezoid pager hints -->
     <string name="edit_title_add">Add</string>
     <string name="edit_title_edit">Edit</string>
@@ -69,7 +75,7 @@
     <string name="trap_form_to_existing">Swipe down to view existing</string>
     <string name="trap_existing_to_form">Swipe up to keep editing</string>
     <string name="preview_new_name">New item</string>
-    <string name="preview_expiry_placeholder">— d — h</string>
+    <string name="preview_expiry_placeholder">- d - h</string>
 
     <!-- Durations & status -->
     <string name="duration_days">%1$d d</string>

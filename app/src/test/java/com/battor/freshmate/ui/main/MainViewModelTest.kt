@@ -257,6 +257,48 @@ class MainViewModelTest {
         assertTrue(vm.uiState.value.buckets.isEmpty()) // 置顶区条目不重复出现在桶中
     }
 
+    @Test fun `保存并退出后关闭表单且条目进置顶区`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        vm.updateEditing { it.copy(name = "牛奶", shelfLifeValue = "7") }
+        vm.saveAndExit()
+        advanceUntilIdle()
+        assertEquals(1, repo.items.value.size)
+        // 与「暂存并继续」的区别：表单关闭，但会话集合照记（置顶区可见刚存的条目）
+        assertNull(vm.uiState.value.editing)
+        assertEquals(setOf(repo.items.value[0].id), vm.uiState.value.sessionItemIds)
+        assertEquals(1, vm.uiState.value.pinnedItems.size)
+    }
+
+    @Test fun `保存并退出校验失败时不落库留在表单`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        vm.updateEditing { it.copy(shelfLifeValue = "7") } // 名称空
+        vm.saveAndExit()
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.editing?.nameError == true)
+        assertTrue(repo.items.value.isEmpty())
+        // 补上名称后走 ✓ 暂存：意图已被 save() 清掉，回到「暂存并继续」
+        vm.updateEditing { it.copy(name = "牛奶") }
+        vm.save()
+        advanceUntilIdle()
+        assertNotNull(vm.uiState.value.editing)
+        assertEquals(1, repo.items.value.size)
+    }
+
+    @Test fun `放弃表单清掉保存并退出意图`() = runTest(dispatcher) {
+        vm.startNew(InputMethodId.MANUAL)
+        vm.updateEditing { it.copy(shelfLifeValue = "7") } // 名称空 → 校验失败
+        vm.saveAndExit()
+        advanceUntilIdle()
+        vm.backToMethodSelection()
+        vm.startNew(InputMethodId.MANUAL)
+        vm.updateEditing { it.copy(name = "面包", shelfLifeValue = "3") }
+        vm.save()
+        advanceUntilIdle()
+        // 旧意图不该波及新表单：✓ 暂存后仍是清空继续
+        assertNotNull(vm.uiState.value.editing)
+        assertTrue(vm.uiState.value.editing!!.name.isEmpty())
+    }
+
     @Test fun `暂存后表单清空但保留输入方式和分类`() = runTest(dispatcher) {
         vm.startNew(InputMethodId.VOICE)
         vm.updateEditing {

@@ -54,6 +54,7 @@ fun GuideScreen(
                 actions = NoopMainActions,
                 guideFirstCardKey = GuideKeys.FIRST_CARD,
                 guideFirstBucketKey = GuideKeys.BUCKET_AREA,
+                handleSystemBack = false,
             )
         }
         GuideOverlay(

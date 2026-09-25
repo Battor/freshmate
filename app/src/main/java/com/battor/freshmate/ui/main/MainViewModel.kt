@@ -132,6 +132,10 @@ class MainViewModel(
     private var permissionRequested = false
     private var saving = false
 
+    /** 「保存并退出」意图：saveAndExit() 置位，persist() 消费——新增态保存后关闭
+     *  表单而不是清空继续；✓ 暂存（save()）、取消过期确认、放弃表单都会清掉。 */
+    private var exitAfterSave = false
+
     /** 派生态随 items/now/sessionItemIds 变化时重算（避免每次重组全量重算）。 */
     private fun withDerived(state: UiState): UiState = state.copy(
         pinnedItems = state.items
@@ -169,6 +173,7 @@ class MainViewModel(
     /** ← 放弃当前表单（新增/编辑通用）：仅关闭表单，「本次添加」置顶区不动。 */
     fun backToMethodSelection() {
         if (saving) return
+        exitAfterSave = false
         _uiState.update { it.copy(editing = null, pendingSave = null) }
     }
 
@@ -195,6 +200,18 @@ class MainViewModel(
     }
 
     fun save() {
+        exitAfterSave = false
+        saveInternal()
+    }
+
+    /** 系统返回/← 确认「保存并退出」：校验、过期确认与 save() 同路，
+     *  区别只在成功后关闭表单（新增态不再「暂存并继续」）。 */
+    fun saveAndExit() {
+        exitAfterSave = true
+        saveInternal()
+    }
+
+    private fun saveInternal() {
         val editing = _uiState.value.editing ?: return
         val name = editing.name.trim()
         val days = editing.shelfLifeValue.trim().toIntOrNull()
@@ -236,6 +253,7 @@ class MainViewModel(
     }
 
     fun cancelPendingSave() {
+        exitAfterSave = false
         _uiState.update { it.copy(pendingSave = null) }
     }
 
@@ -272,8 +290,11 @@ class MainViewModel(
     }
 
     private fun persist(editing: EditingState, days: Int) {
-        if (saving) return // 防重复保存（save()/confirmPendingSave() 均经由本方法落库）
+        if (saving) return // 防重复保存（save()/saveAndExit()/confirmPendingSave() 均经由本方法落库）
         saving = true
+        // 进入协程前取走并清零：挂起期间再按 ✓（save()）不会误吃上一意图
+        val exitAfter = exitAfterSave
+        exitAfterSave = false
         viewModelScope.launch {
             val expiry = expiryDateTime(editing.productionDate, editing.createdAt, days)
             val item = FoodItem(
@@ -309,10 +330,13 @@ class MainViewModel(
             scheduler.scheduleOrCancel(saved, nowProvider())
             _uiState.update {
                 // 新条目暂存后表单清空继续，并进入「本次添加」置顶区；
-                // 编辑已有条目仍是保存即退出，会话集合不动
+                // 编辑已有条目（及「保存并退出」的新增态）保存即退出，会话集合照记
                 if (editing.editingItemId == null) {
                     withDerived(
-                        it.copy(editing = clearedForm(editing), sessionItemIds = it.sessionItemIds + itemId),
+                        it.copy(
+                            editing = if (exitAfter) null else clearedForm(editing),
+                            sessionItemIds = it.sessionItemIds + itemId,
+                        ),
                     )
                 } else {
                     it.copy(editing = null)

@@ -62,6 +62,13 @@
     <string name="discard_back">放弃返回</string>
     <string name="stash_and_continue">暂存并继续</string>
 
+    <!-- 系统返回（走查需求）：退出编辑确认 + 双击退出 -->
+    <string name="unsaved_title">未保存的修改</string>
+    <string name="unsaved_text">表单内容尚未保存，要保存后退出吗？</string>
+    <string name="save_and_exit">保存并退出</string>
+    <string name="discard_exit">不保存</string>
+    <string name="press_back_again">再按一次退出</string>
+
     <!-- 编辑态三段式（需求-7）：顶栏标题 + 梯形跳段提示 -->
     <string name="edit_title_add">新增</string>
     <string name="edit_title_edit">编辑</string>
@@ -70,7 +77,7 @@
     <string name="trap_form_to_existing">下滑查看已有</string>
     <string name="trap_existing_to_form">上滑继续编辑</string>
     <string name="preview_new_name">新条目</string>
-    <string name="preview_expiry_placeholder">— 天 — 小时</string>
+    <string name="preview_expiry_placeholder">- 天 - 小时</string>
 
     <!-- 时长与状态 -->
     <string name="duration_days">%1$d 天</string>

@@ -1,5 +1,8 @@
 package com.battor.freshmate.ui.main
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -118,6 +121,7 @@ interface MainActions {
     fun disperse()
     fun startNew(method: InputMethodId)
     fun save()
+    fun saveAndExit()
     fun backToMethodSelection()
     fun updateEditing(transform: (MainViewModel.EditingState) -> MainViewModel.EditingState)
     fun permissionRequested()
@@ -139,6 +143,7 @@ object NoopMainActions : MainActions {
     override fun disperse() {}
     override fun startNew(method: InputMethodId) {}
     override fun save() {}
+    override fun saveAndExit() {}
     override fun backToMethodSelection() {}
     override fun updateEditing(transform: (MainViewModel.EditingState) -> MainViewModel.EditingState) {}
     override fun permissionRequested() {}
@@ -174,6 +179,7 @@ fun MainScreen(
             override fun disperse() = viewModel.disperseSession()
             override fun startNew(method: InputMethodId) = viewModel.startNew(method)
             override fun save() = viewModel.save()
+            override fun saveAndExit() = viewModel.saveAndExit()
             override fun backToMethodSelection() = viewModel.backToMethodSelection()
             override fun updateEditing(transform: (MainViewModel.EditingState) -> MainViewModel.EditingState) =
                 viewModel.updateEditing(transform)
@@ -201,6 +207,9 @@ internal fun MainContent(
     /** 引导模式聚光「第一张卡片」「第一个桶」：透传给列表分支第一个桶，主流程为 null 零影响 */
     guideFirstCardKey: String? = null,
     guideFirstBucketKey: String? = null,
+    /** 引导页复用 MainContent 时置 false：系统返回拦截（退出编辑确认/双击退出）让位给
+     *  GuideScreen 自己的 BackHandler——Compose 返回栈后组合者优先，不关会被反超。 */
+    handleSystemBack: Boolean = true,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -237,6 +246,28 @@ internal fun MainContent(
     var pendingDelete by remember { mutableStateOf<FoodItem?>(null) }
     val onDeleteItem: (FoodItem) -> Unit = { item -> pendingDelete = item }
 
+    // ← / 系统返回退出编辑（走查需求）：有未保存内容先弹「保存并退出」确认，无内容直接退
+    var pendingDiscard by remember { mutableStateOf(false) }
+    val requestExitEdit = {
+        if (state.hasFormContent) pendingDiscard = true else actions.backToMethodSelection()
+    }
+
+    if (handleSystemBack) {
+        // 编辑/新增态：系统返回与 ← 顶栏按钮同一逻辑（含未保存确认）
+        BackHandler(enabled = state.isEditing, onBack = requestExitEdit)
+        // 主页根（非编辑态）：2 秒内连按两次返回才真正退出 app
+        var lastBackAt by remember { mutableStateOf(0L) }
+        BackHandler(enabled = !state.isEditing) {
+            val pressedAt = System.currentTimeMillis()
+            if (pressedAt - lastBackAt < 2_000L) {
+                (context as? Activity)?.finish()
+            } else {
+                lastBackAt = pressedAt
+                Toast.makeText(context, context.getString(R.string.press_back_again), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     // 编辑态当前吸附段（提升到 Scaffold 外：顶栏与 pager 内容都要读写）。
     // key(isEditing)：每次进出编辑态回落 FORM，避免上次停留段的旧值在 pager 重建前
     // 先渲染一帧错误顶栏
@@ -256,7 +287,7 @@ internal fun MainContent(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = actions::backToMethodSelection) {
+                        IconButton(onClick = requestExitEdit) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.discard_back),
@@ -457,6 +488,31 @@ internal fun MainContent(
             },
             dismissButton = {
                 TextButton(onClick = actions::cancelPendingSave) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+
+    // 退出编辑确认：保存并退出（经 save() 同一套校验/过期确认）/ 不保存直接放弃
+    if (pendingDiscard) {
+        AlertDialog(
+            onDismissRequest = { pendingDiscard = false },
+            title = { Text(stringResource(R.string.unsaved_title)) },
+            text = { Text(stringResource(R.string.unsaved_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDiscard = false
+                        actions.saveAndExit()
+                    },
+                ) { Text(stringResource(R.string.save_and_exit)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pendingDiscard = false
+                        actions.backToMethodSelection()
+                    },
+                ) { Text(stringResource(R.string.discard_exit)) }
             },
         )
     }
