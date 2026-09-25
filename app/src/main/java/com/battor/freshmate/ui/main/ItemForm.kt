@@ -116,7 +116,6 @@ fun ItemForm(
     state: EditingState,
     onStateChange: (EditingState) -> Unit,
     onPlaceholderHint: (String) -> Unit,
-    editingTarget: FoodItem?,
     now: LocalDateTime,
 ) {
     val inputMethod = InputMethods.byId(state.inputMethod)
@@ -133,8 +132,6 @@ fun ItemForm(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            editingTarget?.let { saved -> EditingTargetCard(state, saved, now) }
-
             inputMethod.extraAction?.let { extra ->
                 ExtraActionRow(state.inputMethod, extra.icon, extra.labelRes, onPlaceholderHint)
             }
@@ -240,20 +237,25 @@ fun ItemForm(
 }
 
 /**
- * 表单内的「当前操作项目」指示（需求-5 走查反馈）：中性底色比表单卡深一档（surfaceContainerHighest）+ 虚线边框，与已保存卡片区分。
+ * 表单下方的「实时预览」卡（需求-7 走查反馈：从表单卡内挪出、与编辑区拉开距离；新增模式也显示）。
+ * 中性底色比表单卡深一档（surfaceContainerHighest）+ 虚线边框，与已保存卡片区分。
  * 内容实时反映表单当前值（名称/分类/数量/到期文案随输入变化）；
- * 空值回落原条目：名称清空时行不塌陷、保质期暂时非法时显示原到期时间。
+ * 编辑模式空值回落原条目；新增模式无回落——名称空显「新条目」占位、
+ * 保质期未填显示提示文案。
  */
 @Composable
-private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDateTime) {
+internal fun FormPreviewCard(state: EditingState, saved: FoodItem?, now: LocalDateTime) {
     val onColor = MaterialTheme.colorScheme.onSurfaceVariant
-    // 到期时刻：表单值有效则现算，否则回落原条目（与 ExpiryPreview 的换算口径一致）
+    // 到期时刻：表单值有效则现算，否则编辑模式回落原条目（与 ExpiryPreview 的换算口径一致）
     val liveExpiry = state.shelfLifeValue.toIntOrNull()
         ?.takeIf { it > 0 }
         ?.let { expiryDateTime(state.productionDate, state.createdAt, shelfLifeToDays(it, state.shelfLifeUnit)) }
-        ?: expiryDateTime(saved.productionDate, saved.createdAt, saved.shelfLifeDays)
-    // 需求-6 走查点子：图标按到期状态染色——中性编辑区里留一点紧急度信号，色阶与列表桶一致
-    val statusAccent = LocalStatusColors.current.of(expiryStatus(liveExpiry, now)).accent
+        ?: saved?.let { expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays) }
+    // 需求-6 走查点子：图标按到期状态染色——中性编辑区里留一点紧急度信号，色阶与列表桶一致；
+    // 拿不到到期时刻（新增未填保质期）回落中性色
+    val statusAccent = liveExpiry
+        ?.let { LocalStatusColors.current.of(expiryStatus(it, now)).accent }
+        ?: onColor
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -289,7 +291,7 @@ private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDa
         )
         Column(Modifier.weight(1f)) {
             Text(
-                state.name.ifBlank { saved.name },
+                state.name.ifBlank { saved?.name } ?: stringResource(R.string.preview_new_name),
                 // 名称是主信息，用 onSurface 与副行/到期文案的 onSurfaceVariant 拉开层级
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
@@ -302,7 +304,11 @@ private fun EditingTargetCard(state: EditingState, saved: FoodItem, now: LocalDa
                 )
             }
         }
-        Text(expiryText(liveExpiry, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            liveExpiry?.let { expiryText(it, now) } ?: stringResource(R.string.preview_pending_expiry),
+            color = onColor,
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

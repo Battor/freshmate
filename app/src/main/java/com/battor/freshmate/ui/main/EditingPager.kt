@@ -2,6 +2,7 @@ package com.battor.freshmate.ui.main
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -9,8 +10,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -73,6 +77,11 @@ fun EditingPager(
             VerticalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
+                // 走查反馈：默认阈值 0.5（半页）要拖很远才吸附，降到 0.2
+                flingBehavior = PagerDefaults.flingBehavior(
+                    state = pagerState,
+                    snapPositionalThreshold = 0.2f,
+                ),
             ) { page ->
                 EditScrollColumn {
                     when (structure.pages[page]) {
@@ -87,13 +96,17 @@ fun EditingPager(
                             onDeleteItem = onDeleteItem,
                         )
 
-                        EditPageKind.FORM -> ItemForm(
-                            state = editing,
-                            onStateChange = onStateChange,
-                            onPlaceholderHint = onPlaceholderHint,
-                            editingTarget = editingTarget,
-                            now = now,
-                        )
+                        EditPageKind.FORM -> {
+                            ItemForm(
+                                state = editing,
+                                onStateChange = onStateChange,
+                                onPlaceholderHint = onPlaceholderHint,
+                                now = now,
+                            )
+                            // 预览卡与编辑区拉开距离（走查反馈）：列间距 12 + 额外 12 = 24dp
+                            Spacer(Modifier.height(12.dp))
+                            FormPreviewCard(state = editing, saved = editingTarget, now = now)
+                        }
 
                         EditPageKind.EXISTING -> buckets.forEach { bucket ->
                             BucketBox(
@@ -130,7 +143,13 @@ fun EditingPager(
                         label = label,
                         orientation = TrapezoidShape.Orientation.TOP,
                         onClick = {
-                            scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                            // 走查反馈：默认 spring 太快，换 420ms tween 平滑减速
+                            scope.launch {
+                                pagerState.animateScrollToPage(
+                                    page = pagerState.currentPage - 1,
+                                    animationSpec = tween(durationMillis = 420),
+                                )
+                            }
                         },
                     )
                 }
@@ -146,7 +165,12 @@ fun EditingPager(
                         label = label,
                         orientation = TrapezoidShape.Orientation.BOTTOM,
                         onClick = {
-                            scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                            scope.launch {
+                                pagerState.animateScrollToPage(
+                                    page = pagerState.currentPage + 1,
+                                    animationSpec = tween(durationMillis = 420),
+                                )
+                            }
                         },
                     )
                 }
@@ -155,14 +179,15 @@ fun EditingPager(
     }
 }
 
-/** 三段式每页的公共容器：页内自由滚动 + 统一间距/边距。 */
+/** 三段式每页的公共容器：页内自由滚动 + 统一间距/边距；上下预留梯形高度不压内容。 */
 @Composable
 private fun EditScrollColumn(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            // 上下 28dp：为屏幕边缘的梯形色块留位，静止时内容不与梯形重叠（走查反馈）
+            .padding(top = 28.dp, bottom = 28.dp, start = 16.dp, end = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         content()
@@ -189,7 +214,8 @@ private fun TrapIndicator(
             .clip(TrapezoidShape(orientation))
             .background(MaterialTheme.colorScheme.primaryContainer)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            // 走查反馈：更宽更扁——水平 32dp、垂直 1.5dp（总高约 19dp）
+            .padding(horizontal = 32.dp, vertical = 1.5.dp),
     )
 }
 

@@ -67,6 +67,8 @@
     <string name="trap_form_count">已添加 %1$d 条</string>
     <string name="trap_form_to_existing">下滑查看已有</string>
     <string name="trap_existing_to_form">上滑继续编辑</string>
+    <string name="preview_new_name">新条目</string>
+    <string name="preview_pending_expiry">保质期填好后显示到期时间</string>
 
     <!-- 时长与状态 -->
     <string name="duration_days">%1$d 天</string>
