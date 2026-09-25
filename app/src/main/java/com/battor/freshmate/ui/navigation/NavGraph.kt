@@ -21,6 +21,7 @@ import com.battor.freshmate.R
 import com.battor.freshmate.data.DataStoreSettingsRepository
 import com.battor.freshmate.data.FoodItemDatabase
 import com.battor.freshmate.data.FoodItemRepository
+import com.battor.freshmate.notification.DigestScheduler
 import com.battor.freshmate.notification.ReminderScheduler
 import com.battor.freshmate.ui.common.UiText
 import com.battor.freshmate.ui.guide.GuideScreen
@@ -135,7 +136,13 @@ fun FreshMateNavGraph() {
             val context = LocalContext.current.applicationContext
             val settingsViewModel: SettingsViewModel = viewModel(
                 factory = viewModelFactory {
-                    initializer { SettingsViewModel(settingsRepo) }
+                    initializer {
+                        SettingsViewModel(
+                            settingsRepo,
+                            DigestScheduler(context),
+                            ReminderScheduler(context),
+                        )
+                    }
                 },
             )
             val updateViewModel = sharedUpdateViewModel()
