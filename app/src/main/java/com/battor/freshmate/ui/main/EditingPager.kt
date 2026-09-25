@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
@@ -44,6 +45,7 @@ import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.ui.main.MainViewModel.EditingState
 import java.time.LocalDateTime
+import kotlin.math.min
 import kotlinx.coroutines.launch
 
 /**
@@ -222,6 +224,7 @@ private fun TrapIndicator(
 /**
  * 梯形（需求-7 走查确认）：TOP = 上边全宽、下边两侧各收 [slope]（贴上边缘的倒梯形）；
  * BOTTOM 镜像贴下边缘。宽高由内容（Text）撑起，形状只负责斜边。
+ * 走查反馈：四角圆角——每顶点向相邻两边各让一段 [cornerRadius]、二次贝塞尔过顶点。
  */
 class TrapezoidShape(private val orientation: Orientation) : Shape {
 
@@ -233,20 +236,38 @@ class TrapezoidShape(private val orientation: Orientation) : Shape {
         density: Density,
     ): Outline {
         val slope = with(density) { 10.dp.toPx() }.coerceAtMost(size.width / 2f)
-        val path = Path().apply {
-            if (orientation == Orientation.TOP) {
-                moveTo(0f, 0f)
-                lineTo(size.width, 0f)
-                lineTo(size.width - slope, size.height)
-                lineTo(slope, size.height)
-            } else {
-                moveTo(slope, 0f)
-                lineTo(size.width - slope, 0f)
-                lineTo(size.width, size.height)
-                lineTo(0f, size.height)
-            }
-            close()
+        val cornerRadius = with(density) { 6.dp.toPx() }
+        val w = size.width
+        val h = size.height
+        val points = if (orientation == Orientation.TOP) {
+            listOf(Offset(0f, 0f), Offset(w, 0f), Offset(w - slope, h), Offset(slope, h))
+        } else {
+            listOf(Offset(slope, 0f), Offset(w - slope, 0f), Offset(w, h), Offset(0f, h))
         }
+        // 每个顶点的圆角：沿两条邻边各退 trim（不超过邻边一半，防相邻圆角重叠），
+        // 再以二次贝塞尔经过顶点
+        val n = points.size
+        val corners = points.mapIndexed { i, p ->
+            val prev = points[(i + n - 1) % n]
+            val next = points[(i + 1) % n]
+            val dPrev = (p - prev).getDistance()
+            val dNext = (next - p).getDistance()
+            val trim = cornerRadius.coerceAtMost(min(dPrev, dNext) / 2f)
+            Triple(
+                p + (prev - p) / dPrev * trim, // 圆角起点（朝 prev 方向）
+                p,                              // 顶点
+                p + (next - p) / dNext * trim,  // 圆角终点（朝 next 方向）
+            )
+        }
+        val path = Path()
+        path.moveTo(corners[0].first.x, corners[0].first.y)
+        for (i in 0 until n) {
+            val (start, vertex, end) = corners[i]
+            path.quadraticBezierTo(vertex.x, vertex.y, end.x, end.y)
+            val nextStart = corners[(i + 1) % n].first
+            path.lineTo(nextStart.x, nextStart.y)
+        }
+        path.close()
         return Outline.Generic(path)
     }
 }
