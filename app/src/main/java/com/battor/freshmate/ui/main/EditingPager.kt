@@ -97,15 +97,15 @@ fun EditingPager(
                         )
 
                         EditPageKind.FORM -> {
+                            // 预览在编辑区上方（走查反馈确认）、拉开距离：列间距 12 + 额外 12 = 24dp
+                            FormPreviewCard(state = editing, saved = editingTarget, now = now)
+                            Spacer(Modifier.height(12.dp))
                             ItemForm(
                                 state = editing,
                                 onStateChange = onStateChange,
                                 onPlaceholderHint = onPlaceholderHint,
                                 now = now,
                             )
-                            // 预览卡与编辑区拉开距离（走查反馈）：列间距 12 + 额外 12 = 24dp
-                            Spacer(Modifier.height(12.dp))
-                            FormPreviewCard(state = editing, saved = editingTarget, now = now)
                         }
 
                         EditPageKind.EXISTING -> buckets.forEach { bucket ->
