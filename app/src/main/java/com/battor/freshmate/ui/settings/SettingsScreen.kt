@@ -13,10 +13,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
@@ -33,7 +36,9 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,10 +52,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.battor.freshmate.R
+import com.battor.freshmate.data.PushMode
 import com.battor.freshmate.data.ThemeMode
 import com.battor.freshmate.ui.common.OneShotSnackbar
 import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.update.UpdateViewModel
+import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +75,7 @@ fun SettingsScreen(
     onDismissUpdate: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val pushMode by viewModel.pushMode.collectAsStateWithLifecycle()
     OneShotSnackbar(
         message = updateState.notice,
         snackbarHostState = snackbarHostState,
@@ -89,6 +97,8 @@ fun SettingsScreen(
     ) { padding ->
         LazyColumn(Modifier.fillMaxWidth().padding(padding)) {
             item { ThemeSettingItem(viewModel) }
+            item { PushModeSettingItem(viewModel) }
+            if (pushMode == PushMode.DIGEST) item { PushTimesSettingItem(viewModel) }
             item { LanguageSettingItem(viewModel) }
             item {
                 ListItem(
@@ -224,6 +234,130 @@ private fun ThemeSettingItem(viewModel: SettingsViewModel) {
                 showDialog = false
             },
             onDismiss = { showDialog = false },
+        )
+    }
+}
+
+/** 推送方式：统一/逐个二选一，切换即时生效（VM 内联动调度器）。 */
+@Composable
+private fun PushModeSettingItem(viewModel: SettingsViewModel) {
+    val pushMode by viewModel.pushMode.collectAsStateWithLifecycle()
+    var showDialog by remember { mutableStateOf(false) }
+    val digestLabel = stringResource(R.string.push_mode_digest)
+    val individualLabel = stringResource(R.string.push_mode_individual)
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.settings_push_mode)) },
+        leadingContent = { Icon(Icons.Filled.Notifications, contentDescription = null) },
+        trailingContent = {
+            Text(
+                if (pushMode == PushMode.DIGEST) digestLabel else individualLabel,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        modifier = Modifier.clickable { showDialog = true },
+    )
+    if (showDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.settings_push_mode),
+            options = listOf(digestLabel to PushMode.DIGEST, individualLabel to PushMode.INDIVIDUAL),
+            selected = pushMode,
+            onSelect = {
+                viewModel.setPushMode(it)
+                showDialog = false
+            },
+            onDismiss = { showDialog = false },
+        )
+    }
+}
+
+/** 推送时间：仅统一模式渲染；编辑对话框可增删时间点（上限 2）。 */
+@Composable
+private fun PushTimesSettingItem(viewModel: SettingsViewModel) {
+    val digestTimes by viewModel.digestTimes.collectAsStateWithLifecycle()
+    var showEditor by remember { mutableStateOf(false) }
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.settings_push_time)) },
+        leadingContent = { Icon(Icons.Filled.Schedule, contentDescription = null) },
+        trailingContent = {
+            Text(
+                digestTimes.joinToString("、") { it.toString() },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        modifier = Modifier.clickable { showEditor = true },
+    )
+    if (showEditor) {
+        PushTimesEditorDialog(
+            times = digestTimes,
+            onConfirm = {
+                viewModel.setDigestTimes(it)
+                showEditor = false
+            },
+            onDismiss = { showEditor = false },
+        )
+    }
+}
+
+/** 时间点编辑：列表可删 + 添加（M3 TimePicker，24 小时制），保存后升序；空列表不允许确认。 */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PushTimesEditorDialog(
+    times: List<LocalTime>,
+    onConfirm: (List<LocalTime>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var pending by remember { mutableStateOf(times) }
+    var showPicker by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_push_time)) },
+        text = {
+            Column {
+                pending.forEach { t ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(t.toString(), modifier = Modifier.weight(1f))
+                        IconButton(onClick = { pending = pending - t }) {
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.delete))
+                        }
+                    }
+                }
+                TextButton(
+                    onClick = { showPicker = true },
+                    enabled = pending.size < 2, // spec：最多 2 个时间点
+                ) {
+                    Text(stringResource(R.string.push_time_add))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(pending) }, enabled = pending.isNotEmpty()) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
+    if (showPicker) {
+        val pickerState = rememberTimePickerState(initialHour = 16, initialMinute = 30, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            title = { Text(stringResource(R.string.push_time_add)) },
+            text = { TimePicker(state = pickerState) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pending = (pending + LocalTime.of(pickerState.hour, pickerState.minute)).sorted()
+                        showPicker = false
+                    },
+                ) { Text(stringResource(R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.cancel)) }
+            },
         )
     }
 }
