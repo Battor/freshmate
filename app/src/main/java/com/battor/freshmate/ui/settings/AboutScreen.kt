@@ -21,11 +21,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.battor.freshmate.BuildConfig
 import com.battor.freshmate.R
@@ -50,17 +55,23 @@ fun AboutScreen(onBack: () -> Unit, onOpenTest: () -> Unit) {
     val context = LocalContext.current
     // 隐藏入口：连点 APP 名称 5 次进测试页；第 3 次起 Toast 提示剩余次数。
     // 用 Toast 而非 Snackbar：连点提示 1 秒内连发，Snackbar 的取消竞态会吞掉后一条
-    // （平台开发者选项同为 Toast 模式）；计数状态随本页 remember——离开页面即重置
+    // （平台开发者选项同为 Toast 模式）；计数状态随本页 remember——离开页面即重置。
+    // 新提示先 cancel 旧的、解锁进测试页时清掉残留——Toast 不叠罗汉，测试页首屏干净
+    var hintToast by remember { mutableStateOf<Toast?>(null) }
     val entryCounter = remember {
         TestEntryCounter(
             onHint = { remaining ->
-                Toast.makeText(
+                hintToast?.cancel()
+                hintToast = Toast.makeText(
                     context,
                     context.getString(R.string.test_tap_hint, remaining),
                     Toast.LENGTH_SHORT,
-                ).show()
+                ).also { it.show() }
             },
-            onUnlock = onOpenTest,
+            onUnlock = {
+                hintToast?.cancel()
+                onOpenTest()
+            },
         )
     }
     Scaffold(
@@ -100,8 +111,10 @@ fun AboutScreen(onBack: () -> Unit, onOpenTest: () -> Unit) {
             }
             Text(
                 stringResource(R.string.about_oss_title),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(horizontal = 24.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Start,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
             )
             OssEntries.forEach { entry ->
                 ListItem(
