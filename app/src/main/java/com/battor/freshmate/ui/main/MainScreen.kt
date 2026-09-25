@@ -33,6 +33,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -237,20 +239,53 @@ internal fun MainContent(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                actions = {
-                    // 引导第 5 步聚光顶栏动作区（主流程 holder 为 null，guideTarget 原样返回）
-                    Row(Modifier.guideTarget(GuideKeys.TOPBAR)) {
-                        IconButton(onClick = actions::openHistory) {
-                            Icon(Icons.Filled.History, contentDescription = stringResource(R.string.history))
+            // 需求-7：编辑态顶栏换编辑操作——左上返回、标题按模式、右上保存（逻辑同原 FAB 两按钮）
+            if (state.isEditing) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            stringResource(
+                                if (state.isAddForm) R.string.edit_title_add else R.string.edit_title_edit,
+                            ),
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = actions::backToMethodSelection) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.discard_back),
+                            )
                         }
-                        IconButton(onClick = actions::openSettings) {
-                            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
+                    },
+                    actions = {
+                        if (state.hasFormContent) {
+                            IconButton(onClick = actions::save) {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = stringResource(
+                                        if (state.isAddForm) R.string.stash_and_continue else R.string.save,
+                                    ),
+                                )
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            } else {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.app_name)) },
+                    actions = {
+                        // 引导第 5 步聚光顶栏动作区（主流程 holder 为 null，guideTarget 原样返回）
+                        Row(Modifier.guideTarget(GuideKeys.TOPBAR)) {
+                            IconButton(onClick = actions::openHistory) {
+                                Icon(Icons.Filled.History, contentDescription = stringResource(R.string.history))
+                            }
+                            IconButton(onClick = actions::openSettings) {
+                                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
+                            }
+                        }
+                    },
+                )
+            }
         },
         snackbarHost = {
             SnackbarHost(
@@ -259,18 +294,15 @@ internal fun MainContent(
             )
         },
         floatingActionButton = {
-            FabMenu(
-                formOpen = state.isEditing,
-                isAddForm = state.isAddForm,
-                showSave = state.hasFormContent,
-                onStartInput = actions::startNew,
-                onSave = actions::save,
-                onBack = actions::backToMethodSelection,
-                // edge-to-edge 下键盘弹出时 FAB 随 IME 抬升，不被遮挡；
-                // exclude navigationBars：Scaffold 已消费的导航栏 inset 不重复计入
-                modifier = Modifier.windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
-                    .guideTarget(GuideKeys.FAB),
-            )
+            // 需求-7：编辑态操作上移顶栏，编辑态不再渲染 FAB；非编辑态保留 + 号新增入口
+            if (!state.isEditing) {
+                FabMenu(
+                    onStartInput = actions::startNew,
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
+                        .guideTarget(GuideKeys.FAB),
+                )
+            }
         },
     ) { padding ->
         Column(
@@ -299,9 +331,8 @@ internal fun MainContent(
             ) { isEditing ->
                 val editing = if (isEditing) lastEditing else null
                 if (editing != null) {
-                    // 表单打开：整页一块滚动（需求-5 走查反馈）——表单 + 列表内容直接铺开，
-                    // 滚过表单即见列表。列表用非 lazy 直铺：个人食材规模，
-                    // 且 LazyColumn 嵌 verticalScroll 会因无限高约束崩溃。
+                    // 需求-7：编辑态三段式（本次操作 / 编辑区 / 已添加）VerticalPager 吸附切换，
+                    // 交互细节（梯形跳段、段内滚动）收口在 EditingPager。
                     // 编辑期间隐藏正在编辑的条目（已是表单内虚线框）；空桶/空置顶区整体不渲染
                     val editingId = editing.editingItemId
                     // 记忆化保列表身份稳定：updateEditing 只 copy editing，buckets/pinned 引用
@@ -314,47 +345,17 @@ internal fun MainContent(
                             .map { it.copy(items = it.items.filterNot { item -> item.id == editingId }) }
                             .filter { it.items.isNotEmpty() }
                     }
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        ItemForm(
-                            state = editing,
-                            onStateChange = { newState -> actions.updateEditing { newState } },
-                            onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
-                            // 当前操作项目融入表单（需求-5 走查反馈）：表单内虚线框同底色块
-                            editingTarget = state.editingTarget,
-                            now = state.now,
-                        )
-                        // 本次添加置顶区（编辑期间卡片禁交互、无散入动作）
-                        if (visiblePinned.isNotEmpty()) {
-                            BucketBox(
-                                header = stringResource(R.string.pinned_header),
-                                status = null,
-                                items = visiblePinned,
-                                now = state.now,
-                                cardsEnabled = false,
-                                onHeaderAction = null,
-                                onStartEdit = actions::startEdit,
-                                onDeleteItem = onDeleteItem,
-                            )
-                        }
-                        // 六个过期时间桶，空桶不渲染
-                        visibleBuckets.forEach { bucket ->
-                            BucketBox(
-                                header = stringResource(bucket.status.labelRes),
-                                status = bucket.status,
-                                items = bucket.items,
-                                now = state.now,
-                                cardsEnabled = false,
-                                onStartEdit = actions::startEdit,
-                                onDeleteItem = onDeleteItem,
-                            )
-                        }
-                    }
+                    EditingPager(
+                        pinned = visiblePinned,
+                        buckets = visibleBuckets,
+                        editing = editing,
+                        editingTarget = state.editingTarget,
+                        now = state.now,
+                        onStateChange = { newState -> actions.updateEditing { newState } },
+                        onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
+                        onStartEdit = actions::startEdit,
+                        onDeleteItem = onDeleteItem,
+                    )
                 } else {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         PullToRefreshBox(
@@ -528,7 +529,7 @@ private fun BucketProgressBar(
  * animateItem 让后续桶跟随滑动。
  */
 @Composable
-private fun BucketBox(
+internal fun BucketBox(
     modifier: Modifier = Modifier,
     header: String,
     status: ExpiryStatus?,

@@ -60,6 +60,14 @@
     <string name="discard_back">放棄返回</string>
     <string name="stash_and_continue">暫存並繼續</string>
 
+    <!-- 編輯態三段式（需求-7）：頂欄標題 + 梯形跳段提示 -->
+    <string name="edit_title_add">新增</string>
+    <string name="edit_title_edit">編輯</string>
+    <string name="trap_session_to_form">下滑繼續編輯</string>
+    <string name="trap_form_count">已新增 %1$d 條</string>
+    <string name="trap_form_to_existing">下滑查看已有</string>
+    <string name="trap_existing_to_form">上滑繼續編輯</string>
+
     <!-- 時長與狀態 -->
     <string name="duration_days">%1$d 天</string>
     <string name="duration_hours">%1$d 小時</string>
