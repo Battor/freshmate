@@ -73,6 +73,7 @@ import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
 import com.battor.freshmate.util.formatExpired
+import com.battor.freshmate.util.formatRemaining
 import com.battor.freshmate.util.shelfLifeToDays
 import java.time.Duration
 import java.time.Instant
@@ -241,7 +242,7 @@ fun ItemForm(
  * 中性底色比表单卡深一档（surfaceContainerHighest）+ 虚线边框，与已保存卡片区分。
  * 内容实时反映表单当前值（名称/分类/数量/到期文案随输入变化）；
  * 编辑模式空值回落原条目；新增模式无回落——名称空显「新条目」占位、
- * 保质期未填显示提示文案。
+ * 保质期未填显示灰色「— 天 — 小时」占位。
  */
 @Composable
 internal fun FormPreviewCard(state: EditingState, saved: FoodItem?, now: LocalDateTime) {
@@ -304,9 +305,18 @@ internal fun FormPreviewCard(state: EditingState, saved: FoodItem?, now: LocalDa
                 )
             }
         }
+        // 走查反馈：未填保质期时显示灰色「— 天 — 小时」占位；填好后直接显示纯时长
+        val expiryDisplay = liveExpiry?.let {
+            val remaining = Duration.between(now, it)
+            if (remaining.isNegative || remaining.isZero) {
+                formatExpired(LocalContext.current.resources, remaining.negated())
+            } else {
+                formatRemaining(LocalContext.current.resources, remaining)
+            }
+        }
         Text(
-            liveExpiry?.let { expiryText(it, now) } ?: stringResource(R.string.preview_pending_expiry),
-            color = onColor,
+            expiryDisplay ?: stringResource(R.string.preview_expiry_placeholder),
+            color = if (liveExpiry == null) onColor.copy(alpha = 0.5f) else onColor,
             style = MaterialTheme.typography.bodyMedium,
         )
     }

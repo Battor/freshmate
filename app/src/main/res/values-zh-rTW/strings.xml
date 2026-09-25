@@ -68,7 +68,7 @@
     <string name="trap_form_to_existing">下滑查看已有</string>
     <string name="trap_existing_to_form">上滑繼續編輯</string>
     <string name="preview_new_name">新條目</string>
-    <string name="preview_pending_expiry">保質期填好後顯示到期時間</string>
+    <string name="preview_expiry_placeholder">— 天 — 小時</string>
 
     <!-- 時長與狀態 -->
     <string name="duration_days">%1$d 天</string>

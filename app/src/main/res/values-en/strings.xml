@@ -68,7 +68,7 @@
     <string name="trap_form_to_existing">Swipe down to view existing</string>
     <string name="trap_existing_to_form">Swipe up to keep editing</string>
     <string name="preview_new_name">New item</string>
-    <string name="preview_pending_expiry">Expiry shows once shelf life is set</string>
+    <string name="preview_expiry_placeholder">— d — h</string>
 
     <!-- Durations & status -->
     <string name="duration_days">%1$d d</string>
