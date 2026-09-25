@@ -126,6 +126,14 @@
     <string name="settings_theme">主題</string>
     <string name="settings_theme_light">淺色</string>
     <string name="settings_theme_dark">深色</string>
+
+    <!-- 推送方式設定（統一/逐個） -->
+    <string name="settings_push_mode">推送方式</string>
+    <string name="push_mode_digest">統一推送</string>
+    <string name="push_mode_individual">逐個推送</string>
+    <string name="settings_push_time">推送時間</string>
+    <string name="push_time_add">新增時間</string>
+
     <string name="settings_language">語言</string>
     <string name="language_follow_system">跟隨系統</string>
     <string name="language_name_zh_cn">简体中文</string>
@@ -167,6 +175,11 @@
     <string name="notification_channel">過期提醒</string>
     <string name="notification_title">食刻 FreshMate</string>
     <string name="notification_body">「%1$s」還有 %2$s 到期</string>
+
+    <!-- 統一推送通知 -->
+    <string name="digest_title">%1$s（%2$d 項）</string>
+    <string name="digest_name_separator">、</string>
+    <string name="digest_line">%1$s · %2$s</string>
 
     <!-- 新手引導（教練標記五步 + 設定入口） -->
     <string name="settings_onboarding">新手引導</string>

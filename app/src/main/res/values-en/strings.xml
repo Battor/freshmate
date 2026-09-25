@@ -126,6 +126,14 @@
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
+
+    <!-- Push mode settings (digest / per item) -->
+    <string name="settings_push_mode">Notifications</string>
+    <string name="push_mode_digest">Daily digest</string>
+    <string name="push_mode_individual">Per item</string>
+    <string name="settings_push_time">Digest time</string>
+    <string name="push_time_add">Add time</string>
+
     <string name="settings_language">Language</string>
     <string name="language_follow_system">Follow system</string>
     <string name="language_name_zh_cn">简体中文</string>
@@ -167,6 +175,11 @@
     <string name="notification_channel">Expiry reminders</string>
     <string name="notification_title">食刻 FreshMate</string>
     <string name="notification_body">“%1$s” expires in %2$s</string>
+
+    <!-- Digest notifications -->
+    <string name="digest_title">%1$s (%2$d)</string>
+    <string name="digest_name_separator">", "</string>
+    <string name="digest_line">%1$s · %2$s</string>
 
     <!-- Onboarding tour (5 coach-mark steps + settings entry) -->
     <string name="settings_onboarding">Getting-started tour</string>

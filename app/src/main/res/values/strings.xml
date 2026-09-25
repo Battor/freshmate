@@ -128,6 +128,14 @@
     <string name="settings_theme">主题</string>
     <string name="settings_theme_light">浅色</string>
     <string name="settings_theme_dark">深色</string>
+
+    <!-- 推送方式设置（统一/逐个） -->
+    <string name="settings_push_mode">推送方式</string>
+    <string name="push_mode_digest">统一推送</string>
+    <string name="push_mode_individual">逐个推送</string>
+    <string name="settings_push_time">推送时间</string>
+    <string name="push_time_add">添加时间</string>
+
     <string name="settings_language">语言</string>
     <string name="language_follow_system">跟随系统</string>
     <!-- 语言名永远用母语显示，三个资源目录内容一致，不随界面语言翻译 -->
@@ -170,6 +178,11 @@
     <string name="notification_channel">过期提醒</string>
     <string name="notification_title">食刻 FreshMate</string>
     <string name="notification_body">「%1$s」还有 %2$s 到期</string>
+
+    <!-- 统一推送通知 -->
+    <string name="digest_title">%1$s（%2$d 项）</string>
+    <string name="digest_name_separator">、</string>
+    <string name="digest_line">%1$s · %2$s</string>
 
     <!-- 新手引导（教练标记五步 + 设置入口） -->
     <string name="settings_onboarding">新手引导</string>
