@@ -62,7 +62,7 @@ class DailyDigestReceiver : BroadcastReceiver() {
         val nm = NotificationManagerCompat.from(context)
         val id = DigestIds.notificationId(slot)
         if (items.isEmpty()) {
-            nm.cancel(id)
+            nm.cancel(id) // 档清空则清残留旧通知（通知不自动消失）
             return
         }
         val builder = NotificationCompat.Builder(context, ReminderIds.CHANNEL_ID)
@@ -102,7 +102,7 @@ class DailyDigestReceiver : BroadcastReceiver() {
                 ),
             )
         }
-        // from(context) 链式调用 + 同函数守卫：与 ReminderBroadcastReceiver 同款写法（lint 可见权限已检查）
+        // 守卫与 notify 同函数：lint 可见权限已检查
         if (nm.areNotificationsEnabled()) {
             nm.notify(id, builder.build())
             Timber.i("NOTIFY digest 档位%d %d 项", slot, items.size)

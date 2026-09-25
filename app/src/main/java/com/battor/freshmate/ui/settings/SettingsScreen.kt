@@ -275,12 +275,14 @@ private fun PushModeSettingItem(viewModel: SettingsViewModel) {
 private fun PushTimesSettingItem(viewModel: SettingsViewModel) {
     val digestTimes by viewModel.digestTimes.collectAsStateWithLifecycle()
     var showEditor by remember { mutableStateOf(false) }
+    // 分隔符随语言（中文顿号 / 英文逗号空格）
+    val separator = stringResource(R.string.digest_name_separator)
     ListItem(
         headlineContent = { Text(stringResource(R.string.settings_push_time)) },
         leadingContent = { Icon(Icons.Filled.Schedule, contentDescription = null) },
         trailingContent = {
             Text(
-                digestTimes.joinToString("、") { it.toString() },
+                digestTimes.joinToString(separator) { it.toString() },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
