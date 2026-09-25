@@ -41,11 +41,8 @@ class DailyDigestReceiver : BroadcastReceiver() {
                     val items = FoodItemDatabase.get(context).foodItemDao().getAllOnce()
                         .filter { it.deletedAt == null }
                     val tiers = digestTiers(items, LocalDateTime.now())
-                    val nm = NotificationManagerCompat.from(context)
-                    if (nm.areNotificationsEnabled()) {
-                        postTier(context, nm, slot = 0, items = tiers.dueWithin1d, labelRes = R.string.status_due_1d)
-                        postTier(context, nm, slot = 1, items = tiers.dueWithin3d, labelRes = R.string.status_due_3d)
-                    }
+                    postTier(context, slot = 0, items = tiers.dueWithin1d, labelRes = R.string.status_due_1d)
+                    postTier(context, slot = 1, items = tiers.dueWithin3d, labelRes = R.string.status_due_3d)
                     applyPushConfig(context) // 自续：按设置重装全部时间点
                 }.onFailure { Timber.w(it, "BCAST digest 处理失败") }
             } finally {
@@ -57,11 +54,12 @@ class DailyDigestReceiver : BroadcastReceiver() {
     /** 发一档通知；档为空则清残留旧通知（通知不自动消失，不清会永远陈述过期信息）。 */
     private fun postTier(
         context: Context,
-        nm: NotificationManagerCompat,
         slot: Int,
         items: List<FoodItem>,
         labelRes: Int,
     ) {
+        // from(context) 内联构造（与 ReminderBroadcastReceiver 同款写法）
+        val nm = NotificationManagerCompat.from(context)
         val id = DigestIds.notificationId(slot)
         if (items.isEmpty()) {
             nm.cancel(id)
@@ -104,7 +102,10 @@ class DailyDigestReceiver : BroadcastReceiver() {
                 ),
             )
         }
-        nm.notify(id, builder.build())
-        Timber.i("NOTIFY digest 档位%d %d 项", slot, items.size)
+        // from(context) 链式调用 + 同函数守卫：与 ReminderBroadcastReceiver 同款写法（lint 可见权限已检查）
+        if (nm.areNotificationsEnabled()) {
+            nm.notify(id, builder.build())
+            Timber.i("NOTIFY digest 档位%d %d 项", slot, items.size)
+        }
     }
 }
