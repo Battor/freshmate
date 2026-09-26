@@ -7,7 +7,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -283,7 +282,7 @@ internal fun FormPreviewCard(state: EditingState, saved: FoodItem?, now: LocalDa
         Icon(
             categoryIcon(state.category),
             contentDescription = null,
-            tint = categoryIconColor(state.category, isSystemInDarkTheme()),
+            tint = categoryIconColor(state.category),
             modifier = Modifier.size(28.dp),
         )
         Column(Modifier.weight(1f)) {

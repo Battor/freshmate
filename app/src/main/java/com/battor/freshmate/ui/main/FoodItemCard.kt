@@ -1,7 +1,6 @@
 package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -89,7 +88,7 @@ fun FoodItemCard(
                 Icon(
                     categoryIcon(item.category),
                     contentDescription = stringResource(item.category.labelRes),
-                    tint = categoryIconColor(item.category, isSystemInDarkTheme()),
+                    tint = categoryIconColor(item.category),
                     modifier = Modifier.size(28.dp),
                 )
                 Column(Modifier.weight(1f)) {

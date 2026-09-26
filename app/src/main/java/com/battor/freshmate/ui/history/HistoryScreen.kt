@@ -2,7 +2,6 @@ package com.battor.freshmate.ui.history
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -219,7 +218,7 @@ private fun HistoryItemCard(
                 Icon(
                     categoryIcon(item.category),
                     contentDescription = stringResource(item.category.labelRes),
-                    tint = categoryIconColor(item.category, isSystemInDarkTheme()),
+                    tint = categoryIconColor(item.category),
                     modifier = Modifier.size(28.dp),
                 )
                 Column(Modifier.weight(1f)) {

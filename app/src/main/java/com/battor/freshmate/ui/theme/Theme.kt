@@ -8,6 +8,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.battor.freshmate.ui.main.DarkStatusPalette
@@ -67,6 +68,9 @@ private val DarkColors = darkColorScheme(
     onSurfaceVariant = DarkOnSurfaceVariant,
 )
 
+/** 已解析的主题标志：设置页可强制深浅（themeMode.resolvesDark），调用点勿裸读 isSystemInDarkTheme。 */
+val LocalDarkTheme = staticCompositionLocalOf { false }
+
 @Composable
 fun FreshMateTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -75,7 +79,10 @@ fun FreshMateTheme(
     // 多巴胺配色落地（specs/2026-09-26）：品牌色板是唯一来源，不再被 Android 12+ 动态取色覆盖
     val colorScheme = if (darkTheme) DarkColors else LightColors
     val palette = if (darkTheme) DarkStatusPalette else LightStatusPalette
-    CompositionLocalProvider(LocalStatusColors provides palette) {
+    CompositionLocalProvider(
+        LocalStatusColors provides palette,
+        LocalDarkTheme provides darkTheme,
+    ) {
         MaterialTheme(colorScheme = colorScheme, shapes = AppShapes, content = content)
     }
 }
