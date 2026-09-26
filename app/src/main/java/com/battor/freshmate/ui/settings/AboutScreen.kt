@@ -114,7 +114,8 @@ fun AboutScreen(onBack: () -> Unit, onOpenTest: () -> Unit) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Start,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                // 16dp 对齐下方 ListItem 内容起点（ListItem 自带 16dp 内边距）
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
             )
             OssEntries.forEach { entry ->
                 ListItem(

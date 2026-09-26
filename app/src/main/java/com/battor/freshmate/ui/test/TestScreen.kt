@@ -62,13 +62,12 @@ fun TestScreen(viewModel: TestViewModel, onBack: () -> Unit) {
     val alarmState by TestAlarmTracker.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    // 「到点未触发」需要一次未来的重组：到点+宽限期后戳一下 nowTick
+    // 已排状态下每秒戳 nowTick：驱动实时倒计时；到点+宽限期后状态区判「闹钟未触发」
     var nowTick by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(alarmState) {
-        val s = alarmState
-        if (s is TestAlarmState.Scheduled) {
-            delay((s.atMillis + FIRE_GRACE_MILLIS - System.currentTimeMillis()).coerceAtLeast(0))
+        while (TestAlarmTracker.state.value is TestAlarmState.Scheduled) {
             nowTick = System.currentTimeMillis()
+            delay(1_000L)
         }
     }
     // 档位（毫秒, 标签）：点按即排闹钟，结果走状态区
@@ -197,7 +196,13 @@ private fun LazyListScope.digestPreviewSection(
     }
 }
 
-/** 本次测试的状态区：已排 → 已送达 / 未送达（原因）/ 闹钟未触发。 */
+/** 倒计时 m:ss（90 秒 → 1:30）。 */
+private fun formatCountdown(millis: Long): String {
+    val totalSeconds = (millis / 1000L).coerceAtLeast(0)
+    return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+}
+
+/** 本次测试的状态区：已排（含实时倒计时）→ 已送达 / 未送达（原因）/ 闹钟未触发。 */
 @Composable
 private fun TestStatusLine(alarmState: TestAlarmState, nowTick: Long) {
     val (text, color) = when (val s = alarmState) {
@@ -206,8 +211,12 @@ private fun TestStatusLine(alarmState: TestAlarmState, nowTick: Long) {
             if (nowTick > s.atMillis + FIRE_GRACE_MILLIS) {
                 stringResource(R.string.test_status_not_fired) to MaterialTheme.colorScheme.error
             } else {
-                stringResource(R.string.test_status_scheduled, formatTestTime(s.atMillis)) to
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                val countdown = stringResource(
+                    R.string.test_countdown,
+                    formatCountdown(s.atMillis - nowTick),
+                )
+                stringResource(R.string.test_status_scheduled, formatTestTime(s.atMillis)) +
+                    "（$countdown）" to MaterialTheme.colorScheme.onSurfaceVariant
             }
         is TestAlarmState.Delivered ->
             stringResource(R.string.test_status_delivered, formatTestTime(s.firedAtMillis)) to

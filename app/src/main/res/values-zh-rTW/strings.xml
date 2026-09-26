@@ -156,6 +156,7 @@
     <string name="test_delay_1m">1 分鐘</string>
     <string name="test_delay_5m">5 分鐘</string>
     <string name="test_status_scheduled">已排，%1$s 觸發</string>
+    <string name="test_countdown">剩 %1$s</string>
     <string name="test_status_delivered">已送達（%1$s）</string>
     <string name="test_status_failed_perm">未送達：通知權限未開（%1$s）</string>
     <string name="test_status_not_fired">鬧鐘未觸發（可能被系統省電攔截）</string>
