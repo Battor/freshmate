@@ -167,9 +167,10 @@ fun FoodItemCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        // 删除背景用色板已过期档容器色：深色主题下同步变深
+                        // 删除背景用 M3 error 实红：原用色板已过期档容器色，与过期卡片
+                        // 本体同色，左滑时背景与卡片融成一片无法区分（走查反馈）
                         .background(
-                            LocalStatusColors.current.expired.container,
+                            MaterialTheme.colorScheme.error,
                             MaterialTheme.shapes.large,
                         )
                         .padding(horizontal = 20.dp),
