@@ -26,6 +26,9 @@ object GuideKeys {
     const val FIRST_CARD = "first_card"
     const val BUCKET_AREA = "bucket_area"
     const val TOPBAR = "topbar"
+    const val FORM_AREA = "form_area"
+    const val TRAP_TOP = "trap_top"
+    const val TRAP_BOTTOM = "trap_bottom"
 }
 
 /**

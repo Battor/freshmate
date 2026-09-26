@@ -55,23 +55,29 @@ import androidx.compose.ui.unit.dp
 import com.battor.freshmate.R
 import com.battor.freshmate.ui.common.GuideKeys
 import com.battor.freshmate.ui.common.GuideStateHolder
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-/** 引导步骤定义：targetKey = null 表示无聚光（居中欢迎卡）。 */
+/** 引导步骤定义：targetKeys 空 = 无聚光（居中欢迎卡）。 */
 data class GuideStep(
     @StringRes val titleRes: Int,
     @StringRes val bodyRes: Int,
-    val targetKey: String?,
+    val targetKeys: List<String>,
     /** 本步追加通知权限提示（声明式标记，不耦合 targetKey 字符串）。 */
     val appendPermissionNote: Boolean = false,
+    /** 本步 mock 显示编辑态（表单+双梯形三段式）；false = 非编辑主页。 */
+    val showEditingMock: Boolean = false,
 )
 
 internal val GuideSteps = listOf(
-    GuideStep(R.string.guide_welcome_title, R.string.guide_welcome_body, targetKey = null),
-    GuideStep(R.string.guide_fab_title, R.string.guide_fab_body, GuideKeys.FAB),
-    GuideStep(R.string.guide_card_title, R.string.guide_card_body, GuideKeys.FIRST_CARD),
-    GuideStep(R.string.guide_buckets_title, R.string.guide_buckets_body, GuideKeys.BUCKET_AREA, appendPermissionNote = true),
-    GuideStep(R.string.guide_topbar_title, R.string.guide_topbar_body, GuideKeys.TOPBAR),
+    GuideStep(R.string.guide_welcome_title, R.string.guide_welcome_body, targetKeys = emptyList()),
+    GuideStep(R.string.guide_fab_title, R.string.guide_fab_body, listOf(GuideKeys.FAB)),
+    GuideStep(R.string.guide_form_title, R.string.guide_form_body, listOf(GuideKeys.FORM_AREA), showEditingMock = true),
+    GuideStep(R.string.guide_trap_title, R.string.guide_trap_body, listOf(GuideKeys.TRAP_TOP, GuideKeys.TRAP_BOTTOM), showEditingMock = true),
+    GuideStep(R.string.guide_card_title, R.string.guide_card_body, listOf(GuideKeys.FIRST_CARD)),
+    GuideStep(R.string.guide_buckets_title, R.string.guide_buckets_body, listOf(GuideKeys.BUCKET_AREA), appendPermissionNote = true),
+    GuideStep(R.string.guide_topbar_title, R.string.guide_topbar_body, listOf(GuideKeys.TOPBAR)),
 )
 
 private val ScrimColor = Color.Black.copy(alpha = 0.55f)
@@ -130,45 +136,54 @@ fun GuideOverlay(
                 )
             },
     ) {
-        val targetHole = step.targetKey
-            ?.let { holder.targets[it] }
-            ?.translate(-overlayOffset)
-            ?.inflate(holePaddingPx)
+        val targetHoles = step.targetKeys
+            .mapNotNull { key -> holder.targets[key] }
+            .map { it.translate(-overlayOffset).inflate(holePaddingPx) }
 
-        // 镂空平滑滑向新目标；首个聚光步（null→rect）与布局首帧（尺寸未测得）直接落位不动画
-        var animatedHole by remember { mutableStateOf<Rect?>(null) }
-        LaunchedEffect(targetHole, overlaySize) {
-            if (targetHole == null) {
+        // 镂空滑向新目标；洞数量与上一步相同 → 逐洞补间；数量变化/首帧（尺寸未测得）直接落位
+        var animatedHoles by remember { mutableStateOf<List<Rect>?>(null) }
+        LaunchedEffect(targetHoles, overlaySize) {
+            if (targetHoles.isEmpty()) {
                 // 目标已消失（onDispose 摘除注册）：清陈旧镂空，退回无聚光布局，
                 // 否则聚光灯悬在幽灵位置、说明卡对着不存在的矩形定位
-                animatedHole = null
+                animatedHoles = null
                 return@LaunchedEffect
             }
             if (overlaySize == IntSize.Zero) return@LaunchedEffect
-            val from = animatedHole
-            if (from == null || from == targetHole) {
-                animatedHole = targetHole
-            } else {
-                val anim = Animatable(from, Rect.VectorConverter)
-                anim.animateTo(targetHole, tween(280)) { animatedHole = value }
+            val from = animatedHoles
+            if (from == null || from.size != targetHoles.size) {
+                animatedHoles = targetHoles
+                return@LaunchedEffect
             }
+            // 洞数相同：逐洞同步补间（每帧聚合各 Animatable 当前值）
+            val anims = from.mapIndexed { i, rect -> Animatable(rect, Rect.VectorConverter) }
+            anims.forEachIndexed { i, anim ->
+                launch { anim.animateTo(targetHoles[i], tween(280)) }
+            }
+            while (anims.any { it.isRunning }) {
+                animatedHoles = anims.map { it.value }
+                delay(16)
+            }
+            animatedHoles = targetHoles
         }
-        val hole = animatedHole ?: targetHole
+        val holes = animatedHoles ?: targetHoles.ifEmpty { null }
 
         Canvas(Modifier.fillMaxSize()) {
             val corner = CornerRadius(14.dp.toPx())
-            // EvenOdd 填充：整屏矩形 XOR 镂空圆角矩形 = 带洞遮罩
+            // EvenOdd 填充：整屏矩形 XOR 每个镂空圆角矩形 = 带洞遮罩（多洞天然支持）
             val path = Path().apply {
                 fillType = PathFillType.EvenOdd
                 addRect(Rect(Offset.Zero, size))
-                hole?.let { addRoundRect(RoundRect(rect = it, cornerRadius = corner)) }
+                holes.orEmpty().forEach { holeRect ->
+                    addRoundRect(RoundRect(rect = holeRect, cornerRadius = corner))
+                }
             }
             drawPath(path, ScrimColor)
-            hole?.let {
+            holes.orEmpty().forEach { holeRect ->
                 drawRoundRect(
                     color = Color.White.copy(alpha = 0.85f),
-                    topLeft = it.topLeft,
-                    size = it.size,
+                    topLeft = holeRect.topLeft,
+                    size = holeRect.size,
                     cornerRadius = corner,
                     style = Stroke(width = 1.5.dp.toPx()),
                 )
@@ -177,7 +192,7 @@ fun GuideOverlay(
 
         // 说明卡纵向定位。首帧卡高未测得按 0 估，onSizeChanged 回填后下一帧自然校正
         var cardHeightPx by remember { mutableStateOf(0) }
-        if (hole == null) {
+        if (holes == null) {
             // 无聚光（欢迎步）：卡片居中
             GuideCard(
                 step = step,
@@ -189,7 +204,16 @@ fun GuideOverlay(
             )
         } else {
             val gapPx = with(LocalDensity.current) { 24.dp.toPx() }
-            val cardY = cardOffsetY(hole, overlaySize.height, cardHeightPx, gapPx)
+            // 说明卡按所有洞的包围盒定位：单洞=原行为；双洞（上下梯形）包围盒≈整屏 → 卡片居中
+            val bounds = holes!!.reduce { acc, rect ->
+                Rect(
+                    left = minOf(acc.left, rect.left),
+                    top = minOf(acc.top, rect.top),
+                    right = maxOf(acc.right, rect.right),
+                    bottom = maxOf(acc.bottom, rect.bottom),
+                )
+            }
+            val cardY = cardOffsetY(bounds, overlaySize.height, cardHeightPx, gapPx)
             GuideCard(
                 step = step,
                 stepIndex = stepIndex,

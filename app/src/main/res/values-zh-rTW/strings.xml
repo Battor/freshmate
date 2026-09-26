@@ -205,4 +205,11 @@
     <string name="guide_mock_milk">牛奶</string>
     <string name="guide_mock_yogurt">優格</string>
     <string name="guide_mock_vegetable">蔬菜</string>
+    <string name="guide_form_title">編輯介面</string>
+    <string name="guide_form_body">名稱、分類、保存期限在這裡填寫；儲存後條目會進入「本次新增」。</string>
+    <string name="guide_trap_title">切換檢視</string>
+    <string name="guide_trap_body">螢幕上下有梯形按鈕，滑動可以同時檢視其它介面：上面是本次新增，下面是已有的條目。</string>
+    <string name="guide_mock_form_name">草莓</string>
+    <string name="guide_mock_session_bread">麵包</string>
+    <string name="guide_mock_session_egg">雞蛋</string>
 </resources>

@@ -209,4 +209,11 @@
     <string name="guide_mock_milk">牛奶</string>
     <string name="guide_mock_yogurt">酸奶</string>
     <string name="guide_mock_vegetable">蔬菜</string>
+    <string name="guide_form_title">编辑界面</string>
+    <string name="guide_form_body">名称、分类、保质期在这里填写；保存后条目会进入「本次添加」。</string>
+    <string name="guide_trap_title">切换查看</string>
+    <string name="guide_trap_body">屏幕上下有梯形按钮，滑动可以同时查看其它界面：上面是本次添加，下面是已有的条目。</string>
+    <string name="guide_mock_form_name">草莓</string>
+    <string name="guide_mock_session_bread">面包</string>
+    <string name="guide_mock_session_egg">鸡蛋</string>
 </resources>

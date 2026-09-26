@@ -205,4 +205,11 @@
     <string name="guide_mock_milk">Milk</string>
     <string name="guide_mock_yogurt">Yogurt</string>
     <string name="guide_mock_vegetable">Vegetables</string>
+    <string name="guide_form_title">Edit screen</string>
+    <string name="guide_form_body">Fill in the name, category and shelf life here; saved items go to “Just added”.</string>
+    <string name="guide_trap_title">Switch views</string>
+    <string name="guide_trap_body">Trapezoid buttons at the top and bottom edges — swipe to see the other views: items added this session above, existing items below.</string>
+    <string name="guide_mock_form_name">Strawberry</string>
+    <string name="guide_mock_session_bread">Bread</string>
+    <string name="guide_mock_session_egg">Egg</string>
 </resources>
