@@ -44,9 +44,9 @@ import com.battor.freshmate.util.expiryStatus
 import com.battor.freshmate.util.remainingFraction
 import java.time.LocalDateTime
 
-/** 卡片余量色层（specs/2026-09-26）：油表方向，on 色 18% alpha，右缘 14% 卡宽渐隐（走查反馈：12% 仍偏硬）。 */
+/** 卡片余量色层（specs/2026-09-26）：油表方向，on 色 18% alpha，右缘 25% 卡宽渐隐（走查反馈：14% 仍偏硬）。 */
 private const val CARD_FILL_ALPHA = 0.18f
-private const val CARD_FILL_FADE_FRACTION = 0.14f
+private const val CARD_FILL_FADE_FRACTION = 0.25f
 
 @Composable
 fun FoodItemCard(

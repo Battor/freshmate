@@ -552,9 +552,11 @@ internal fun BucketBox(
     guideBucketKey: String? = null,
 ) {
     // 走查反馈：缺口边框——整圈边框、标题嵌在顶部边框缺口里（类似输入框浮动标签）。
-    // 边框与标题同色：状态桶用该档 accent，「本次添加」用 primary，紧急度一眼可辨
-    val frameColor = status?.let { LocalStatusColors.current.of(it).accent }
-        ?: MaterialTheme.colorScheme.primary
+    // 边框线用状态色 accent 加透明度淡化；标题文字保持实色 accent 保证可读，
+    // 「本次添加」桶用 primary（文字）+ 淡化线
+    val statusColors = status?.let { LocalStatusColors.current.of(it) }
+    val notchColor = statusColors?.accent ?: MaterialTheme.colorScheme.primary
+    val lineColor = (statusColors?.accent ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.45f)
     // semantics 块非 Composable 上下文，提前解析
     val disperseLabel = stringResource(R.string.disperse_into_buckets)
     val bucketTarget = if (guideBucketKey != null) Modifier.guideTarget(guideBucketKey) else Modifier
@@ -564,7 +566,7 @@ internal fun BucketBox(
         Surface(
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, frameColor),
+            border = BorderStroke(1.dp, lineColor),
             modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
         ) {
             Column(
@@ -607,7 +609,7 @@ internal fun BucketBox(
         Text(
             header,
             style = MaterialTheme.typography.labelLarge,
-            color = frameColor,
+            color = notchColor,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .offset(x = (-18).dp, y = 14.dp)
