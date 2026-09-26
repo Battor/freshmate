@@ -63,5 +63,7 @@ class ExpiryUtilsTest {
         assertEquals(1f, remainingFraction(null, createdAt, 10, createdAt.minusDays(1)), 0.001f)
         // shelfLife = 0 → total 为零，防御性归 1
         assertEquals(1f, remainingFraction(null, createdAt, 0, createdAt), 0.001f)
+        // shelfLife 为负 → total 为负，防御性归 1
+        assertEquals(1f, remainingFraction(null, createdAt, -3, createdAt.plusDays(1)), 0.001f)
     }
 }
