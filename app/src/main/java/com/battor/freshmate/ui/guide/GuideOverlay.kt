@@ -55,6 +55,9 @@ import androidx.compose.ui.unit.dp
 import com.battor.freshmate.R
 import com.battor.freshmate.ui.common.GuideKeys
 import com.battor.freshmate.ui.common.GuideStateHolder
+import com.battor.freshmate.ui.theme.DarkOnSurfaceVariant
+import com.battor.freshmate.ui.theme.DarkSurfaceHigh
+import com.battor.freshmate.ui.theme.GreenLight
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -243,20 +246,26 @@ private fun GuideCard(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 编辑态两步（showEditingMock）说明卡悬浮在浅色表单上，浅色卡难以区分——改深色底
+    // （描边方案走过查不够分明，已撤销）。深色主题下深底与周边深色表面亦相容
+    val onDark = step.showEditingMock
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (onDark) DarkSurfaceHigh else MaterialTheme.colorScheme.surface,
+        ),
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
                 stringResource(R.string.guide_step_indicator, stepIndex + 1, GuideSteps.size),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = if (onDark) GreenLight else MaterialTheme.colorScheme.primary,
             )
             Text(
                 stringResource(step.titleRes),
                 style = MaterialTheme.typography.titleMedium,
+                color = if (onDark) Color.White else Color.Unspecified,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Text(
@@ -268,7 +277,7 @@ private fun GuideCard(
                     }
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (onDark) DarkOnSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
             // skip 紧贴主操作左侧（成组右对齐，走查反馈：不要拆到两端）
@@ -278,7 +287,10 @@ private fun GuideCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onSkip) {
-                    Text(stringResource(R.string.guide_skip))
+                    Text(
+                        stringResource(R.string.guide_skip),
+                        color = if (onDark) GreenLight else Color.Unspecified,
+                    )
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(onClick = onNext) {
