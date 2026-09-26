@@ -26,9 +26,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -41,12 +38,7 @@ import com.battor.freshmate.ui.theme.categoryIconColor
 import com.battor.freshmate.util.ExpiryStatus
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
-import com.battor.freshmate.util.remainingFraction
 import java.time.LocalDateTime
-
-/** 卡片余量色层（specs/2026-09-26）：油表方向，on 色 18% alpha，右缘 25% 卡宽渐隐（走查反馈：14% 仍偏硬）。 */
-private const val CARD_FILL_ALPHA = 0.18f
-private const val CARD_FILL_FADE_FRACTION = 0.25f
 
 @Composable
 fun FoodItemCard(
@@ -90,56 +82,33 @@ fun FoodItemCard(
             ),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            // 余量色层：剩余越多覆盖越长（油表）；过期 fraction=0 无色层。on 色低 alpha 在
-            // 浅色主题呈加深、深色主题呈提亮，文字对比度不受影响
-            val fillFraction = remainingFraction(item.productionDate, item.createdAt, item.shelfLifeDays, now)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .drawBehind {
-                        if (fillFraction > 0f) {
-                            val fillWidth = size.width * fillFraction
-                            val fade = size.width * CARD_FILL_FADE_FRACTION
-                            drawRect(
-                                brush = Brush.horizontalGradient(
-                                    0f to onColor.copy(alpha = CARD_FILL_ALPHA),
-                                    ((fillWidth - fade) / fillWidth).coerceIn(0f, 1f) to
-                                        onColor.copy(alpha = CARD_FILL_ALPHA),
-                                    1f to Color.Transparent,
-                                ),
-                                size = Size(fillWidth, size.height),
-                            )
-                        }
-                    },
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        categoryIcon(item.category),
-                        contentDescription = stringResource(item.category.labelRes),
-                        tint = categoryIconColor(item.category),
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Column(Modifier.weight(1f)) {
-                        Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
-                        item.quantity?.let {
-                            Text(
-                                stringResource(R.string.quantity_label, it),
-                                color = onColor,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
+                Icon(
+                    categoryIcon(item.category),
+                    contentDescription = stringResource(item.category.labelRes),
+                    tint = categoryIconColor(item.category),
+                    modifier = Modifier.size(28.dp),
+                )
+                Column(Modifier.weight(1f)) {
+                    Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
+                    item.quantity?.let {
+                        Text(
+                            stringResource(R.string.quantity_label, it),
+                            color = onColor,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
-                    // 走查反馈：更久到期只显示天数（超过 14 天的小时没有信息量）
-                    Text(
-                        expiryText(expiry, now, daysOnly = status == ExpiryStatus.SAFE),
-                        color = onColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
                 }
+                // 走查反馈：更久到期只显示天数（超过 14 天的小时没有信息量）
+                Text(
+                    expiryText(expiry, now, daysOnly = status == ExpiryStatus.SAFE),
+                    color = onColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }
