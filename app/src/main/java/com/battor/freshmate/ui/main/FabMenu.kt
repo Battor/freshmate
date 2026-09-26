@@ -7,6 +7,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,7 +31,13 @@ fun FabMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
-        FloatingActionButton(onClick = { expanded = true }) {
+        // 走查反馈：FAB 用品牌主色（浅色主题即 APP 图标的深绿）+ onPrimary 前景；
+        // 深色主题沿用 primary = 亮绿变体，保持与深底的对比
+        FloatingActionButton(
+            onClick = { expanded = true },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 通用 -->
-    <string name="app_name">食刻 FreshMate</string>
-    <!-- 顶栏标题按语言显示短名（走查反馈）；app_name 带双语全名只用于桌面图标 -->
+    <!-- 走查反馈：应用名按语言——中文系统「食刻」，英文系统「FreshMate」（桌面图标 label 随应用语言） -->
+    <string name="app_name">食刻</string>
+    <!-- 顶栏标题按语言显示短名（走查反馈） -->
     <string name="app_title">食刻</string>
     <string name="back">返回</string>
     <string name="ok">确定</string>

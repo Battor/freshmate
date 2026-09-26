@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 通用 -->
-    <string name="app_name">食刻 FreshMate</string>
+    <string name="app_name">食刻</string>
     <string name="app_title">食刻</string>
     <string name="back">返回</string>
     <string name="ok">確定</string>
