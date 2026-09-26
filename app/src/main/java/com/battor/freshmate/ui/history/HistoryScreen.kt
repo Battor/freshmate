@@ -2,6 +2,7 @@ package com.battor.freshmate.ui.history
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +56,7 @@ import com.battor.freshmate.ui.main.expiryText
 import com.battor.freshmate.ui.common.OneShotSnackbar
 import com.battor.freshmate.ui.common.asString
 import com.battor.freshmate.ui.main.LocalStatusColors
+import com.battor.freshmate.ui.theme.categoryIconColor
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
 import java.time.LocalDateTime
@@ -217,7 +219,7 @@ private fun HistoryItemCard(
                 Icon(
                     categoryIcon(item.category),
                     contentDescription = stringResource(item.category.labelRes),
-                    tint = onColor,
+                    tint = categoryIconColor(item.category, isSystemInDarkTheme()),
                     modifier = Modifier.size(28.dp),
                 )
                 Column(Modifier.weight(1f)) {

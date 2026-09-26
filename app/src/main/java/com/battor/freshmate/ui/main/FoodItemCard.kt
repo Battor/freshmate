@@ -1,6 +1,7 @@
 package com.battor.freshmate.ui.main
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.ui.theme.categoryIconColor
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
 import java.time.LocalDateTime
@@ -87,7 +89,7 @@ fun FoodItemCard(
                 Icon(
                     categoryIcon(item.category),
                     contentDescription = stringResource(item.category.labelRes),
-                    tint = onColor,
+                    tint = categoryIconColor(item.category, isSystemInDarkTheme()),
                     modifier = Modifier.size(28.dp),
                 )
                 Column(Modifier.weight(1f)) {

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -69,9 +70,9 @@ import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.inputmethod.InputMethods
 import com.battor.freshmate.ui.main.MainViewModel.EditingState
+import com.battor.freshmate.ui.theme.categoryIconColor
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
-import com.battor.freshmate.util.expiryStatus
 import com.battor.freshmate.util.formatExpired
 import com.battor.freshmate.util.formatRemaining
 import com.battor.freshmate.util.shelfLifeToDays
@@ -252,11 +253,6 @@ internal fun FormPreviewCard(state: EditingState, saved: FoodItem?, now: LocalDa
         ?.takeIf { it > 0 }
         ?.let { expiryDateTime(state.productionDate, state.createdAt, shelfLifeToDays(it, state.shelfLifeUnit)) }
         ?: saved?.let { expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays) }
-    // 需求-6 走查点子：图标按到期状态染色——中性编辑区里留一点紧急度信号，色阶与列表桶一致；
-    // 拿不到到期时刻（新增未填保质期）回落中性色
-    val statusAccent = liveExpiry
-        ?.let { LocalStatusColors.current.of(expiryStatus(it, now)).accent }
-        ?: onColor
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -287,7 +283,7 @@ internal fun FormPreviewCard(state: EditingState, saved: FoodItem?, now: LocalDa
         Icon(
             categoryIcon(state.category),
             contentDescription = null,
-            tint = statusAccent,
+            tint = categoryIconColor(state.category, isSystemInDarkTheme()),
             modifier = Modifier.size(28.dp),
         )
         Column(Modifier.weight(1f)) {
