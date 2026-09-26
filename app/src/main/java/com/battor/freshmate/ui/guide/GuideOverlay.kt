@@ -157,10 +157,12 @@ fun GuideOverlay(
             }
             // 洞数相同：逐洞同步补间（每帧聚合各 Animatable 当前值）
             val anims = from.mapIndexed { i, rect -> Animatable(rect, Rect.VectorConverter) }
-            anims.forEachIndexed { i, anim ->
+            val jobs = anims.mapIndexed { i, anim ->
                 launch { anim.animateTo(targetHoles[i], tween(280)) }
             }
-            while (anims.any { it.isRunning }) {
+            // 轮询 Job 存活而非 Animatable.isRunning：子协程尚未派发时 isRunning 仍为 false，
+            // 会整段跳过、直接跳变落位
+            while (jobs.any { it.isActive }) {
                 animatedHoles = anims.map { it.value }
                 delay(16)
             }
@@ -170,16 +172,17 @@ fun GuideOverlay(
 
         Canvas(Modifier.fillMaxSize()) {
             val corner = CornerRadius(14.dp.toPx())
+            val visibleHoles = holes.orEmpty()
             // EvenOdd 填充：整屏矩形 XOR 每个镂空圆角矩形 = 带洞遮罩（多洞天然支持）
             val path = Path().apply {
                 fillType = PathFillType.EvenOdd
                 addRect(Rect(Offset.Zero, size))
-                holes.orEmpty().forEach { holeRect ->
+                visibleHoles.forEach { holeRect ->
                     addRoundRect(RoundRect(rect = holeRect, cornerRadius = corner))
                 }
             }
             drawPath(path, ScrimColor)
-            holes.orEmpty().forEach { holeRect ->
+            visibleHoles.forEach { holeRect ->
                 drawRoundRect(
                     color = Color.White.copy(alpha = 0.85f),
                     topLeft = holeRect.topLeft,
@@ -192,8 +195,17 @@ fun GuideOverlay(
 
         // 说明卡纵向定位。首帧卡高未测得按 0 估，onSizeChanged 回填后下一帧自然校正
         var cardHeightPx by remember { mutableStateOf(0) }
-        if (holes == null) {
-            // 无聚光（欢迎步）：卡片居中
+        // 说明卡定位：无聚光居中；聚光包围盒超过半屏（如上下双洞）也居中；
+        // 其余按包围盒上下选边（cardOffsetY 两头钳制在屏内）
+        val cardBounds = holes?.reduce { acc, rect ->
+            Rect(
+                left = minOf(acc.left, rect.left),
+                top = minOf(acc.top, rect.top),
+                right = maxOf(acc.right, rect.right),
+                bottom = maxOf(acc.bottom, rect.bottom),
+            )
+        }
+        if (cardBounds == null || cardBounds.height > overlaySize.height / 2f) {
             GuideCard(
                 step = step,
                 stepIndex = stepIndex,
@@ -204,16 +216,7 @@ fun GuideOverlay(
             )
         } else {
             val gapPx = with(LocalDensity.current) { 24.dp.toPx() }
-            // 说明卡按所有洞的包围盒定位：单洞=原行为；双洞（上下梯形）包围盒≈整屏 → 卡片居中
-            val bounds = holes!!.reduce { acc, rect ->
-                Rect(
-                    left = minOf(acc.left, rect.left),
-                    top = minOf(acc.top, rect.top),
-                    right = maxOf(acc.right, rect.right),
-                    bottom = maxOf(acc.bottom, rect.bottom),
-                )
-            }
-            val cardY = cardOffsetY(bounds, overlaySize.height, cardHeightPx, gapPx)
+            val cardY = cardOffsetY(cardBounds, overlaySize.height, cardHeightPx, gapPx)
             GuideCard(
                 step = step,
                 stepIndex = stepIndex,
