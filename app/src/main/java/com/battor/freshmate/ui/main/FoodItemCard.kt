@@ -115,22 +115,22 @@ fun FoodItemCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                Icon(
-                    categoryIcon(item.category),
-                    contentDescription = stringResource(item.category.labelRes),
-                    tint = categoryIconColor(item.category),
-                    modifier = Modifier.size(28.dp),
-                )
-                Column(Modifier.weight(1f)) {
-                    Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
-                    item.quantity?.let {
-                        Text(
-                            stringResource(R.string.quantity_label, it),
-                            color = onColor,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                    Icon(
+                        categoryIcon(item.category),
+                        contentDescription = stringResource(item.category.labelRes),
+                        tint = categoryIconColor(item.category),
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
+                        item.quantity?.let {
+                            Text(
+                                stringResource(R.string.quantity_label, it),
+                                color = onColor,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
-                }
                     Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
                 }
             }

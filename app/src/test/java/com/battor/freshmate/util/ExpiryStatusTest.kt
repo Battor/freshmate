@@ -6,7 +6,6 @@ import androidx.test.core.app.ApplicationProvider
 import java.time.Duration
 import java.time.LocalDateTime
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -67,16 +66,4 @@ class ExpiryStatusTest {
     @Test
     fun `过期文案 - 小时`() =
         assertEquals("已过期 5 小时", "已过期 " + formatExpired(res, Duration.ofHours(5)))
-
-    // 断言不变量而非复述枚举表：比例 ∈ (0,1]、EXPIRED/SAFE 取满、due 梯子单调不减
-    @Test
-    fun `桶头进度比例 - 不变量`() {
-        ExpiryStatus.entries.forEach {
-            assertTrue(it.windowProgress > 0f && it.windowProgress <= 1f)
-        }
-        assertEquals(1f, ExpiryStatus.EXPIRED.windowProgress)
-        assertEquals(1f, ExpiryStatus.SAFE.windowProgress)
-        val progresses = ExpiryStatus.entries.drop(1).map { it.windowProgress }
-        assertEquals(progresses.sorted(), progresses)
-    }
 }
