@@ -62,13 +62,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -551,53 +551,26 @@ internal fun BucketBox(
     guideFirstCardKey: String? = null,
     guideBucketKey: String? = null,
 ) {
-    val border = if (status == null) {
-        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-    } else {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-    }
+    // 走查反馈：缺口边框——整圈边框、标题嵌在顶部边框缺口里（类似输入框浮动标签）。
+    // 边框与标题同色：状态桶用该档 accent，「本次添加」用 primary，紧急度一眼可辨
+    val frameColor = status?.let { LocalStatusColors.current.of(it).accent }
+        ?: MaterialTheme.colorScheme.primary
     // semantics 块非 Composable 上下文，提前解析
     val disperseLabel = stringResource(R.string.disperse_into_buckets)
     val bucketTarget = if (guideBucketKey != null) Modifier.guideTarget(guideBucketKey) else Modifier
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        border = border,
-        modifier = modifier.then(bucketTarget).fillMaxWidth().animateContentSize(),
-    ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    Box(modifier = modifier.then(bucketTarget).fillMaxWidth().animateContentSize()) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, frameColor),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            if (status != null) {
-                val statusColors = LocalStatusColors.current.of(status)
-                Text(
-                    header,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = statusColors.on,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.End,
-                )
-            } else {
-                // 「本次添加」组头：浅主色背景 chip 让散入动作可发现；TalkBack 提供自定义动作
-                Text(
-                    header,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.extraSmall)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                        .semantics {
-                            onHeaderAction?.let {
-                                customActions = listOf(
-                                    CustomAccessibilityAction(disperseLabel) { it(); true },
-                                )
-                            }
-                        },
-                )
-            }
-            items.forEachIndexed { cardIndex, item ->
+            Column(
+                // 顶部 16dp：给骑在边框上的缺口标题下半截留位
+                modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 16.dp, bottom = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items.forEachIndexed { cardIndex, item ->
                 // 卡片入场淡入（走查反馈）：跨桶迁移/散入各桶/撤销删除时新位置柔和不突兀。
                 // key 按 item.id 圈住 remember 槽位，重排时复用入场状态——否则相邻卡
                 // 会因槽位换主而重新播放入场动画。移除的收缩由桶 animateContentSize 承接
@@ -627,5 +600,28 @@ internal fun BucketBox(
                 }
             }
         }
+    }
+        // 缺口标题：上移半个自身高度骑在顶边框上（x=18dp 越过左侧圆角段），
+        // 背景与页面底色同色遮出缺口；「本次添加」桶在此承载散入动作的 TalkBack 语义
+        Text(
+            header,
+            style = MaterialTheme.typography.labelLarge,
+            color = frameColor,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = 18.dp)
+                .graphicsLayer { translationY = -size.height / 2f }
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 6.dp)
+                .semantics {
+                    if (status == null) {
+                        onHeaderAction?.let {
+                            customActions = listOf(
+                                CustomAccessibilityAction(disperseLabel) { it(); true },
+                            )
+                        }
+                    }
+                },
+        )
     }
 }
