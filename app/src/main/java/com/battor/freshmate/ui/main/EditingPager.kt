@@ -116,13 +116,14 @@ fun EditingPager(
                         )
 
                         EditPageKind.FORM -> {
-                            // 预览+表单整体作为聚光目标（引导编辑态步骤）；外层 Column 不改观感，
-                            // EditScrollColumn 的 spacedBy(12) 已覆盖与相邻段内容的间距。
+                            // 预览+表单整体作为聚光目标（引导编辑态步骤）；补同款 spacedBy(12)
+                            // 保持原间距不变观感，EditScrollColumn 的 spacedBy(12) 已覆盖与相邻段内容的间距。
                             // key 判空守卫同 MainScreen 的 guideBucketKey：guideTarget 只收非空
                             Column(
                                 modifier = if (guideFormKey != null) Modifier.guideTarget(guideFormKey) else Modifier,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                // 预览在编辑区上方（走查反馈确认）、拉开距离：列间距 12 + 额外 12 = 24dp
+                                // 预览在编辑区上方（走查反馈确认）、拉开距离：列间距 12 + Spacer 12 + 列间距 12 = 36dp
                                 FormPreviewCard(state = editing, saved = editingTarget, now = now)
                                 Spacer(Modifier.height(12.dp))
                                 ItemForm(
