@@ -11,6 +11,7 @@ import com.battor.freshmate.util.ExpiryStatus
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.formatExpired
 import com.battor.freshmate.util.formatRemaining
+import com.battor.freshmate.util.formatRemainingDaysOnly
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -76,13 +77,13 @@ fun expiryText(item: FoodItem, now: LocalDateTime): String =
 
 /** 按到期时刻的重载：表单「当前操作项目」实时预览用（需求-5 走查反馈）。 */
 @Composable
-fun expiryText(expiry: LocalDateTime, now: LocalDateTime): String {
+fun expiryText(expiry: LocalDateTime, now: LocalDateTime, daysOnly: Boolean = false): String {
     val remaining = Duration.between(now, expiry)
     val expired = remaining.isNegative || remaining.isZero
-    val duration = if (expired) {
-        formatExpired(LocalContext.current.resources, remaining.negated())
-    } else {
-        formatRemaining(LocalContext.current.resources, remaining)
+    val duration = when {
+        expired -> formatExpired(LocalContext.current.resources, remaining.negated())
+        daysOnly -> formatRemainingDaysOnly(LocalContext.current.resources, remaining)
+        else -> formatRemaining(LocalContext.current.resources, remaining)
     }
     return if (expired) {
         stringResource(R.string.card_status_expired, duration)

@@ -60,6 +60,13 @@ class ExpiryStatusTest {
         assertEquals("30 分钟", formatRemaining(res, Duration.ofMinutes(45)))
 
     @Test
+    fun `剩余文案 - 只显示天数向下取整`() {
+        // 14 天 1 小时 → 14 天（完整天数，不夸大剩余）；恰好 15 天 → 15 天
+        assertEquals("14 天", formatRemainingDaysOnly(res, Duration.ofMinutes(14 * 1440 + 60)))
+        assertEquals("15 天", formatRemainingDaysOnly(res, Duration.ofDays(15)))
+    }
+
+    @Test
     fun `过期文案 - 天`() =
         assertEquals("已过期 2 天", "已过期 " + formatExpired(res, Duration.ofDays(2)))
 

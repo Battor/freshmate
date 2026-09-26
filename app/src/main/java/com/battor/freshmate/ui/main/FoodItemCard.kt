@@ -38,14 +38,15 @@ import androidx.compose.ui.unit.dp
 import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.ui.theme.categoryIconColor
+import com.battor.freshmate.util.ExpiryStatus
 import com.battor.freshmate.util.expiryDateTime
 import com.battor.freshmate.util.expiryStatus
 import com.battor.freshmate.util.remainingFraction
 import java.time.LocalDateTime
 
-/** 卡片余量色层（specs/2026-09-26）：油表方向，on 色 18% alpha，右缘 12% 卡宽渐隐。 */
+/** 卡片余量色层（specs/2026-09-26）：油表方向，on 色 18% alpha，右缘 14% 卡宽渐隐（走查反馈：12% 仍偏硬）。 */
 private const val CARD_FILL_ALPHA = 0.18f
-private const val CARD_FILL_FADE_FRACTION = 0.12f
+private const val CARD_FILL_FADE_FRACTION = 0.14f
 
 @Composable
 fun FoodItemCard(
@@ -56,7 +57,8 @@ fun FoodItemCard(
     enabled: Boolean = true,
 ) {
     val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
-    val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
+    val status = expiryStatus(expiry, now)
+    val (container, onColor) = LocalStatusColors.current.of(status)
     val deleteLabel = stringResource(R.string.delete)
 
     // 防御：rememberSwipeToDismissBoxState 只在状态对象首建时捕获 confirmValueChange
@@ -131,7 +133,12 @@ fun FoodItemCard(
                             )
                         }
                     }
-                    Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
+                    // 走查反馈：更久到期只显示天数（超过 14 天的小时没有信息量）
+                    Text(
+                        expiryText(expiry, now, daysOnly = status == ExpiryStatus.SAFE),
+                        color = onColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
             }
         }

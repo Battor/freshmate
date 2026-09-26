@@ -50,6 +50,13 @@ fun formatRemaining(res: Resources, remaining: Duration): String {
     return if (parts.isEmpty()) res.getString(R.string.duration_under_half_hour) else parts.joinToString(" ")
 }
 
+/**
+ * 只显示完整天数（"更久到期"桶专用，走查反馈：超过 14 天不显示小时）。
+ * 向下取整——14 天 1 小时说成 14 天：不夸大剩余，与原"天 + 小时"的天数部分一致。
+ */
+fun formatRemainingDaysOnly(res: Resources, remaining: Duration): String =
+    res.getString(R.string.duration_days, remaining.toMinutes().coerceAtLeast(0) / 1440)
+
 /** 已过期的时长文案："2 天" / "5 小时"，按当前语言输出。 */
 fun formatExpired(res: Resources, overdue: Duration): String {
     val days = overdue.toDays()
