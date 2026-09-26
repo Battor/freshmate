@@ -69,6 +69,7 @@ import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.inputmethod.InputMethodId
 import com.battor.freshmate.inputmethod.InputMethods
 import com.battor.freshmate.ui.main.MainViewModel.EditingState
+import com.battor.freshmate.ui.theme.categoryFormColor
 import com.battor.freshmate.ui.theme.categoryIconColor
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
@@ -121,11 +122,12 @@ fun ItemForm(
 ) {
     val inputMethod = InputMethods.byId(state.inputMethod)
 
-    // 需求-6：编辑区中性化——容器/虚线框改中性 surface 色阶，不再用 primaryContainer 大色块
+    // 编辑区底色随分类联动（specs/2026-09-26）：表单本身成为"分类指示器"；
+    // 输入框维持 surfaceContainerLowest 中性填充，与任何分类底色相容
     Card(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = categoryFormColor(state.category),
         ),
         modifier = Modifier.fillMaxWidth(),
     ) {
