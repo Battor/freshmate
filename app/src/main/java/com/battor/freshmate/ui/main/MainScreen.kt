@@ -12,25 +12,21 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -67,20 +63,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -98,12 +86,6 @@ import com.battor.freshmate.util.ExpiryStatus
 import java.time.LocalDateTime
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-/** 桶头进度条宽度 = 组头文字宽度 × 2（需求-5 走查反馈：1.5 基础上再加宽）。 */
-private const val BUCKET_BAR_WIDTH_SCALE = 2f
-
-/** 桶头进度条轨道与条纹底色的透明度（同色淡底）。 */
-private const val BUCKET_BAR_TRACK_ALPHA = 0.3f
 
 /**
  * MainContent 全部交互回调：主流程用匿名对象适配 ViewModel 与导航（编译器强制覆写全量，
@@ -548,45 +530,6 @@ internal fun MainContent(
 }
 
 /**
- * 桶头进度条（需求-5 走查反馈第 4 轮）：药丸形轨道 + 状态容器色斜条纹填充段。
- * LinearProgressIndicator 不支持条纹，自绘 Canvas；无语义节点（避免 TalkBack 朗读
- * 对「窗口刻度」无意义的百分比，组头语义由右侧文字承载）。
- */
-@Composable
-private fun BucketProgressBar(
-    progress: Float,
-    fillColor: Color,
-    modifier: Modifier = Modifier,
-) {
-    Canvas(modifier = modifier.height(6.dp)) {
-        val corner = CornerRadius(size.height / 2f)
-        drawRoundRect(color = fillColor.copy(alpha = BUCKET_BAR_TRACK_ALPHA), cornerRadius = corner)
-        val fillWidth = size.width * progress.coerceIn(0f, 1f)
-        if (fillWidth <= 0f) return@Canvas
-        // 填充段 = 同色淡底 + 45° 实色斜纹：同色两调，深浅主题都成立
-        clipPath(
-            Path().apply {
-                addRoundRect(RoundRect(rect = Rect(0f, 0f, fillWidth, size.height), cornerRadius = corner))
-            },
-        ) {
-            drawRect(fillColor.copy(alpha = BUCKET_BAR_TRACK_ALPHA))
-            val stripeWidth = 3.5.dp.toPx()
-            val period = 7.dp.toPx()
-            var x = -size.height
-            while (x < fillWidth + size.height) {
-                drawLine(
-                    color = fillColor,
-                    start = Offset(x, size.height),
-                    end = Offset(x + size.height, 0f),
-                    strokeWidth = stripeWidth,
-                )
-                x += period
-            }
-        }
-    }
-}
-
-/**
  * 桶容器（需求-3）：浅边框 + 状态色桶头 + 子条目卡片。
  * status = null 表示「本次添加」置顶区（主色 2dp 边框、组头用主色文本）。
  * 点卡片 = 编辑；组头与组空白不可点击（桶按过期时间聚合，无组级交互）。
@@ -628,28 +571,13 @@ internal fun BucketBox(
         ) {
             if (status != null) {
                 val statusColors = LocalStatusColors.current.of(status)
-                // 进度条宽度 = 组头文字实际宽度 × 2（需求-5 走查反馈，精确测量非估算）
-                val textMeasurer = rememberTextMeasurer()
-                val textStyle = MaterialTheme.typography.labelLarge
-                val textWidth = remember(header, textStyle) {
-                    textMeasurer.measure(header, textStyle).size.width
-                }
-                val barWidth = with(LocalDensity.current) { textWidth.toDp() * BUCKET_BAR_WIDTH_SCALE }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                Text(
+                    header,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = statusColors.on,
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    // 桶级紧急度：填充段 = 状态容器色（与组内卡片同色）斜条纹；
-                    // 条纹纹理的明暗差弥补粉彩容器色叠浅底的低对比（无需再借深色 on）
-                    BucketProgressBar(
-                        progress = status.windowProgress,
-                        fillColor = statusColors.container,
-                        modifier = Modifier.width(barWidth),
-                    )
-                    // 文字右对齐到组右缘（需求-5 走查反馈）
-                    Spacer(Modifier.weight(1f))
-                    Text(header, style = textStyle, color = statusColors.on)
-                }
+                    textAlign = TextAlign.End,
+                )
             } else {
                 // 「本次添加」组头：浅主色背景 chip 让散入动作可发现；TalkBack 提供自定义动作
                 Text(
