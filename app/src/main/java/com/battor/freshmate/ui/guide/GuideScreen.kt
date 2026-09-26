@@ -31,8 +31,14 @@ fun GuideScreen(
     val milkName = stringResource(R.string.guide_mock_milk)
     val yogurtName = stringResource(R.string.guide_mock_yogurt)
     val vegetableName = stringResource(R.string.guide_mock_vegetable)
-    val mock = remember(milkName, yogurtName, vegetableName) {
-        GuideMockContent(milkName, yogurtName, vegetableName)
+    val strawberryName = stringResource(R.string.guide_mock_form_name)
+    val breadName = stringResource(R.string.guide_mock_session_bread)
+    val eggName = stringResource(R.string.guide_mock_session_egg)
+    val mock = remember(milkName, yogurtName, vegetableName, strawberryName, breadName, eggName) {
+        GuideMockContent(
+            milkName, yogurtName, vegetableName,
+            formName = strawberryName, breadName = breadName, eggName = eggName,
+        )
     }
     val holder = remember { GuideStateHolder() }
     val machine = remember { GuideStateMachine(GuideSteps.size) }
@@ -48,12 +54,21 @@ fun GuideScreen(
     Box(Modifier.fillMaxSize()) {
         CompositionLocalProvider(LocalGuideState provides holder) {
             MainContent(
-                state = mock.uiState,
+                // 状态按步派生：编辑态步骤显示预填表单 + 双梯形三段式（key 含 machine.current，
+                // 步进时 uiState 与聚光洞同步切换）
+                state = remember(mock, machine.current) {
+                    mock.uiStateForStep(isEditingStep = GuideSteps[machine.current].showEditingMock)
+                },
                 errorEvent = null,
                 updateHint = null,
                 actions = NoopMainActions,
                 guideFirstCardKey = GuideKeys.FIRST_CARD,
                 guideFirstBucketKey = GuideKeys.BUCKET_AREA,
+                // 三个 key 永久传入：目标未组合时（如非编辑态没有梯形）onDispose 摘除注册，
+                // 不会留幽灵洞
+                guideFormKey = GuideKeys.FORM_AREA,
+                guideTrapTopKey = GuideKeys.TRAP_TOP,
+                guideTrapBottomKey = GuideKeys.TRAP_BOTTOM,
                 handleSystemBack = false,
             )
         }

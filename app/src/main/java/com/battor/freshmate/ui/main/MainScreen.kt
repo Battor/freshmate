@@ -189,6 +189,10 @@ internal fun MainContent(
     /** 引导模式聚光「第一张卡片」「第一个桶」：透传给列表分支第一个桶，主流程为 null 零影响 */
     guideFirstCardKey: String? = null,
     guideFirstBucketKey: String? = null,
+    /** 引导模式聚光「编辑表单区/上下梯形」：透传给 EditingPager，主流程为 null 零影响 */
+    guideFormKey: String? = null,
+    guideTrapTopKey: String? = null,
+    guideTrapBottomKey: String? = null,
     /** 引导页复用 MainContent 时置 false：系统返回拦截（退出编辑确认/双击退出）让位给
      *  GuideScreen 自己的 BackHandler——Compose 返回栈后组合者优先，不关会被反超。 */
     handleSystemBack: Boolean = true,
@@ -376,6 +380,9 @@ internal fun MainContent(
                         onPlaceholderHint = { scope.launch { snackbarHostState.showSnackbar(it) } },
                         onStartEdit = actions::startEdit,
                         onDeleteItem = onDeleteItem,
+                        guideFormKey = guideFormKey,
+                        guideTrapTopKey = guideTrapTopKey,
+                        guideTrapBottomKey = guideTrapBottomKey,
                         onPageChanged = { editPage = it },
                     )
                 } else {

@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
+import com.battor.freshmate.ui.common.guideTarget
 import com.battor.freshmate.ui.main.MainViewModel.EditingState
 import com.battor.freshmate.ui.theme.TrapFill
 import java.time.LocalDateTime
@@ -68,6 +69,10 @@ fun EditingPager(
     onPlaceholderHint: (String) -> Unit,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
+    /** 引导模式聚光 key：表单区 / 上下梯形；主流程为 null 零开销（guideFirstCardKey 同款通道） */
+    guideFormKey: String? = null,
+    guideTrapTopKey: String? = null,
+    guideTrapBottomKey: String? = null,
     /** 当前吸附段变化时上报——MainScreen 据此切换顶栏（已添加段显示默认样式） */
     onPageChanged: (EditPageKind) -> Unit = {},
 ) {
@@ -111,15 +116,22 @@ fun EditingPager(
                         )
 
                         EditPageKind.FORM -> {
-                            // 预览在编辑区上方（走查反馈确认）、拉开距离：列间距 12 + 额外 12 = 24dp
-                            FormPreviewCard(state = editing, saved = editingTarget, now = now)
-                            Spacer(Modifier.height(12.dp))
-                            ItemForm(
-                                state = editing,
-                                onStateChange = onStateChange,
-                                onPlaceholderHint = onPlaceholderHint,
-                                now = now,
-                            )
+                            // 预览+表单整体作为聚光目标（引导编辑态步骤）；外层 Column 不改观感，
+                            // EditScrollColumn 的 spacedBy(12) 已覆盖与相邻段内容的间距。
+                            // key 判空守卫同 MainScreen 的 guideBucketKey：guideTarget 只收非空
+                            Column(
+                                modifier = if (guideFormKey != null) Modifier.guideTarget(guideFormKey) else Modifier,
+                            ) {
+                                // 预览在编辑区上方（走查反馈确认）、拉开距离：列间距 12 + 额外 12 = 24dp
+                                FormPreviewCard(state = editing, saved = editingTarget, now = now)
+                                Spacer(Modifier.height(12.dp))
+                                ItemForm(
+                                    state = editing,
+                                    onStateChange = onStateChange,
+                                    onPlaceholderHint = onPlaceholderHint,
+                                    now = now,
+                                )
+                            }
                         }
 
                         EditPageKind.EXISTING -> buckets.forEach { bucket ->
@@ -156,6 +168,8 @@ fun EditingPager(
                     TrapIndicator(
                         label = label,
                         orientation = TrapezoidShape.Orientation.TOP,
+                        // 引导第 4 步聚光上梯形（key 判空守卫同上）
+                        modifier = if (guideTrapTopKey != null) Modifier.guideTarget(guideTrapTopKey) else Modifier,
                         onClick = {
                             // 走查反馈：默认 spring 太快，换 420ms tween 平滑减速
                             scope.launch {
@@ -178,6 +192,8 @@ fun EditingPager(
                     TrapIndicator(
                         label = label,
                         orientation = TrapezoidShape.Orientation.BOTTOM,
+                        // 引导第 4 步聚光下梯形
+                        modifier = if (guideTrapBottomKey != null) Modifier.guideTarget(guideTrapBottomKey) else Modifier,
                         onClick = {
                             scope.launch {
                                 pagerState.animateScrollToPage(
@@ -218,6 +234,7 @@ private fun TrapIndicator(
     label: TrapLabel,
     orientation: TrapezoidShape.Orientation,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Text(
         text = when (label) {
@@ -228,7 +245,7 @@ private fun TrapIndicator(
         },
         color = Color.White,
         style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier
+        modifier = modifier
             .clip(TrapezoidShape(orientation))
             .background(TrapFill)
             .clickable(onClick = onClick)
