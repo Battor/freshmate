@@ -297,7 +297,7 @@ internal fun MainContent(
                 TopAppBar(
                     title = { Text(stringResource(R.string.app_title)) },
                     actions = {
-                        // 引导第 5 步聚光顶栏动作区（主流程 holder 为 null，guideTarget 原样返回）
+                        // 引导第 7 步聚光顶栏动作区（主流程 holder 为 null，guideTarget 原样返回）
                         Row(Modifier.guideTarget(GuideKeys.TOPBAR)) {
                             IconButton(onClick = actions::openHistory) {
                                 Icon(Icons.Filled.History, contentDescription = stringResource(R.string.history))
@@ -433,7 +433,7 @@ internal fun MainContent(
                                             cardsEnabled = true,
                                             onStartEdit = actions::startEdit,
                                             onDeleteItem = onDeleteItem,
-                                            // 引导第 3 步聚光首卡、第 4 步聚光首桶（含桶头讲分桶概念；
+                                            // 引导第 5 步聚光首卡、第 6 步聚光首桶（含桶头讲分桶概念；
                                             // 整列表做镂空会几乎盖满全屏，遮罩形同虚设——走查反馈）
                                             guideFirstCardKey = if (bucketIndex == 0) guideFirstCardKey else null,
                                             guideBucketKey = if (bucketIndex == 0) guideFirstBucketKey else null,

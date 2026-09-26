@@ -43,7 +43,7 @@ fun GuideScreen(
     val holder = remember { GuideStateHolder() }
     val machine = remember { GuideStateMachine(GuideSteps.size) }
     val context = LocalContext.current
-    // 条件文案：通知被关才在第 4 步追加权限说明（读真实系统权限，非用户数据）
+    // 条件文案：通知被关才在第 6 步追加权限说明（读真实系统权限，非用户数据）
     val showPermissionNote = remember {
         !NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
