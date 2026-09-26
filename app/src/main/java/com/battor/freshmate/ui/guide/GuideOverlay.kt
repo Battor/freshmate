@@ -2,7 +2,6 @@ package com.battor.freshmate.ui.guide
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -248,9 +247,6 @@ private fun GuideCard(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        // 走查反馈：编辑态两步的说明卡悬浮在浅色表单上难以区分，统一加深色描边
-        // （遮罩上的其它步骤描边不显眼，无副作用）
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
