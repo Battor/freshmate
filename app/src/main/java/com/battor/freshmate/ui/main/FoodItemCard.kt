@@ -106,6 +106,11 @@ fun FoodItemCard(
                                     ((fillWidth - fade) / fillWidth).coerceIn(0f, 1f) to
                                         onColor.copy(alpha = CARD_FILL_ALPHA),
                                     1f to Color.Transparent,
+                                    // 走查 BUG 修复：显式锚定渐变坐标到绘制矩形——默认色标映射
+                                    // 整个组件宽度，渐隐段落在 drawRect 之外被整体裁掉，
+                                    // 用户看到的一直是 0% 渐隐的硬边（12/14/25% "没区别"的根因）
+                                    startX = 0f,
+                                    endX = fillWidth,
                                 ),
                                 size = Size(fillWidth, size.height),
                             )
