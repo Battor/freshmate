@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.ui.main.MainViewModel.EditingState
+import com.battor.freshmate.ui.theme.TrapFill
 import java.time.LocalDateTime
 import kotlin.math.min
 import kotlinx.coroutines.launch
@@ -224,11 +226,11 @@ private fun TrapIndicator(
             is TrapLabel.SessionCount -> stringResource(R.string.trap_form_count, label.count)
             TrapLabel.ViewExisting -> stringResource(R.string.trap_form_to_existing)
         },
-        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        color = Color.White,
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier
             .clip(TrapezoidShape(orientation))
-            .background(MaterialTheme.colorScheme.primaryContainer)
+            .background(TrapFill)
             .clickable(onClick = onClick)
             // 走查反馈：更宽更扁——水平 32dp、垂直 1.5dp（总高约 19dp）
             .padding(horizontal = 32.dp, vertical = 1.5.dp),

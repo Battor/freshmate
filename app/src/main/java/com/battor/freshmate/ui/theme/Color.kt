@@ -35,3 +35,6 @@ val DarkSurfaceLow = Color(0xFF191B17)
 val DarkSurfaceHigh = Color(0xFF242620)
 val DarkSurfaceHighest = Color(0xFF2E3029)
 val DarkOnSurfaceVariant = Color(0xFFC4C9BE)
+
+// 编辑态梯形跳段提示（specs/2026-09-26）：中绿实色深浅主题共用——小面积功能件要白字可读
+val TrapFill = Color(0xFF4E8B54)
