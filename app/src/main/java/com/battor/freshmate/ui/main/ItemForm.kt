@@ -73,6 +73,7 @@ import com.battor.freshmate.ui.theme.categoryFormColor
 import com.battor.freshmate.ui.theme.categoryIconColor
 import com.battor.freshmate.util.ShelfLifeUnit
 import com.battor.freshmate.util.expiryDateTime
+import com.battor.freshmate.util.expiryStatus
 import com.battor.freshmate.util.formatExpired
 import com.battor.freshmate.util.formatRemaining
 import com.battor.freshmate.util.shelfLifeToDays
@@ -241,7 +242,7 @@ fun ItemForm(
 
 /**
  * 表单下方的「实时预览」卡（需求-7 走查反馈：从表单卡内挪出、与编辑区拉开距离；新增模式也显示）。
- * 中性底色比表单卡深一档（surfaceContainerHighest）+ 虚线边框，与已保存卡片区分。
+ * 底色随到期档位容器色变化（走查反馈；拿不到到期时刻回落中性 surfaceContainerHighest）+ 虚线边框。
  * 内容实时反映表单当前值（名称/分类/数量/到期文案随输入变化）；
  * 编辑模式空值回落原条目；新增模式无回落——名称空显「新条目」占位、
  * 保质期未填显示灰色「— 天 — 小时」占位。
@@ -254,11 +255,16 @@ internal fun FormPreviewCard(state: EditingState, saved: FoodItem?, now: LocalDa
         ?.takeIf { it > 0 }
         ?.let { expiryDateTime(state.productionDate, state.createdAt, shelfLifeToDays(it, state.shelfLifeUnit)) }
         ?: saved?.let { expiryDateTime(it.productionDate, it.createdAt, it.shelfLifeDays) }
+    // 走查反馈：预览背景随到期档位的容器色变化——编辑区里的紧急度信号；
+    // 拿不到到期时刻（新增未填保质期）回落中性色
+    val previewContainer = liveExpiry
+        ?.let { LocalStatusColors.current.of(expiryStatus(it, now)).container }
+        ?: MaterialTheme.colorScheme.surfaceContainerHighest
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .background(previewContainer)
             .drawBehind {
                 // Compose 无内建虚线边框：Stroke + dashPathEffect 手绘圆角矩形
                 val stroke = 1.5.dp.toPx()
