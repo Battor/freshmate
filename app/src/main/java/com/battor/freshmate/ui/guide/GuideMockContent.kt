@@ -18,7 +18,10 @@ class GuideMockContent(
     milkName: String,
     yogurtName: String,
     vegetableName: String,
-    now: LocalDateTime = LocalDateTime.now(),
+    private val now: LocalDateTime = LocalDateTime.now(),
+    private val formName: String = "",
+    private val breadName: String = "",
+    private val eggName: String = "",
 ) {
 
     val uiState: MainViewModel.UiState = run {
@@ -40,5 +43,38 @@ class GuideMockContent(
             mock(3, vegetableName, Category.FRUITS_VEG, shelfLifeDays = 7, createdAt = now.minusDays(2)), // 到期 now+5d
         )
         MainViewModel.UiState(items = items, now = now, buckets = bucketItems(items, now))
+    }
+
+    /**
+     * 按引导步骤派生界面（specs/2026-09-26-fab-input-and-guide）：isEditingStep = true
+     * （对应 GuideSteps 中 showEditingMock = true 的两步，由调用方传入——本层不依赖
+     * GuideOverlay/GuideSteps，保持纯数据无 UI 依赖）返回预填表单 + 会话条目的三段式，
+     * 否则返回基础主页态。纯函数，不修改基础 uiState。
+     * 叙事：刚录完面包和鸡蛋（本次添加），正在录草莓（表单预填）→ 预览卡有内容、
+     * 顶栏 ✓ 出现、FORM 页恒有上下两个梯形。
+     */
+    fun uiStateForStep(isEditingStep: Boolean): MainViewModel.UiState {
+        if (!isEditingStep) return uiState
+        val bread = FoodItem(
+            id = -4L, name = breadName, category = Category.STAPLE,
+            productionDate = null, shelfLifeDays = 5,
+            quantity = null, createdAt = now.minusMinutes(8),
+        )
+        val egg = FoodItem(
+            id = -5L, name = eggName, category = Category.MEAT_EGG,
+            productionDate = null, shelfLifeDays = 15,
+            quantity = null, createdAt = now.minusMinutes(3),
+        )
+        return uiState.copy(
+            editing = MainViewModel.EditingState(
+                name = formName,
+                category = Category.FRUITS_VEG,
+                shelfLifeValue = "3",
+                createdAt = now,
+            ),
+            sessionItemIds = setOf(-4L, -5L),
+            pinnedItems = listOf(egg, bread), // 新→旧（createdAt 倒序）
+            buckets = uiState.buckets,        // 会话条目不重复入桶（mock 直接给派生值）
+        )
     }
 }
