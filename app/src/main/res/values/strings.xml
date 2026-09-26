@@ -106,7 +106,7 @@
     <string name="empty_history">暂无已删除条目</string>
     <string name="restore_title">还原条目</string>
     <string name="restore_confirm">把「%1$s」还原吗？还原后将回到主列表对应的过期时间桶。</string>
-    <string name="deleted_at">删除于 %1$s</string>
+    <string name="history_item_meta">%1$s，保质期 %2$s</string>
     <string name="restored_snackbar">已还原「%1$s」</string>
 
     <!-- 错误（VM → UiText） -->

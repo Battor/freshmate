@@ -103,7 +103,7 @@
     <string name="empty_history">暫無已刪除條目</string>
     <string name="restore_title">還原條目</string>
     <string name="restore_confirm">把「%1$s」還原嗎？還原後將回到主列表對應的過期時間桶。</string>
-    <string name="deleted_at">刪除於 %1$s</string>
+    <string name="history_item_meta">%1$s，保存期限 %2$s</string>
     <string name="restored_snackbar">已還原「%1$s」</string>
 
     <!-- 錯誤 -->

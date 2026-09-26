@@ -103,7 +103,7 @@
     <string name="empty_history">No deleted items</string>
     <string name="restore_title">Restore item</string>
     <string name="restore_confirm">Restore “%1$s”? It will return to its expiry bucket in the main list.</string>
-    <string name="deleted_at">Deleted %1$s</string>
+    <string name="history_item_meta">%1$s · shelf life %2$s</string>
     <string name="restored_snackbar">Restored “%1$s”</string>
 
     <!-- Errors -->

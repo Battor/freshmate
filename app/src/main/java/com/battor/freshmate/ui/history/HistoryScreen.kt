@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -35,7 +34,6 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -51,17 +49,12 @@ import com.battor.freshmate.R
 import com.battor.freshmate.data.FoodItem
 import com.battor.freshmate.ui.main.RestoreGreen
 import com.battor.freshmate.ui.main.categoryIcon
-import com.battor.freshmate.ui.main.expiryText
 import com.battor.freshmate.ui.common.OneShotSnackbar
 import com.battor.freshmate.ui.common.asString
-import com.battor.freshmate.ui.main.LocalStatusColors
 import com.battor.freshmate.ui.theme.categoryIconColor
-import com.battor.freshmate.util.expiryDateTime
-import com.battor.freshmate.util.expiryStatus
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-private val DeletedAtFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+private val DateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,8 +92,14 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 state.groups.forEach { group ->
-                    item(key = "del_${group.deletedAt}") {
-                        DeletedGroupBox(group, state.now, viewModel::requestRestore)
+                    group.items.forEach { item ->
+                        // key 按 item.id 圈定槽位（走查 bug 修复）：还原后组内列表收缩，
+                        // 无 key 时相邻卡继承旧槽位的 SwipeToDismissBoxState——其
+                        // confirmValueChange 闭包捕获旧 item，第二次滑动会还原成对
+                        // 已还原条目的 no-op（提示成功但不生效）
+                        item(key = item.id) {
+                            HistoryItemCard(item, viewModel::requestRestore)
+                        }
                     }
                 }
             }
@@ -118,37 +117,12 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
     }
 }
 
+/** 保质期按量级选单位：整年→年、整月（30 天）→月、其余→天（快捷键即 30/365 基准，可整除往返）。 */
 @Composable
-private fun DeletedGroupBox(
-    group: DeletedGroup,
-    now: LocalDateTime,
-    onRequestRestore: (FoodItem) -> Unit,
-) {
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.deleted_at, group.deletedAt.format(DeletedAtFormat)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            group.items.forEach { item ->
-                // key 按 item.id 圈定槽位（走查 bug 修复）：还原后组内列表收缩，
-                // 无 key 时相邻卡继承旧槽位的 SwipeToDismissBoxState——其
-                // confirmValueChange 闭包捕获旧 item，第二次滑动会还原成对
-                // 已还原条目的 no-op（提示成功但不生效）
-                key(item.id) {
-                    HistoryItemCard(item, now, onRequestRestore)
-                }
-            }
-        }
-    }
+private fun shelfLifeText(shelfLifeDays: Int): String = when {
+    shelfLifeDays % 365 == 0 -> stringResource(R.string.quick_shelf_years, shelfLifeDays / 365)
+    shelfLifeDays % 30 == 0 -> stringResource(R.string.quick_shelf_months, shelfLifeDays / 30)
+    else -> stringResource(R.string.quick_shelf_days, shelfLifeDays)
 }
 
 /**
@@ -159,12 +133,8 @@ private fun DeletedGroupBox(
 @Composable
 private fun HistoryItemCard(
     item: FoodItem,
-    now: LocalDateTime,
     onRequestRestore: (FoodItem) -> Unit,
 ) {
-    val expiry = remember(item) { expiryDateTime(item.productionDate, item.createdAt, item.shelfLifeDays) }
-    val (container, onColor) = LocalStatusColors.current.of(expiryStatus(expiry, now))
-
     val restoreLabel = stringResource(R.string.restore)
     // 防御：rememberSwipeToDismissBoxState 只在状态对象首建时捕获 confirmValueChange
     // 闭包（无 key 复用状态时新闭包被忽略），经 rememberUpdatedState 取最新 item
@@ -201,13 +171,13 @@ private fun HistoryItemCard(
             ) { Icon(Icons.Filled.Restore, contentDescription = restoreLabel, tint = Color.White) }
         },
     ) {
+        // 走查反馈：历史项不再按状态着色，回归默认描边卡——只留左侧图标表达分类身份
         Card(
             shape = MaterialTheme.shapes.large,
-            // 钉同样的状态色：不活跃条目只变淡、不变 M3 禁用配色
             colors = CardDefaults.cardColors(
-                containerColor = container, contentColor = onColor,
-                disabledContainerColor = container, disabledContentColor = onColor,
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
@@ -222,9 +192,17 @@ private fun HistoryItemCard(
                     modifier = Modifier.size(28.dp),
                 )
                 Column(Modifier.weight(1f)) {
-                    Text(item.name, color = onColor, style = MaterialTheme.typography.bodyLarge)
+                    Text(item.name, style = MaterialTheme.typography.bodyLarge)
                 }
-                Text(expiryText(item, now), color = onColor, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    // 走查反馈：右侧改为「生产日期，保质期 x」；无生产日期回落录入日
+                    stringResource(
+                        R.string.history_item_meta,
+                        (item.productionDate ?: item.createdAt.toLocalDate()).format(DateFormat),
+                        shelfLifeText(item.shelfLifeDays),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }
