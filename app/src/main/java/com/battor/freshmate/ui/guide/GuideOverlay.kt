@@ -71,12 +71,20 @@ data class GuideStep(
     val appendPermissionNote: Boolean = false,
     /** 本步 mock 显示编辑态（表单+双梯形三段式）；false = 非编辑主页。 */
     val showEditingMock: Boolean = false,
+    /** 说明卡落在大镂空内部、压在浅色内容上：改深色底保证区分（当前仅编辑表单步）。 */
+    val darkCard: Boolean = false,
 )
 
 internal val GuideSteps = listOf(
     GuideStep(R.string.guide_welcome_title, R.string.guide_welcome_body, targetKeys = emptyList()),
     GuideStep(R.string.guide_fab_title, R.string.guide_fab_body, listOf(GuideKeys.FAB)),
-    GuideStep(R.string.guide_form_title, R.string.guide_form_body, listOf(GuideKeys.FORM_AREA), showEditingMock = true),
+    GuideStep(
+        R.string.guide_form_title,
+        R.string.guide_form_body,
+        listOf(GuideKeys.FORM_AREA),
+        showEditingMock = true,
+        darkCard = true,
+    ),
     GuideStep(R.string.guide_trap_title, R.string.guide_trap_body, listOf(GuideKeys.TRAP_TOP, GuideKeys.TRAP_BOTTOM), showEditingMock = true),
     GuideStep(R.string.guide_card_title, R.string.guide_card_body, listOf(GuideKeys.FIRST_CARD)),
     GuideStep(R.string.guide_buckets_title, R.string.guide_buckets_body, listOf(GuideKeys.BUCKET_AREA), appendPermissionNote = true),
@@ -246,9 +254,9 @@ private fun GuideCard(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 编辑态两步（showEditingMock）说明卡悬浮在浅色表单上，浅色卡难以区分——改深色底
-    // （描边方案走过查不够分明，已撤销）。深色主题下深底与周边深色表面亦相容
-    val onDark = step.showEditingMock
+    // 说明卡落在大镂空内部压在浅色表单上时改深色底（描边方案走过查不够分明，已撤销）；
+    // 遮罩上的卡（含双梯形步，卡浮在遮罩中央）保持浅色。深色主题下深底与深色表面亦相容
+    val onDark = step.darkCard
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
