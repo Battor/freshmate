@@ -50,7 +50,8 @@
 ### 3. mock 编辑态（`GuideMockContent` 纯函数）
 
 ```kotlin
-fun uiStateForStep(stepIndex: Int): UiState
+/** isEditingStep 由调用方按 GuideSteps[step].showEditingMock 传入（mock 层不依赖引导步骤定义）。 */
+fun uiStateForStep(isEditingStep: Boolean): UiState
 ```
 
 编辑步从基础 `uiState` copy：`editing = EditingState(name = 草莓, category = FRUITS_VEG,
@@ -90,9 +91,8 @@ EditingState）、EditingPager 交互（吸附/梯形点击/动画）、非编�
 
 ## 测试
 
-- 单测：`uiStateForStep` —— 步 3/4 编辑态（`editing != null`、会话集合 = {-4,-5}、
-  pinned 2 条、buckets 3 条且不含会话条目）；其余步非编辑态；越界步索引按
-  非编辑态处理（防御，正常流程不会触达）
+- 单测：`uiStateForStep` —— 编辑步（`editing != null`、会话集合 = {-4,-5}、
+  pinned 2 条、buckets 3 条且不含会话条目）；非编辑步返回原主页态且基础态不被污染
 - 全量：`testDebugUnitTest assembleDebug lintDebug`
 - 装机走查：FAB 直进手动表单；7 步顺序、步 3/4 界面切换、双洞高亮、步 4 文案、
   深浅主题下双洞边框可辨
