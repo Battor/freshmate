@@ -559,15 +559,16 @@ internal fun BucketBox(
     val disperseLabel = stringResource(R.string.disperse_into_buckets)
     val bucketTarget = if (guideBucketKey != null) Modifier.guideTarget(guideBucketKey) else Modifier
     Box(modifier = modifier.then(bucketTarget).fillMaxWidth().animateContentSize()) {
+        // 顶部预留 14dp ≈ 缺口标题半高：LazyColumn 的 item 只能在自身边界内绘制，
+        // 标题的布局位置必须落在 Box 内（渲染时再上移半高），否则上半截被 item 裁切
         Surface(
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, frameColor),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
         ) {
             Column(
-                // 顶部 16dp：给骑在边框上的缺口标题下半截留位
-                modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 16.dp, bottom = 10.dp),
+                modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 14.dp, bottom = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items.forEachIndexed { cardIndex, item ->
@@ -601,15 +602,15 @@ internal fun BucketBox(
             }
         }
     }
-        // 缺口标题：上移半个自身高度骑在顶边框上（x=18dp 越过左侧圆角段），
-        // 背景与页面底色同色遮出缺口；「本次添加」桶在此承载散入动作的 TalkBack 语义
+        // 缺口标题（走查反馈改为靠右）：布局位置 = Surface 顶边（y=14dp），渲染时上移半高
+        // 骑在边框上；背景与页面底色同色遮出缺口。「本次添加」桶在此承载散入动作的 TalkBack 语义
         Text(
             header,
             style = MaterialTheme.typography.labelLarge,
             color = frameColor,
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = 18.dp)
+                .align(Alignment.TopEnd)
+                .offset(x = (-18).dp, y = 14.dp)
                 .graphicsLayer { translationY = -size.height / 2f }
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 6.dp)
