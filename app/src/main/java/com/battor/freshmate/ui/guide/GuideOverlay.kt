@@ -71,17 +71,18 @@ data class GuideStep(
     val appendPermissionNote: Boolean = false,
     /** 本步 mock 显示编辑态（表单+双梯形三段式）；false = 非编辑主页。 */
     val showEditingMock: Boolean = false,
-    /** 说明卡落在大镂空内部、压在浅色内容上：改深色底保证区分（当前仅编辑表单步）。 */
+    /** 说明卡用深色底：无聚光步浮在灰色遮罩上时强调，且与浅色表单背景拉开（当前仅编辑表单步）。 */
     val darkCard: Boolean = false,
 )
 
 internal val GuideSteps = listOf(
     GuideStep(R.string.guide_welcome_title, R.string.guide_welcome_body, targetKeys = emptyList()),
     GuideStep(R.string.guide_fab_title, R.string.guide_fab_body, listOf(GuideKeys.FAB)),
+    // 走查反馈：表单步不镂空——整页都是表单，聚光无意义；全屏遮罩 + 深色说明卡即可
     GuideStep(
         R.string.guide_form_title,
         R.string.guide_form_body,
-        listOf(GuideKeys.FORM_AREA),
+        targetKeys = emptyList(),
         showEditingMock = true,
         darkCard = true,
     ),
@@ -254,8 +255,8 @@ private fun GuideCard(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 说明卡落在大镂空内部压在浅色表单上时改深色底（描边方案走过查不够分明，已撤销）；
-    // 遮罩上的卡（含双梯形步，卡浮在遮罩中央）保持浅色。深色主题下深底与深色表面亦相容
+    // 编辑表单步无聚光、说明卡居中浮在灰色遮罩上，用深色底强调（描边方案走过查不够分明，
+    // 已撤销）；其余步骤的卡浮在遮罩上保持浅色。深色主题下深底与深色表面亦相容
     val onDark = step.darkCard
     Card(
         modifier = modifier,

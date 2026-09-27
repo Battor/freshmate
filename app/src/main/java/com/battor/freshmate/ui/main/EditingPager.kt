@@ -69,8 +69,7 @@ fun EditingPager(
     onPlaceholderHint: (String) -> Unit,
     onStartEdit: (FoodItem) -> Unit,
     onDeleteItem: (FoodItem) -> Unit,
-    /** 引导模式聚光 key：表单区 / 上下梯形；主流程为 null 零开销（guideFirstCardKey 同款通道） */
-    guideFormKey: String? = null,
+    /** 引导模式聚光 key：上下梯形；主流程为 null 零开销（guideFirstCardKey 同款通道） */
     guideTrapTopKey: String? = null,
     guideTrapBottomKey: String? = null,
     /** 当前吸附段变化时上报——MainScreen 据此切换顶栏（已添加段显示默认样式） */
@@ -116,23 +115,15 @@ fun EditingPager(
                         )
 
                         EditPageKind.FORM -> {
-                            // 预览+表单整体作为聚光目标（引导编辑态步骤）；补同款 spacedBy(12)
-                            // 保持原间距不变观感，EditScrollColumn 的 spacedBy(12) 已覆盖与相邻段内容的间距。
-                            // key 判空守卫同 MainScreen 的 guideBucketKey：guideTarget 只收非空
-                            Column(
-                                modifier = if (guideFormKey != null) Modifier.guideTarget(guideFormKey) else Modifier,
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                // 预览在编辑区上方（走查反馈确认）、拉开距离：列间距 12 + Spacer 12 + 列间距 12 = 36dp
-                                FormPreviewCard(state = editing, saved = editingTarget, now = now)
-                                Spacer(Modifier.height(12.dp))
-                                ItemForm(
-                                    state = editing,
-                                    onStateChange = onStateChange,
-                                    onPlaceholderHint = onPlaceholderHint,
-                                    now = now,
-                                )
-                            }
+                            // 预览在编辑区上方（走查反馈确认）、拉开距离：列间距 12 + Spacer 12 + 列间距 12 = 36dp
+                            FormPreviewCard(state = editing, saved = editingTarget, now = now)
+                            Spacer(Modifier.height(12.dp))
+                            ItemForm(
+                                state = editing,
+                                onStateChange = onStateChange,
+                                onPlaceholderHint = onPlaceholderHint,
+                                now = now,
+                            )
                         }
 
                         EditPageKind.EXISTING -> buckets.forEach { bucket ->

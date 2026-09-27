@@ -64,9 +64,8 @@ fun GuideScreen(
                 actions = NoopMainActions,
                 guideFirstCardKey = GuideKeys.FIRST_CARD,
                 guideFirstBucketKey = GuideKeys.BUCKET_AREA,
-                // 三个 key 永久传入：目标未组合时（如非编辑态没有梯形）onDispose 摘除注册，
+                // key 永久传入：目标未组合时（如非编辑态没有梯形）onDispose 摘除注册，
                 // 不会留幽灵洞
-                guideFormKey = GuideKeys.FORM_AREA,
                 guideTrapTopKey = GuideKeys.TRAP_TOP,
                 guideTrapBottomKey = GuideKeys.TRAP_BOTTOM,
                 handleSystemBack = false,
