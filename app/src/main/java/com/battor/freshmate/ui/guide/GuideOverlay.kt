@@ -55,9 +55,6 @@ import androidx.compose.ui.unit.dp
 import com.battor.freshmate.R
 import com.battor.freshmate.ui.common.GuideKeys
 import com.battor.freshmate.ui.common.GuideStateHolder
-import com.battor.freshmate.ui.theme.DarkOnSurfaceVariant
-import com.battor.freshmate.ui.theme.DarkSurfaceHigh
-import com.battor.freshmate.ui.theme.GreenLight
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -71,8 +68,6 @@ data class GuideStep(
     val appendPermissionNote: Boolean = false,
     /** 本步 mock 显示编辑态（表单+双梯形三段式）；false = 非编辑主页。 */
     val showEditingMock: Boolean = false,
-    /** 说明卡用深色底：无聚光步浮在灰色遮罩上时强调，且与浅色表单背景拉开（当前仅编辑表单步）。 */
-    val darkCard: Boolean = false,
 )
 
 internal val GuideSteps = listOf(
@@ -84,7 +79,6 @@ internal val GuideSteps = listOf(
         R.string.guide_form_body,
         targetKeys = emptyList(),
         showEditingMock = true,
-        darkCard = true,
     ),
     GuideStep(R.string.guide_trap_title, R.string.guide_trap_body, listOf(GuideKeys.TRAP_TOP, GuideKeys.TRAP_BOTTOM), showEditingMock = true),
     GuideStep(R.string.guide_card_title, R.string.guide_card_body, listOf(GuideKeys.FIRST_CARD)),
@@ -255,26 +249,20 @@ private fun GuideCard(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 编辑表单步无聚光、说明卡居中浮在灰色遮罩上，用深色底强调（描边方案走过查不够分明，
-    // 已撤销）；其余步骤的卡浮在遮罩上保持浅色。深色主题下深底与深色表面亦相容
-    val onDark = step.darkCard
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (onDark) DarkSurfaceHigh else MaterialTheme.colorScheme.surface,
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
                 stringResource(R.string.guide_step_indicator, stepIndex + 1, GuideSteps.size),
                 style = MaterialTheme.typography.labelSmall,
-                color = if (onDark) GreenLight else MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary,
             )
             Text(
                 stringResource(step.titleRes),
                 style = MaterialTheme.typography.titleMedium,
-                color = if (onDark) Color.White else Color.Unspecified,
                 modifier = Modifier.padding(top = 4.dp),
             )
             Text(
@@ -286,7 +274,7 @@ private fun GuideCard(
                     }
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = if (onDark) DarkOnSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
             // skip 紧贴主操作左侧（成组右对齐，走查反馈：不要拆到两端）
@@ -296,10 +284,7 @@ private fun GuideCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onSkip) {
-                    Text(
-                        stringResource(R.string.guide_skip),
-                        color = if (onDark) GreenLight else Color.Unspecified,
-                    )
+                    Text(stringResource(R.string.guide_skip))
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(onClick = onNext) {
