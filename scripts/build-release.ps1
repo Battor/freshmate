@@ -26,6 +26,34 @@ if (-not $versionName -or -not $versionCode) {
     throw "无法从 app\build.gradle.kts 解析 versionName/versionCode"
 }
 
+# 询问是否升级版本号：输入非空且大于当前版本才写入 build.gradle.kts，否则沿用当前版本
+Write-Host "当前版本: $versionName (versionCode $versionCode)"
+$newVersion = Read-Host "输入新版本号（如 0.2.6；留空或更小则不升级）"
+$parsedNew = $null
+if ($newVersion -and [version]::TryParse($newVersion, [ref]$parsedNew)) {
+    if ($parsedNew -gt [version]$versionName) {
+        $newCode = [int]$versionCode + 1
+        $gradleFile = $gradleFile `
+            -replace 'versionCode\s*=\s*\d+', "versionCode = $newCode" `
+            -replace 'versionName\s*=\s*"[^"]*"', "versionName = `"$newVersion`""
+        # PS5 的 Set-Content 默认编码会毁掉文件里的中文注释——用 WriteAllText 落无 BOM UTF-8
+        [System.IO.File]::WriteAllText(
+            (Join-Path (Get-Location) "app\build.gradle.kts"),
+            $gradleFile,
+            (New-Object System.Text.UTF8Encoding($false))
+        )
+        $versionName = $newVersion
+        $versionCode = $newCode
+        Write-Host "版本已升级: $versionName (versionCode $versionCode)——记得提交 build.gradle.kts"
+    }
+    else {
+        Write-Host "新版本 $newVersion 不大于当前版本 $versionName，不更新版本（沿用 $versionName）"
+    }
+}
+else {
+    Write-Host "输入为空或不是合法版本号，不更新版本（沿用 $versionName）"
+}
+
 # 构建：默认测试 + 打包
 $tasks = @("assembleRelease")
 if (-not $SkipTests) { $tasks = @("testDebugUnitTest") + $tasks }
