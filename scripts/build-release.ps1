@@ -1,0 +1,66 @@
+﻿# FreshMate 正式包构建脚本（Windows PowerShell 5.1+）
+# 用法：.\scripts\build-release.ps1 [-SkipTests]
+# 流程：单测 + assembleRelease → 拷贝 APK 到 dist\ → 计算 SHA256 → 更新 dist\manifest.json
+# 前提：update.properties 已配置 manifestUrl（release 门禁会自行校验）
+
+param(
+    # 跳过单元测试（默认跑 testDebugUnitTest 再打包）
+    [switch]$SkipTests
+)
+
+$ErrorActionPreference = 'Stop'
+Set-Location (Split-Path -Parent $PSScriptRoot)
+
+# JAVA_HOME：Android Studio 自带 JBR（gradle 需要 JDK 17）
+$javaHome = "C:\Program Files\Android\Android Studio\jbr"
+if (-not (Test-Path $javaHome)) {
+    throw "未找到 JBR：$javaHome（请检查 Android Studio 安装路径，或修改本脚本）"
+}
+$env:JAVA_HOME = $javaHome
+
+# 从 app\build.gradle.kts 解析版本号（单一事实来源，脚本不重复维护版本）
+$gradleFile = Get-Content "app\build.gradle.kts" -Raw
+$versionName = [regex]::Match($gradleFile, 'versionName\s*=\s*"([^"]+)"').Groups[1].Value
+$versionCode = [regex]::Match($gradleFile, 'versionCode\s*=\s*(\d+)').Groups[1].Value
+if (-not $versionName -or -not $versionCode) {
+    throw "无法从 app\build.gradle.kts 解析 versionName/versionCode"
+}
+
+# 构建：默认测试 + 打包
+$tasks = @("assembleRelease")
+if (-not $SkipTests) { $tasks = @("testDebugUnitTest") + $tasks }
+& .\gradlew.bat @tasks
+if ($LASTEXITCODE -ne 0) { throw "构建失败（gradlew exit $LASTEXITCODE）" }
+
+# 制品 → dist\
+New-Item -ItemType Directory -Force -Path "dist" | Out-Null
+$apkSource = "app\build\outputs\apk\release\app-release.apk"
+if (-not (Test-Path $apkSource)) { throw "未找到 APK：$apkSource" }
+$apkDest = "dist\freshmate-$versionName.apk"
+Copy-Item $apkSource $apkDest -Force
+$hash = (Get-FileHash $apkDest -Algorithm SHA256).Hash.ToLower()
+
+# 更新 dist\manifest.json（保留 notes，仅刷版本/地址/哈希）
+$manifestPath = "dist\manifest.json"
+if (Test-Path $manifestPath) {
+    $manifest = Get-Content $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $manifest.versionCode = [int]$versionCode
+    $manifest.versionName = $versionName
+    $manifest.apkUrl = "https://www.battor.site/freshmate/freshmate-$versionName.apk"
+    $manifest.sha256 = $hash
+    # PS5 的 UTF8 带带 BOM，部分 JSON 解析器（如 Android JSONObject）不接受——用 WriteAllText 落无 BOM UTF-8
+    $json = $manifest | ConvertTo-Json
+    [System.IO.File]::WriteAllText((Join-Path (Get-Location) $manifestPath), $json, (New-Object System.Text.UTF8Encoding($false)))
+}
+else {
+    Write-Warning "未找到 $manifestPath，跳过 manifest 更新（首次发布请手工创建）"
+}
+
+Write-Host ""
+Write-Host "==================== 发布制品就绪 ===================="
+Write-Host "版本  : $versionName (versionCode $versionCode)"
+Write-Host "APK   : $apkDest ($((Get-Item $apkDest).Length) bytes)"
+Write-Host "SHA256: $hash"
+Write-Host "manifest: $manifestPath 已刷新（notes 未动，按需手工修改）"
+Write-Host "======================================================"
+Write-Host "剩余步骤（手工）：上传 APK + manifest 到 battor.site；git push 由你自行执行"
