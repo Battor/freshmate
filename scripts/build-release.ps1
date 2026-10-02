@@ -11,10 +11,18 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
 
-# JAVA_HOME：Android Studio 自带 JBR（gradle 需要 JDK 17）
+# JAVA_HOME：发版构建优先 OpenJDK 21（Temurin，与 F-Droid 构建环境的 Debian trixie default-jdk
+# 对齐——可复现构建哈希比对的前提）；未装则回落 Android Studio JBR 并警告
+$jdk21 = "C:\Program Files\OpenJDK\21"
 $javaHome = "C:\Program Files\Android\Android Studio\jbr"
-if (-not (Test-Path $javaHome)) {
-    throw "未找到 JBR：$javaHome（请检查 Android Studio 安装路径，或修改本脚本）"
+if (Test-Path $jdk21) {
+    $javaHome = $jdk21
+}
+elseif (-not (Test-Path $javaHome)) {
+    throw "未找到 JDK：既无 $jdk21 也无 JBR（$javaHome），请至少安装其一"
+}
+else {
+    Write-Warning "未找到 OpenJDK 21（$jdk21），回落 JBR——正式包哈希可能与 F-Droid 构建不一致，建议安装 Temurin 21"
 }
 $env:JAVA_HOME = $javaHome
 
@@ -56,6 +64,9 @@ else {
 }
 
 # 构建：默认测试 + 打包
+# 先停掉所有 Gradle 守护进程：残留守护进程（如 IDE 同步拉起的 JBR 实例）可能握着
+# app\build\intermediates\lint-cache 里的 jar 句柄，导致本次构建报"另一个程序正在使用此文件"
+& .\gradlew.bat --stop | Out-Null
 $tasks = @("assembleRelease")
 if (-not $SkipTests) { $tasks = @("testDebugUnitTest") + $tasks }
 & .\gradlew.bat @tasks
