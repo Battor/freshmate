@@ -63,6 +63,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // 关闭 VCS 信息嵌入（AGP 8.3+ 默认开启）：它把当前 git 提交哈希写进 APK，
+            // 使同内容不同提交/checkout 方式的构建哈希不同，与 F-Droid 可复现构建校验冲突
+            vcsInfo {
+                include = false
+            }
             if (keystoreProps.isNotEmpty()) {
                 signingConfig = signingConfigs.getByName("release")
             }
