@@ -1,7 +1,7 @@
 ﻿# FreshMate 正式包构建脚本（Windows PowerShell 5.1+）
 # 用法：.\scripts\build-release.ps1 [-SkipTests]
 # 流程：单测 + assembleRelease → 拷贝 APK 到 dist\ → 计算 SHA256 → 更新 dist\manifest.json
-# 前提：update.properties 已配置 manifestUrl（release 门禁会自行校验）
+# 前提：无必须配置。update.properties 缺失时回落入库默认更新地址（可放该文件覆盖）
 
 param(
     # 跳过单元测试（默认跑 testDebugUnitTest 再打包）

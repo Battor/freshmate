@@ -12,15 +12,18 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
-// 更新检查地址：从根目录 update.properties 读取（已 gitignore，服务器路径不入库）。
-// 缺失时 debug/测试回落占位地址仅作开发；release 构建直接失败——占位地址烧进正式包无法挽回。
+// 更新检查地址：优先从根目录 update.properties 读取（已 gitignore，本地可覆盖）。
+// 缺失时回落入库的公开默认地址——F-Droid 等从公开源码构建的环境没有该文件，
+// 必须能直接出正式包（此地址本来就会烧进每个 APK 的 BuildConfig，入库无泄露问题）。
+val DEFAULT_MANIFEST_URL = "https://www.battor.site/freshmate/manifest.json"
 val updateProps = Properties().apply {
     val f = rootProject.file("update.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
-val manifestUrl: String? = updateProps.getProperty("manifestUrl")?.takeIf { it.isNotBlank() }
-if (manifestUrl == null) {
-    logger.warn("update.properties 缺失或未配置 manifestUrl：本次构建使用占位更新地址（仅限开发，勿发布）")
+val manifestUrl: String =
+    updateProps.getProperty("manifestUrl")?.takeIf { it.isNotBlank() } ?: DEFAULT_MANIFEST_URL
+if (updateProps.getProperty("manifestUrl").isNullOrBlank()) {
+    logger.warn("update.properties 缺失或未配置 manifestUrl：使用入库默认更新地址 $DEFAULT_MANIFEST_URL")
 }
 
 android {
@@ -37,7 +40,7 @@ android {
         buildConfigField(
             "String",
             "UPDATE_MANIFEST_URL",
-            "\"${manifestUrl ?: "https://example.com/freshmate/manifest.json"}\"",
+            "\"$manifestUrl\"",
         )
     }
 
@@ -92,25 +95,6 @@ android {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
-}
-
-// release 门禁：更新地址未配置即中止（占位地址烧进正式包后无法挽回），并给出修复指导
-tasks.matching { it.name.contains("Release") }.configureEach {
-    if (manifestUrl == null) {
-        doFirst {
-            throw GradleException(
-                """
-                |
-                |正式构建中止：缺少更新检查地址配置。
-                |请新建文件 ${rootProject.file("update.properties").absolutePath}
-                |内容一行：
-                |    manifestUrl=https://你的域名/freshmate/manifest.json
-                |（该文件已在 .gitignore 中，不会被提交）
-                |
-                """.trimMargin()
-            )
-        }
-    }
 }
 
 dependencies {
