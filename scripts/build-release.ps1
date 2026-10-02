@@ -18,8 +18,9 @@ if (-not (Test-Path $javaHome)) {
 }
 $env:JAVA_HOME = $javaHome
 
-# 从 app\build.gradle.kts 解析版本号（单一事实来源，脚本不重复维护版本）
-$gradleFile = Get-Content "app\build.gradle.kts" -Raw
+# 从 app\build.gradle.kts 解析版本号（单一事实来源，脚本不重复维护版本）。
+# 必须显式 -Encoding UTF8：文件无 BOM，PS5 缺省按 ANSI 读，中文注释在内存里即乱码
+$gradleFile = Get-Content "app\build.gradle.kts" -Raw -Encoding UTF8
 $versionName = [regex]::Match($gradleFile, 'versionName\s*=\s*"([^"]+)"').Groups[1].Value
 $versionCode = [regex]::Match($gradleFile, 'versionCode\s*=\s*(\d+)').Groups[1].Value
 if (-not $versionName -or -not $versionCode) {
