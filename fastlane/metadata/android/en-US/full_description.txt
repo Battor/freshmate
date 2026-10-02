@@ -1,0 +1,20 @@
+FreshMate is a simple, offline-first food freshness manager. Track what is in your fridge, see at a glance what expires soon, and stop throwing away forgotten food.
+
+<b>Features</b>
+
+• Expiry buckets — items are grouped by remaining shelf life (expired / expiring soon / still fresh), with a clear visual countdown on every card
+• Quick manual entry — add an item with name, category, production date and shelf life in seconds
+• Flexible shelf life — enter days, months or years; common presets one tap away
+• Three-pane editing — review what you just added, keep editing, or browse existing items with snap-scroll sections
+• History & restore — removed items are kept in history and can be restored with one tap
+• Expiry reminders — scheduled notifications warn you before food goes bad
+• Onboarding guide — a step-by-step walkthrough of the main screen on first launch
+• Themes & languages — dark and light theme, per-app language (Simplified Chinese, Traditional Chinese, English)
+
+<b>Privacy</b>
+
+FreshMate works fully offline. All data stays on your device — no account, no ads, no analytics, no tracking. The only network access is an optional manual update check against the developer's website.
+
+<b>License</b>
+
+Free and open source under the GNU General Public License v3.0.

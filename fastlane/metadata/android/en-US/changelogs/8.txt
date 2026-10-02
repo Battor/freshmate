@@ -1,0 +1,1 @@
+Simplified entry: the + button now goes straight to manual input (voice/image input postponed). History redesign: plain bordered cards showing production date and shelf life, removed grouping. Onboarding guide expanded to 7 steps with new editing-screen and swipe-navigation steps. Polish: lighter remaining-life tint on cards, solid red swipe-to-delete background.
