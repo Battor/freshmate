@@ -87,6 +87,13 @@ android {
         }
     }
 
+    // 关闭依赖元数据签名块（AGP 默认开启）：它会被 F-Droid 扫描器判为多余签名块，
+    // 且内容含依赖信息，与可复现构建的最小化原则相悖
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     sourceSets {
         getByName("androidTest").assets.srcDirs(files("$projectDir/schemas"))
     }
