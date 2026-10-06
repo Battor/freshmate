@@ -67,7 +67,9 @@ else {
 # 先停掉所有 Gradle 守护进程：残留守护进程（如 IDE 同步拉起的 JBR 实例）可能握着
 # app\build\intermediates\lint-cache 里的 jar 句柄，导致本次构建报"另一个程序正在使用此文件"
 & .\gradlew.bat --stop | Out-Null
-$tasks = @("assembleRelease")
+# --no-build-cache：构建缓存可能命中旧环境（如换 JDK 前）的任务产物且键不含全部环境变量，
+# 曾导致发布包 dex/baseline.prof 与 F-Droid 侧构建不一致——发布构建必须全量执行
+$tasks = @("--no-build-cache", "assembleRelease")
 if (-not $SkipTests) { $tasks = @("testDebugUnitTest") + $tasks }
 & .\gradlew.bat @tasks
 if ($LASTEXITCODE -ne 0) { throw "构建失败（gradlew exit $LASTEXITCODE）" }
