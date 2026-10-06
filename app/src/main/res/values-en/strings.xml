@@ -173,6 +173,7 @@
     <string name="update_checksum_failed">APK checksum failed</string>
     <string name="update_download_failed">Download failed: %1$s</string>
     <string name="update_apk_missing">The downloaded APK was cleared by the system. Please download it again.</string>
+    <string name="update_source_note">This update comes from the developer\'s website, not from F-Droid.</string>
 
     <!-- Notifications -->
     <string name="notification_channel">Expiry reminders</string>

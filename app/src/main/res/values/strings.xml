@@ -177,6 +177,8 @@
     <string name="update_checksum_failed">安装包校验失败</string>
     <string name="update_download_failed">下载失败：%1$s</string>
     <string name="update_apk_missing">安装包已被系统清理，请重新下载</string>
+    <!-- F-Droid 审核要求：应用内更新必须明示来源并非 F-Droid（收录政策·自更新同意条款） -->
+    <string name="update_source_note">此更新来自开发者网站，而非 F-Droid 应用商店。</string>
 
     <!-- 通知 -->
     <string name="notification_channel">过期提醒</string>

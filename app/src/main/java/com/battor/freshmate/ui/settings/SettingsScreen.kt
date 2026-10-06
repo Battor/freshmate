@@ -161,6 +161,12 @@ fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     m.notes?.let { Text(it) }
+                    // F-Droid 审核要求：自更新必须明示来源并非 F-Droid（收录政策·自更新同意条款）
+                    Text(
+                        stringResource(R.string.update_source_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     if (updateState.downloading) {
                         val p = updateState.progress
                         if (p != null) {
