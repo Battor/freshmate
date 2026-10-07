@@ -1,0 +1,1 @@
+Update check is now opt-in: the automatic check on startup is off by default (enable in Settings), manual check unchanged. Update APKs are now strictly hash-verified before installation. English is now the default app language.
