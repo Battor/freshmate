@@ -30,8 +30,15 @@ class SettingsViewModel(
     val digestTimes: StateFlow<List<LocalTime>> =
         repository.digestTimes.stateIn(viewModelScope, SharingStarted.Eagerly, DEFAULT_DIGEST_TIMES)
 
+    val startupUpdateCheck: StateFlow<Boolean> =
+        repository.startupUpdateCheck.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { repository.setThemeMode(mode) }
+    }
+
+    fun setStartupUpdateCheck(enabled: Boolean) {
+        viewModelScope.launch { repository.setStartupUpdateCheck(enabled) }
     }
 
     /** 切统一：装摘要闹钟（物品闹钟不取消——receiver 闸门兜住）；切逐个：清摘要 + 还原语义重排。 */

@@ -19,6 +19,7 @@
     <string name="view">查看</string>
     <string name="view_logs">查看日誌</string>
     <string name="check_update">檢查更新</string>
+    <string name="settings_startup_update_check">啟動時檢查更新</string>
 
     <!-- 主列表 -->
     <string name="empty_list">暫無食品，點 + 新增</string>

@@ -75,7 +75,12 @@ fun FreshMateNavGraph() {
             val viewModel: MainViewModel = viewModel(factory = mainFactory(context))
             // Activity 级共享：main 的静默检查与 settings 的对话框用同一个 UpdateViewModel
             val updateViewModel = sharedUpdateViewModel()
-            LaunchedEffect(Unit) { updateViewModel.check(manual = false) }
+            // F-Droid 审核：启动静默检查默认关，须用户在设置里开启后才连服务器
+            val startupUpdateCheck by settingsRepo.startupUpdateCheck
+                .collectAsStateWithLifecycle(initialValue = false)
+            LaunchedEffect(startupUpdateCheck) {
+                if (startupUpdateCheck) updateViewModel.check(manual = false)
+            }
             val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
             // 首启未完成引导 → 自动进入（初值 true 防 DataStore 首帧误弹；
             // false 到达后 LaunchedEffect 重启触发导航，写完标记回来不再弹）
@@ -154,6 +159,7 @@ fun FreshMateNavGraph() {
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
                 onOpenGuide = { navController.navigate(Routes.guide(first = false)) },
                 updateState = updateState,
+                onSetStartupUpdateCheck = settingsViewModel::setStartupUpdateCheck,
                 onCheckUpdate = { updateViewModel.check(manual = true) },
                 onDownload = updateViewModel::download,
                 onInstall = updateViewModel::install,

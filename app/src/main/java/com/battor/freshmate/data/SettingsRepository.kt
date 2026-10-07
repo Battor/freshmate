@@ -59,6 +59,10 @@ interface SettingsRepository {
     /** 新手引导是否已完成/跳过（首启自动弹一次的闸门）。 */
     val onboardingCompleted: Flow<Boolean>
     suspend fun setOnboardingCompleted()
+
+    /** 启动时静默检查更新（F-Droid 审核：连开发者服务器属联网行为，默认关、用户主动开启）。 */
+    val startupUpdateCheck: Flow<Boolean>
+    suspend fun setStartupUpdateCheck(enabled: Boolean)
 }
 
 class DataStoreSettingsRepository(private val context: Context) : SettingsRepository {
@@ -91,10 +95,18 @@ class DataStoreSettingsRepository(private val context: Context) : SettingsReposi
         context.settingsDataStore.edit { it[OnboardingKey] = true }
     }
 
+    override val startupUpdateCheck: Flow<Boolean> = context.settingsDataStore.data
+        .map { prefs -> prefs[StartupUpdateCheckKey] ?: false }
+
+    override suspend fun setStartupUpdateCheck(enabled: Boolean) {
+        context.settingsDataStore.edit { it[StartupUpdateCheckKey] = enabled }
+    }
+
     private companion object {
         val Key = stringPreferencesKey("theme_mode")
         val PushModeKey = stringPreferencesKey("push_mode")
         val DigestTimesKey = stringPreferencesKey("digest_times")
         val OnboardingKey = booleanPreferencesKey("onboarding_completed")
+        val StartupUpdateCheckKey = booleanPreferencesKey("startup_update_check")
     }
 }

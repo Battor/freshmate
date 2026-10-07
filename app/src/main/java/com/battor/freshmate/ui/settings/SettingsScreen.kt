@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
@@ -32,6 +33,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -68,6 +70,7 @@ fun SettingsScreen(
     onOpenAbout: () -> Unit,
     onOpenGuide: () -> Unit,
     updateState: UpdateViewModel.UiState,
+    onSetStartupUpdateCheck: (Boolean) -> Unit,
     onCheckUpdate: () -> Unit,
     onDownload: () -> Unit,
     onInstall: () -> Unit,
@@ -76,6 +79,7 @@ fun SettingsScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val pushMode by viewModel.pushMode.collectAsStateWithLifecycle()
+    val startupUpdateCheck by viewModel.startupUpdateCheck.collectAsStateWithLifecycle()
     OneShotSnackbar(
         message = updateState.notice,
         snackbarHostState = snackbarHostState,
@@ -118,6 +122,23 @@ fun SettingsScreen(
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                     },
                     modifier = Modifier.clickable(onClick = onOpenLogs),
+                )
+            }
+            item {
+                // F-Droid 审核：启动静默检查必须默认关、用户可关。开启瞬间顺带查一次，
+                // 让"打开开关"立即有可感知反馈（新版本弹对话框/无更新走 snackbar）
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_startup_update_check)) },
+                    leadingContent = { Icon(Icons.Filled.FileDownload, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = startupUpdateCheck,
+                            onCheckedChange = { enabled ->
+                                onSetStartupUpdateCheck(enabled)
+                                if (enabled) onCheckUpdate()
+                            },
+                        )
+                    },
                 )
             }
             item {

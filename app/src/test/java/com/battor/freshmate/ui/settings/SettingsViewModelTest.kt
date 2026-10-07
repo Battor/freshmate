@@ -29,6 +29,7 @@ class SettingsViewModelTest {
         override val pushMode = MutableStateFlow(PushMode.DIGEST)
         override val digestTimes = MutableStateFlow(DEFAULT_DIGEST_TIMES)
         override val onboardingCompleted = MutableStateFlow(true)
+        override val startupUpdateCheck = MutableStateFlow(false)
         override suspend fun setThemeMode(mode: ThemeMode) {
             themeMode.value = mode
         }
@@ -40,6 +41,9 @@ class SettingsViewModelTest {
         }
         override suspend fun setOnboardingCompleted() {
             onboardingCompleted.value = true
+        }
+        override suspend fun setStartupUpdateCheck(enabled: Boolean) {
+            startupUpdateCheck.value = enabled
         }
     }
 

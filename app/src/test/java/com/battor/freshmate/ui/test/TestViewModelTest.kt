@@ -35,10 +35,12 @@ class TestViewModelTest {
         override val pushMode = MutableStateFlow(PushMode.DIGEST)
         override val digestTimes = MutableStateFlow(DEFAULT_DIGEST_TIMES)
         override val onboardingCompleted = MutableStateFlow(true)
+        override val startupUpdateCheck = MutableStateFlow(false)
         override suspend fun setThemeMode(mode: ThemeMode) {}
         override suspend fun setPushMode(mode: PushMode) {}
         override suspend fun setDigestTimes(times: List<LocalTime>) {}
         override suspend fun setOnboardingCompleted() {}
+        override suspend fun setStartupUpdateCheck(enabled: Boolean) {}
     }
 
     @Before fun setUp() {

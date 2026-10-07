@@ -13,7 +13,7 @@ FreshMate is a simple, offline-first food freshness manager. Track what is in yo
 
 <b>Privacy</b>
 
-FreshMate works fully offline. All data stays on your device — no account, no ads, no analytics, no tracking. The only network access is an optional manual update check against the developer's website.
+FreshMate works fully offline. All data stays on your device — no account, no ads, no analytics, no tracking. The only network access is the update check against the developer's website: manual via Settings, and the optional startup check is off unless you enable it.
 
 <b>License</b>
 

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 通用 -->
+    <!-- 走查反馈：应用名按语言——中文系统「食刻」，英文系统「FreshMate」（桌面图标 label 随应用语言） -->
+    <string name="app_name">食刻</string>
+    <!-- 顶栏标题按语言显示短名（走查反馈） -->
+    <string name="app_title">食刻</string>
+    <string name="back">返回</string>
+    <string name="ok">确定</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="delete_confirm_title">删除确认</string>
+    <string name="delete_confirm_text">确定要删除「%1$s」吗？删除后可在历史页还原。</string>
+    <string name="restore">还原</string>
+    <string name="undo">撤销</string>
+    <string name="history">历史</string>
+    <string name="settings">设置</string>
+    <string name="add">添加</string>
+    <string name="about">关于</string>
+    <string name="view">查看</string>
+    <string name="view_logs">查看日志</string>
+    <string name="check_update">检查更新</string>
+    <string name="settings_startup_update_check">启动时检查更新</string>
+
+    <!-- 主列表 -->
+    <string name="empty_list">暂无食品，点 + 添加</string>
+    <string name="pinned_header">本次添加</string>
+    <string name="disperse_into_buckets">散入各桶</string>
+    <string name="deleted_snackbar">已删除「%1$s」</string>
+    <string name="near_expiry_title">该食品临近过期</string>
+    <string name="near_expiry_text">「%1$s」已有 %2$d 个提醒时点过去，剩余提醒时点 %3$d 个。确认保存吗？</string>
+    <string name="quantity_label">数量：%1$s</string>
+
+    <!-- 表单 -->
+    <string name="field_name">食品名称 *</string>
+    <string name="error_name_required">请输入名称</string>
+    <string name="label_category">分类</string>
+    <string name="field_production_date">生产日期</string>
+    <string name="hint_production_date">不填则按录入日起算</string>
+    <string name="clear_production_date">清除生产日期</string>
+    <string name="field_shelf_life">保质期 *</string>
+    <string name="error_shelf_life">请输入大于 0 的数字</string>
+    <string name="field_quantity">数量（可选，如 2 / 500g）</string>
+    <string name="card_status_expired">已过期 %1$s</string>
+    <string name="card_status_remaining">还有 %1$s 到期</string>
+    <string name="expiry_preview_expired">已过期 %1$s，保存后将不再提醒</string>
+    <string name="quick_shelf_days">%1$d天</string>
+    <string name="quick_shelf_months">%1$d个月</string>
+    <string name="quick_shelf_years">%1$d年</string>
+    <string name="unit_day">天</string>
+    <string name="unit_week">周</string>
+    <string name="unit_month">月</string>
+    <string name="unit_year">年</string>
+    <string name="placeholder_voice">语音识别即将上线</string>
+    <string name="placeholder_image">图片识别即将上线</string>
+    <string name="recording">录音中…（占位，再按一次结束）</string>
+    <string name="extra_voice_hint">长按说话</string>
+    <string name="extra_image_hint">选择图片</string>
+    <string name="extra_with_long_press">%1$s（长按）</string>
+    <string name="input_manual">手动输入</string>
+    <string name="input_voice">语音输入</string>
+    <string name="input_image">图片输入</string>
+    <string name="discard_back">放弃返回</string>
+    <string name="stash_and_continue">暂存并继续</string>
+
+    <!-- 系统返回（走查需求）：退出编辑确认 + 双击退出 -->
+    <string name="unsaved_title">未保存的修改</string>
+    <string name="unsaved_text">表单内容尚未保存，要保存后退出吗？</string>
+    <string name="save_and_exit">保存并退出</string>
+    <string name="discard_exit">不保存</string>
+    <string name="press_back_again">再按一次退出</string>
+
+    <!-- 编辑态三段式（需求-7）：顶栏标题 + 梯形跳段提示 -->
+    <string name="edit_title_add">新增</string>
+    <string name="edit_title_edit">编辑</string>
+    <string name="trap_session_to_form">下滑继续编辑</string>
+    <string name="trap_form_count">已添加 %1$d 条</string>
+    <string name="trap_form_to_existing">下滑查看已有</string>
+    <string name="trap_existing_to_form">上滑继续编辑</string>
+    <string name="preview_new_name">新条目</string>
+    <string name="preview_expiry_placeholder">- 天 - 小时</string>
+
+    <!-- 时长与状态 -->
+    <string name="duration_days">%1$d 天</string>
+    <string name="duration_hours">%1$d 小时</string>
+    <string name="duration_half_hour">30 分钟</string>
+    <string name="duration_under_half_hour">不足 30 分钟</string>
+    <string name="status_expired">已过期</string>
+    <string name="status_due_1d">1 天内到期</string>
+    <string name="status_due_3d">3 天内到期</string>
+    <string name="status_due_7d">7 天内到期</string>
+    <string name="status_due_14d">14 天内到期</string>
+    <string name="status_safe">更久到期</string>
+
+    <!-- 分类 -->
+    <string name="category_fruits_veg">果蔬</string>
+    <string name="category_meat_egg">肉蛋</string>
+    <string name="category_dairy">乳品</string>
+    <string name="category_drink">饮料</string>
+    <string name="category_snack">零食</string>
+    <string name="category_staple">主食</string>
+    <string name="category_frozen">冷冻</string>
+    <string name="category_condiment">调味</string>
+
+    <!-- 历史 -->
+    <string name="empty_history">暂无已删除条目</string>
+    <string name="restore_title">还原条目</string>
+    <string name="restore_confirm">把「%1$s」还原吗？还原后将回到主列表对应的过期时间桶。</string>
+    <string name="history_item_meta">%1$s，保质期 %2$s</string>
+    <string name="restored_snackbar">已还原「%1$s」</string>
+
+    <!-- 错误（VM → UiText） -->
+    <string name="error_delete_failed">删除失败，请重试</string>
+    <string name="error_restore_failed">还原失败，请重试</string>
+    <string name="error_recover_failed">恢复失败，请重试</string>
+    <string name="error_save_failed">保存失败，请重试</string>
+
+    <!-- 权限横幅 -->
+    <string name="banner_notifications_off">通知未开启，将收不到过期提醒</string>
+    <string name="banner_exact_alarm_off">精确提醒未开启，提醒时间可能偏差</string>
+    <string name="banner_action_go">去开启</string>
+
+    <!-- 日志 -->
+    <string name="log_title">日志 %1$s</string>
+    <string name="pick_date">选择日期</string>
+    <string name="empty_logs">暂无日志</string>
+
+    <!-- 设置 -->
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+
+    <!-- 推送方式设置（统一/逐个） -->
+    <string name="settings_push_mode">推送方式</string>
+    <string name="push_mode_digest">统一推送</string>
+    <string name="push_mode_individual">逐个推送</string>
+    <string name="settings_push_time">推送时间</string>
+    <string name="push_time_add">添加时间</string>
+
+    <string name="settings_language">语言</string>
+    <string name="language_follow_system">跟随系统</string>
+    <!-- 语言名永远用母语显示，三个资源目录内容一致，不随界面语言翻译 -->
+    <string name="language_name_zh_cn">简体中文</string>
+    <string name="language_name_zh_tw">繁體中文</string>
+    <string name="language_name_en">English</string>
+
+    <!-- 关于 -->
+    <string name="version">版本 %1$s (%2$d)</string>
+    <string name="about_tagline">记录食品保质期，临期提醒不浪费。</string>
+    <string name="about_oss_title">开源项目</string>
+
+    <!-- 功能测试页（隐藏入口：关于页连点 APP 名称 5 次） -->
+    <string name="test_title">测试页</string>
+    <string name="test_tap_hint">再点 %1$d 次进入测试页</string>
+    <string name="test_empty">暂无待通知</string>
+    <string name="test_notification_body">测试通知：提醒链路正常</string>
+    <string name="test_push_mode_line">推送方式：%1$s</string>
+    <string name="test_digest_fire">立即推送测试摘要</string>
+    <string name="test_delay_15s">15 秒</string>
+    <string name="test_delay_1m">1 分钟</string>
+    <string name="test_delay_5m">5 分钟</string>
+    <string name="test_status_scheduled">已排，%1$s 触发</string>
+    <string name="test_countdown">剩 %1$s</string>
+    <string name="test_status_delivered">已送达（%1$s）</string>
+    <string name="test_status_failed_perm">未送达：通知权限未开（%1$s）</string>
+    <string name="test_status_not_fired">闹钟未触发（可能被系统省电拦截）</string>
+
+    <!-- 更新 -->
+    <string name="update_hint">发现新版本 %1$s</string>
+    <string name="update_found_title">发现新版本 %1$s</string>
+    <string name="update_download">下载更新</string>
+    <string name="update_downloading">下载中…</string>
+    <string name="update_downloading_percent">下载中 %1$d%%</string>
+    <string name="update_install">安装</string>
+    <string name="update_already_latest">已是最新版本</string>
+    <string name="update_check_failed">检查更新失败，请稍后重试</string>
+    <string name="update_checksum_failed">安装包校验失败</string>
+    <string name="update_download_failed">下载失败：%1$s</string>
+    <string name="update_apk_missing">安装包已被系统清理，请重新下载</string>
+    <!-- F-Droid 审核要求：应用内更新必须明示来源并非 F-Droid（收录政策·自更新同意条款） -->
+    <string name="update_source_note">此更新来自开发者网站，而非 F-Droid 应用商店。</string>
+
+    <!-- 通知 -->
+    <string name="notification_channel">过期提醒</string>
+    <string name="notification_title">食刻 FreshMate</string>
+    <string name="notification_body">「%1$s」还有 %2$s 到期</string>
+
+    <!-- 统一推送通知 -->
+    <string name="digest_title">%1$s（%2$d 项）</string>
+    <string name="digest_name_separator">、</string>
+    <string name="digest_line">%1$s · %2$s</string>
+
+    <!-- 新手引导（教练标记五步 + 设置入口） -->
+    <string name="settings_onboarding">新手引导</string>
+    <string name="guide_skip">跳过引导</string>
+    <string name="guide_next">下一步</string>
+    <string name="guide_done">完成</string>
+    <string name="guide_step_indicator">第 %1$d 步，共 %2$d 步</string>
+    <string name="guide_welcome_title">欢迎使用食刻</string>
+    <string name="guide_welcome_body">记下保质期，到期前提醒你。先花半分钟认识几个关键操作。</string>
+    <string name="guide_fab_title">添加食品</string>
+    <string name="guide_fab_body">点右下角「＋」，手动录入，填上保质期就行。</string>
+    <string name="guide_card_title">滑动删除</string>
+    <string name="guide_card_body">在卡片上向左滑删除（会先弹确认）。删错了也不怕，「历史」里可以还原。</string>
+    <string name="guide_buckets_title">到期分桶</string>
+    <string name="guide_buckets_body">列表按剩余时间自动分桶；下拉刷新可把「本次添加」散入各桶。</string>
+    <string name="guide_permission_note">允许通知后，到期提醒才会送达。</string>
+    <string name="guide_topbar_title">历史 与 设置</string>
+    <string name="guide_topbar_body">右上角可打开历史（右滑还原）和设置（主题/语言，或重看本引导）。</string>
+
+    <string name="guide_mock_milk">牛奶</string>
+    <string name="guide_mock_yogurt">酸奶</string>
+    <string name="guide_mock_vegetable">蔬菜</string>
+    <string name="guide_form_title">编辑界面</string>
+    <string name="guide_form_body">名称、分类、保质期在这里填写；保存后条目会进入「本次添加」。</string>
+    <string name="guide_trap_title">切换查看</string>
+    <string name="guide_trap_body">屏幕上下有梯形按钮，滑动可以同时查看其它界面：上面是本次添加，下面是已有的条目。</string>
+    <string name="guide_mock_form_name">草莓</string>
+    <string name="guide_mock_session_bread">面包</string>
+    <string name="guide_mock_session_egg">鸡蛋</string>
+</resources>

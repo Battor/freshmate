@@ -98,18 +98,21 @@ class UpdateViewModel(
                         s.copy(progress = if (total > 0) copied.toFloat() / total else null)
                     }
                 }
-                // 校验策略（设计文档 §5.3）：清单提供 sha256 则必须匹配；未提供则放行并记日志
+                // 校验策略（设计文档 §5.3；F-Droid 审核意见收紧）：清单必须提供 sha256，
+                // 缺失视为不可信来源直接拒绝安装（Android 同签名规则仍兜底，但哈希校验更严）
                 val expected = m.sha256
-                if (expected != null) {
-                    val actual = downloader.sha256(apkFile)
-                    if (!actual.equals(expected, ignoreCase = true)) {
-                        Timber.i("UPDATE 校验失败 expected=%s actual=%s", expected, actual)
-                        apkFile.delete()
-                        _uiState.update { it.copy(downloading = false, notice = UiText(R.string.update_checksum_failed)) }
-                        return@launch
-                    }
-                } else {
-                    Timber.i("UPDATE 清单未提供 sha256，跳过校验")
+                if (expected == null) {
+                    Timber.i("UPDATE 清单未提供 sha256，拒绝安装")
+                    apkFile.delete()
+                    _uiState.update { it.copy(downloading = false, notice = UiText(R.string.update_checksum_failed)) }
+                    return@launch
+                }
+                val actual = downloader.sha256(apkFile)
+                if (!actual.equals(expected, ignoreCase = true)) {
+                    Timber.i("UPDATE 校验失败 expected=%s actual=%s", expected, actual)
+                    apkFile.delete()
+                    _uiState.update { it.copy(downloading = false, notice = UiText(R.string.update_checksum_failed)) }
+                    return@launch
                 }
                 _uiState.update { it.copy(downloading = false, apkReady = true) }
             } catch (e: kotlinx.coroutines.CancellationException) {
